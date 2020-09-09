@@ -16,4 +16,13 @@ public class FTPServer {
     private String user;
     private String password;
     private int port;
+
+    /**
+     * Overrides Object's toString
+     * @return a String representation of this object
+     */
+    @Override
+    public String toString() {
+        return "Server Host: " + server + ", User: " + user + ", Port: " + port;
+    }
 }
