@@ -15,19 +15,47 @@ public class FTPNotConnectedException extends FTPException {
      * This is a "growing" enum, i.e. it will change as development progresses
      */
     public enum ActionType {
+        /**
+         * Represents an action related to logging into the server
+         */
         LOGIN,
+        /**
+         * Represents an action relating to logging out from the server
+         */
         LOGOUT,
+        /**
+         * Represents the action of disconnecting from a connected FTPConnection
+         */
         DISCONNECT,
+        /**
+         * Represents an action of uploading a file to the server
+         */
         UPLOAD,
+        /**
+         * Represents any action in relation to downloading, either downloading physically to the local disk, or downloading file information in an intermediate step,
+         * such as into a FTPFile
+         */
         DOWNLOAD,
-        STATUS_CHECK
+        /**
+         * Represents any action in relation to modifying an existing file e.g. editing it or deleting it
+         */
+        MODIFICATION,
+        /**
+         * Represents any action related to checking to the status of the server/files. Differs from DOWNLOAD, as the information received is limited to status
+         * and not contents being downloaded
+         */
+        STATUS_CHECK,
+        /**
+         * Represents any action relating to server navigation, such as changing working directory
+         */
+        NAVIGATE
     }
 
     private static HashMap<ActionType, String> actionTypeMappings = new HashMap<>();
 
     static {
         ActionType[] actionTypes = ActionType.values();
-        String[] names = {"Login", "Logout", "Disconnect", "Upload", "Download", "Status Check"};
+        String[] names = {"Login", "Logout", "Disconnect", "Upload", "Download", "Modification", "Status Check", "Navigate"};
 
         for (int i = 0; i < actionTypes.length; i++)
             actionTypeMappings.put(actionTypes[i], names[i]);

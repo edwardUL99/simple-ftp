@@ -9,7 +9,10 @@ import lombok.With;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPFile;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.SocketException;
 import java.time.LocalDateTime;
@@ -41,7 +44,7 @@ public class FTPConnection {
     @Getter
     private boolean connected;
 
-    //add methods to connect, disconnect, get files etc
+    //add methods to connect, disconnect, get files, add, remove etc
 
     /**
      * Connects to the FTP Server using the details specified in this object's FTPServer field
@@ -105,6 +108,120 @@ public class FTPConnection {
         } catch (IOException ex) {
             log.error("Connection failed during login with user {}", user);
             throw new FTPConnectionFailedException("A connection error occurred during login", ex, ftpServer);
+        }
+    }
+
+    /**
+     * Attempts to change the current directory to the directory specified by the path
+     * @param path the path of the working directory to switch to
+     * @return true if the operation was successful
+     * @throws FTPNotConnectedException if this is attempted when isConnected() returns false
+     * @throws FTPConnectionFailedException if an error occurs
+     */
+    public boolean changeWorkingDirectory(String path) throws FTPNotConnectedException, FTPConnectionFailedException {
+        if (!connected) {
+            log.error("Cannot change to directory {} as the FTPConnection is not connected", path);
+            throw new FTPNotConnectedException("Cannot change directory as FTPConnection is not connected to the server", FTPNotConnectedException.ActionType.NAVIGATE);
+        }
+
+        try {
+            log.info("Changing working directory to {}", path);
+            return ftpClient.changeWorkingDirectory(path);
+        } catch (IOException ex) {
+            log.error("An error occurred when changing working directory to {}", path);
+            throw new FTPConnectionFailedException("An error occurred changing working directory", ex, ftpServer);
+        }
+    }
+
+    /**
+     * Attempts to change to the parent directory of the current working directory
+     * @return true if the operation was successful
+     * @throws FTPNotConnectedException if this is attempted when isConnected() returns false
+     * @throws FTPConnectionFailedException if an error occurs
+     */
+    public boolean changeToParentDirectory() throws FTPNotConnectedException, FTPConnectionFailedException {
+        if (!connected) {
+            log.error("Cannot change to parent directory as the FTPConnection is not connected");
+            throw new FTPNotConnectedException("Cannot change to parent directory as FTPConnection is not connected to the server", FTPNotConnectedException.ActionType.NAVIGATE);
+        }
+
+        try {
+            log.info("Changing to the parent of the current working directory");
+            return ftpClient.changeToParentDirectory();
+        } catch (IOException ex) {
+            log.error("An error occurred changing to parent of current working directory");
+            throw new FTPConnectionFailedException("An error occurred changing to the parent of the current working directory", ex, ftpServer);
+        }
+    }
+
+    /**
+     * Attempts to retrieve the FTP File specified at the path
+     * @param path the path to the file
+     * @return a FTPFile object representing the specified path, or null if not found
+     * @throws FTPNotConnectedException if isConnected() returns false when this is connected
+     * @throws FTPConnectionFailedException if an error occurs
+     */
+    public FTPFile getFile(String path) throws FTPNotConnectedException, FTPConnectionFailedException {
+        if (!isConnected()) {
+            log.error("Cannot retrieve file specified by {} as the FTPConnection is not connected");
+            throw new FTPNotConnectedException("FTPConnection is not connected to the server, so cannot retrieve file", FTPNotConnectedException.ActionType.DOWNLOAD);
+        }
+
+        try {
+            log.info("Attempting tp retrieve file specified by path {}", path);
+            return ftpClient.mlistFile(path);
+        } catch (IOException ex) {
+            log.error("An error occurred while retrieving the file specified by path {} from the server", path);
+            throw new FTPConnectionFailedException("An error occurred retrieving the file from the server", ex, ftpServer);
+        }
+    }
+
+    /**
+     * Saves the file specified to the path on the server
+     * @param file the standard Java IO file to add to the server
+     * @param path the path to store the file in
+     * @return true if the operation was successful
+     * @throws FTPNotConnectedException if this is called when isConnected() returns false
+     * @throws FTPConnectionFailedException if an error occurred
+     */
+    public boolean addFile(File file, String path) throws FTPNotConnectedException, FTPConnectionFailedException {
+        String name = file.getName();
+
+        if (!connected) {
+            log.error("Cannot save file {} to {} as FTPConnection is not connected", name, path);
+            throw new FTPNotConnectedException("FTPConnection is not connected to the sever, cannot add file to it", FTPNotConnectedException.ActionType.UPLOAD);
+        }
+
+        try {
+            FileInputStream fileInputStream = new FileInputStream(file);
+            return ftpClient.storeFile(path, fileInputStream);
+        } catch (IOException ex) {
+            log.error("Cannot save file {} to {} as an error occurred", name, path);
+            throw new FTPConnectionFailedException("An error occurred saving file to server", ex, ftpServer);
+        }
+    }
+
+    //add append to file too
+
+    /**
+     * Attempts to remove the file specified by the path from the FTP server
+     * @param filePath the path to the file on the server
+     * @return true if the operation was a success
+     * @throws FTPNotConnectedException if isConnected() returns false when this operation is called
+     * @throws FTPConnectionFailedException if an error occurs
+     */
+    public boolean removeFile(String filePath) throws FTPNotConnectedException, FTPConnectionFailedException {
+        if (!connected) {
+            log.error("Cannot remove file {} from the server as FTPConnection is not connected", filePath);
+            throw new FTPNotConnectedException("FTPConnection not connected to server so cannot remove file", FTPNotConnectedException.ActionType.MODIFICATION);
+        }
+
+        try {
+            log.info("Removing file {} from the server", filePath);
+            return ftpClient.deleteFile(filePath);
+        } catch (IOException ex) {
+            log.error("An error occurred removing file {}", filePath);
+            throw new FTPConnectionFailedException("An error occurred when removing file", ex, ftpServer);
         }
     }
 
