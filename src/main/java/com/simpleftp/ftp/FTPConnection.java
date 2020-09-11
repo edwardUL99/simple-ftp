@@ -2,52 +2,57 @@ package com.simpleftp.ftp;
 
 import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
 import com.simpleftp.ftp.exceptions.FTPNotConnectedException;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.With;
+import lombok.*;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.SocketException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * This is the main class used for provided a connection to a FTP server
+ * This is the main class used for provided a client connection to a FTP server
+ * It provides a subset of the features provided by org.apache.commons.net.ftp.FTPClient
+ * This class also abstracts some calls of that library to hide any unnecessary details
+ * It also doesn't include any functions that are not required by the system so not to complicate things
+ *
+ * The library also needs to be wrapped so that exceptions for this system can be thrown and certain constraints to be
+ * put on the calls
+ * Also required to provide logging
  */
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @With
 @Slf4j
 public class FTPConnection {
     /**
      * The FTP Client which provides the main FTP functionality
      */
-    private FTPClient ftpClient;
+    protected FTPClient ftpClient;
     /**
      * The FTPServer object providing all the login details and server parameters
      */
-    private FTPServer ftpServer;
+    protected FTPServer ftpServer;
     /**
      * Provides details to this connection like page size etc
      */
-    private FTPConnectionDetails ftpConnectionDetails;
+    @Getter
+    @Setter
+    protected FTPConnectionDetails ftpConnectionDetails;
     /**
      * A boolean flag to indicate if this connection is actively connected or not
      */
     @Getter
-    private boolean connected;
+    protected boolean connected;
 
     //add methods to connect, disconnect, get files, add, remove etc
 
     /**
      * Connects to the FTP Server using the details specified in this object's FTPServer field
+     * @return true if it was successful and false only and only if isConnected() returns true, other errors throw exceptions
      */
     public boolean connect() throws FTPConnectionFailedException {
         if (!connected) {
@@ -55,6 +60,7 @@ public class FTPConnection {
             int port = ftpServer.getPort();
 
             try {
+                log.info("Connecting the FTPConnection to the server");
                 ftpClient.connect(host, port);
                 connected = true;
                 return true;
@@ -64,6 +70,7 @@ public class FTPConnection {
             }
         }
 
+        log.info("FTPConnection already connected to the server, not about to re-connect");
         return false;
     }
 
@@ -104,12 +111,14 @@ public class FTPConnection {
 
         try {
             log.info("Logging in to ftp server with user {}", user);
-            return ftpClient.login(ftpServer.getUser(), ftpServer.getPassword());
+            return ftpClient.login(user, ftpServer.getPassword());
         } catch (IOException ex) {
             log.error("Connection failed during login with user {}", user);
             throw new FTPConnectionFailedException("A connection error occurred during login", ex, ftpServer);
         }
     }
+
+    //logout method here
 
     /**
      * Attempts to change the current directory to the directory specified by the path
