@@ -53,6 +53,7 @@ public class FTPConnection {
     /**
      * Connects to the FTP Server using the details specified in this object's FTPServer field
      * @return true if it was successful and false only and only if isConnected() returns true, other errors throw exceptions
+     * @throws FTPConnectionFailedException if an error occurs during connection
      */
     public boolean connect() throws FTPConnectionFailedException {
         if (!connected) {
