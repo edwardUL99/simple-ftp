@@ -17,36 +17,25 @@
 
 package com.simpleftp.ftp.exceptions;
 
-import lombok.Getter;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-
 /**
- * This abstract class will provide a base class for all FTP exceptions
+ * This exception is used to represent a generic FTP error, not one related to connection
+ * IOExceptions thrown in the context of the ftp calls are considered connection failures so, do not use this exception for that
  */
-@Getter
-public abstract class FTPException extends Exception {
+public class FTPError extends FTPException {
     /**
-     * The time at which this exception occurred;
+     * Constructs a FTPError object with the specified message
+     * @param message the message for this exception to display
      */
-    private LocalDateTime exceptionTime;
-
-    public FTPException(String message) {
+    public FTPError(String message) {
         super(message);
-        exceptionTime = LocalDateTime.now();
-    }
-
-    public FTPException(String message, Exception e) {
-        super(message, e);
-        exceptionTime = LocalDateTime.now();
     }
 
     /**
-     * Appends the exception time onto the message for the super exception
+     * Constructs a FTPError object with the specified message and causing exception
+     * @param message the message for this exception to display
+     * @param ex the causing exception
      */
-    @Override
-    public String getMessage() {
-        return super.getMessage() + ", Occurred at " + exceptionTime.format(DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss"));
+    public FTPError(String message, Exception ex) {
+        super(message, ex);
     }
 }
