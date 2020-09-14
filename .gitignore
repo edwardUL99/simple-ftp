@@ -23,3 +23,7 @@
 hs_err_pid*
 .idea
 target
+
+docs
+
+publish_docs.sh
