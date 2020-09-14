@@ -20,10 +20,13 @@ package com.simpleftp.ftp.exceptions;
 import com.simpleftp.ftp.FTPServer;
 import lombok.Getter;
 
-import java.time.LocalDateTime;
-
 /**
  * This class represents exceptions related to connection to the server and errors sending and receving commands over this connection and not the status of the connection, exceptions like FTPNotConnectedException handles this
+ *
+ * This exception represents a serious fault with the connection to the server, so if this is thrown, the FTP connection should be logged out and closed before throwing it
+ * Normal FTP connection is not possible after this exception is thrown
+ *
+ * It is a fault otherwise if this is thrown and FTPConnection.isConnected() or FTPConnection.isLoggedIn() still return true after it
  */
 @Getter
 public class FTPConnectionFailedException extends FTPException {

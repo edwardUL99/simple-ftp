@@ -15,30 +15,26 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ftp;
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.With;
+package com.simpleftp.ftp.exceptions;
 
 /**
- * This class provides details to be used in creating a FTPConnection
- * Encapsulates all these details into one place
+ * This class represents exceptions that occur after a command fails to be sent or failed to receive a reply from the server
  */
-@NoArgsConstructor
-@AllArgsConstructor
-@With
-@Data
-public class FTPConnectionDetails {
+public class FTPCommandFailedException extends FTPException {
     /**
-     * The page size for listing files in the server
+     * Constructs an exception object with the specified message
+     * @param message the message for this exception to display
      */
-    private int pageSize;
+    public FTPCommandFailedException(String message) {
+        super(message);
+    }
+
     /**
-     * The number of seconds for the server to time out
-     * This is used for all timeouts such a keep alive etc
+     * Constructs an exception object with the specified message and causing exception
+     * @param message the message for this exception to display
+     * @param ex the causing exception
      */
-    private int timeout;
-    //this will be added to
+    public FTPCommandFailedException(String message, Exception ex) {
+        super(message, ex);
+    }
 }

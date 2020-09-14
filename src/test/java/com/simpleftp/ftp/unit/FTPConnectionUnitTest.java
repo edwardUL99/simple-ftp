@@ -18,9 +18,11 @@
 package com.simpleftp.ftp.unit;
 
 import com.simpleftp.ftp.FTPServer;
+import com.simpleftp.ftp.exceptions.FTPCommandFailedException;
 import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
 import com.simpleftp.ftp.exceptions.FTPNotConnectedException;
 import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPConnectionClosedException;
 import org.apache.commons.net.ftp.FTPFile;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -137,7 +139,7 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldLogOutOnDisconnectIfLoggedIn() throws IOException, FTPConnectionFailedException, FTPNotConnectedException {
+    void shouldLogOutOnDisconnectIfLoggedIn() throws IOException, FTPConnectionFailedException, FTPNotConnectedException, FTPCommandFailedException {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);
         doNothing().when(ftpClient).disconnect();
@@ -157,15 +159,27 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldThrowIfErrorOccursWhenDisconnecting() throws IOException {
+    void shouldThrowIfConnectionErrorOccursWhenDisconnecting() throws IOException {
         ftpConnection.setConnected(true);
-        doThrow(IOException.class).when(ftpClient).disconnect();
+        ftpConnection.setLoggedIn(true);
+        doThrow(FTPConnectionClosedException.class).when(ftpClient).logout();
         assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.disconnect());
-        assertTrue(ftpConnection.isConnected()); //should still be connected afterwards
+        assertFalse(ftpConnection.isConnected()); //should not be connected afterwards
+        assertFalse(ftpConnection.isLoggedIn());
+        verify(ftpClient).logout();
     }
 
     @Test
-    void shouldLoginSuccessfully() throws IOException, FTPConnectionFailedException, FTPNotConnectedException {
+    void shouldThrowIfErrorOccursWhenDisconnecting() throws IOException {
+        ftpConnection.setConnected(true);
+        doThrow(IOException.class).when(ftpClient).disconnect();
+        assertThrows(FTPCommandFailedException.class, () -> ftpConnection.disconnect());
+        assertTrue(ftpConnection.isConnected()); //should be still connected afterwards
+        verify(ftpClient).disconnect();
+    }
+
+    @Test
+    void shouldLoginSuccessfully() throws IOException, FTPConnectionFailedException, FTPNotConnectedException, FTPCommandFailedException {
         ftpConnection.setConnected(true);
         given(ftpServer.getUser())
                 .willReturn(TEST_SERVER_USER);
@@ -201,11 +215,27 @@ class FTPConnectionUnitTest {
                 .willReturn(TEST_SERVER_PASSWORD);
         doThrow(IOException.class).when(ftpClient).login(TEST_SERVER_USER, TEST_SERVER_PASSWORD);
 
-        assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.login());
+        assertThrows(FTPCommandFailedException.class, () -> ftpConnection.login());
+        verify(ftpClient).login(TEST_SERVER_USER, TEST_SERVER_PASSWORD);
     }
 
     @Test
-    void shouldNotLogInAgainIfAlreadyLoggedIn() throws FTPConnectionFailedException, FTPNotConnectedException, IOException {
+    void shouldNotLogInIfConnectionErrorOccurs() throws IOException {
+        ftpConnection.setConnected(true);
+        given(ftpServer.getUser())
+                .willReturn(TEST_SERVER_USER);
+        given(ftpServer.getPassword())
+                .willReturn(TEST_SERVER_PASSWORD);
+        doThrow(FTPConnectionClosedException.class).when(ftpClient).login(TEST_SERVER_USER, TEST_SERVER_PASSWORD);
+
+        assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.login());
+        assertFalse(ftpConnection.isConnected());
+        assertFalse(ftpConnection.isLoggedIn());
+        verify(ftpClient).login(TEST_SERVER_USER, TEST_SERVER_PASSWORD);
+    }
+
+    @Test
+    void shouldNotLogInAgainIfAlreadyLoggedIn() throws FTPConnectionFailedException, FTPNotConnectedException, IOException, FTPCommandFailedException {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);
         given(ftpServer.getUser())
@@ -220,7 +250,7 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldLogOutSuccessfully() throws IOException, FTPConnectionFailedException, FTPNotConnectedException {
+    void shouldLogOutSuccessfully() throws IOException, FTPConnectionFailedException, FTPNotConnectedException, FTPCommandFailedException {
         ftpConnection.setLoggedIn(true);
         ftpConnection.setConnected(true);
         given(ftpClient.logout())
@@ -235,7 +265,7 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void logoutShouldBeNoopIfNotLoggedIn() throws FTPConnectionFailedException, FTPNotConnectedException {
+    void logoutShouldBeNoopIfNotLoggedIn() throws FTPConnectionFailedException, FTPNotConnectedException, FTPCommandFailedException {
         ftpConnection.setConnected(true);
 
         boolean result = ftpConnection.logout();
@@ -252,9 +282,21 @@ class FTPConnectionUnitTest {
         ftpConnection.setLoggedIn(true);
         doThrow(IOException.class).when(ftpClient).logout();
 
-        assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.logout());
+        assertThrows(FTPCommandFailedException.class, () -> ftpConnection.logout());
         assertTrue(ftpConnection.isLoggedIn());
         assertTrue(ftpConnection.isConnected());
+        verify(ftpClient).logout();
+    }
+
+    @Test
+    void logoutShouldThrowIfConnectionErrorOccurs() throws IOException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        doThrow(FTPConnectionClosedException.class).when(ftpClient).logout();
+
+        assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.logout());
+        assertFalse(ftpConnection.isLoggedIn());
+        assertFalse(ftpConnection.isConnected());
         verify(ftpClient).logout();
     }
 
@@ -272,7 +314,7 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldChangeWorkingDirectorySuccessfully() throws IOException, FTPConnectionFailedException, FTPNotConnectedException {
+    void shouldChangeWorkingDirectorySuccessfully() throws IOException, FTPConnectionFailedException, FTPNotConnectedException, FTPCommandFailedException {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);
         given(ftpClient.changeWorkingDirectory(TEST_PATH))
@@ -287,7 +329,7 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldNotChangeDirectoryIfNotLoggedIn() throws FTPConnectionFailedException, FTPNotConnectedException {
+    void shouldNotChangeDirectoryIfNotLoggedIn() throws FTPConnectionFailedException, FTPNotConnectedException, FTPCommandFailedException {
         ftpConnection.setConnected(true);
 
         boolean result = ftpConnection.changeWorkingDirectory(TEST_PATH);
@@ -312,14 +354,26 @@ class FTPConnectionUnitTest {
         ftpConnection.setLoggedIn(true);
         doThrow(IOException.class).when(ftpClient).changeWorkingDirectory(TEST_PATH);
 
-        assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.changeWorkingDirectory(TEST_PATH));
+        assertThrows(FTPCommandFailedException.class, () -> ftpConnection.changeWorkingDirectory(TEST_PATH));
         assertTrue(ftpConnection.isConnected());
         assertTrue(ftpConnection.isLoggedIn());
         verify(ftpClient).changeWorkingDirectory(TEST_PATH);
     }
 
     @Test
-    void shouldChangeToParentWorkingDirectorySuccessfully() throws IOException, FTPConnectionFailedException, FTPNotConnectedException {
+    void shouldThrowIfConnectionErrorOccursChangingDirectory() throws IOException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        doThrow(FTPConnectionClosedException.class).when(ftpClient).changeWorkingDirectory(TEST_PATH);
+
+        assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.changeWorkingDirectory(TEST_PATH));
+        assertFalse(ftpConnection.isConnected());
+        assertFalse(ftpConnection.isLoggedIn());
+        verify(ftpClient).changeWorkingDirectory(TEST_PATH);
+    }
+
+    @Test
+    void shouldChangeToParentWorkingDirectorySuccessfully() throws IOException, FTPConnectionFailedException, FTPNotConnectedException, FTPCommandFailedException {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);
         given(ftpClient.changeToParentDirectory())
@@ -334,7 +388,7 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldNotChangeToParentDirectoryIfNotLoggedIn() throws FTPConnectionFailedException, FTPNotConnectedException {
+    void shouldNotChangeToParentDirectoryIfNotLoggedIn() throws FTPConnectionFailedException, FTPNotConnectedException, FTPCommandFailedException {
         ftpConnection.setConnected(true);
 
         boolean result = ftpConnection.changeToParentDirectory();
@@ -359,9 +413,21 @@ class FTPConnectionUnitTest {
         ftpConnection.setLoggedIn(true);
         doThrow(IOException.class).when(ftpClient).changeToParentDirectory();
 
-        assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.changeToParentDirectory());
+        assertThrows(FTPCommandFailedException.class, () -> ftpConnection.changeToParentDirectory());
         assertTrue(ftpConnection.isConnected());
         assertTrue(ftpConnection.isLoggedIn());
+        verify(ftpClient).changeToParentDirectory();
+    }
+
+    @Test
+    void shouldThrowIfConnectionErrorOccursChangingToParentDirectory() throws IOException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        doThrow(FTPConnectionClosedException.class).when(ftpClient).changeToParentDirectory();
+
+        assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.changeToParentDirectory());
+        assertFalse(ftpConnection.isConnected());
+        assertFalse(ftpConnection.isLoggedIn());
         verify(ftpClient).changeToParentDirectory();
     }
 
@@ -374,7 +440,7 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldGetFTPFileSuccessfullyByMLST() throws IOException, FTPConnectionFailedException, FTPNotConnectedException {
+    void shouldGetFTPFileSuccessfullyByMLST() throws IOException, FTPConnectionFailedException, FTPNotConnectedException, FTPCommandFailedException {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);
         given(ftpClient.hasFeature("MLST"))
@@ -392,7 +458,7 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldGetFTPFileSuccessfullyByLIST() throws IOException, FTPConnectionFailedException, FTPNotConnectedException {
+    void shouldGetFTPFileSuccessfullyByLIST() throws IOException, FTPConnectionFailedException, FTPNotConnectedException, FTPCommandFailedException {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);
         given(ftpClient.hasFeature("MLST"))
@@ -410,7 +476,7 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldReturnNullWithMLSTGetFTPFile() throws IOException, FTPConnectionFailedException, FTPNotConnectedException {
+    void shouldReturnNullWithMLSTGetFTPFile() throws IOException, FTPConnectionFailedException, FTPNotConnectedException, FTPCommandFailedException {
         ftpConnection.setLoggedIn(true);
         ftpConnection.setConnected(true);
         given(ftpClient.hasFeature("MLST"))
@@ -427,7 +493,7 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldReturnNullWithLISTReturningNullGetFTPFile() throws IOException, FTPConnectionFailedException, FTPNotConnectedException {
+    void shouldReturnNullWithLISTReturningNullGetFTPFile() throws IOException, FTPConnectionFailedException, FTPNotConnectedException, FTPCommandFailedException {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);
         given(ftpClient.hasFeature("MLST"))
@@ -444,7 +510,7 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldReturnNullIfLISTReturnsEmptyArrayGetFTPFile() throws IOException, FTPConnectionFailedException, FTPNotConnectedException {
+    void shouldReturnNullIfLISTReturnsEmptyArrayGetFTPFile() throws IOException, FTPConnectionFailedException, FTPNotConnectedException, FTPCommandFailedException {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);
         given(ftpClient.hasFeature("MLST"))
@@ -461,7 +527,7 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldReturnNullIfLoggedOutOnGetFTPFile() throws FTPConnectionFailedException, FTPNotConnectedException {
+    void shouldReturnNullIfLoggedOutOnGetFTPFile() throws FTPConnectionFailedException, FTPNotConnectedException, FTPCommandFailedException {
         ftpConnection.setConnected(true);
         FTPFile result = ftpConnection.getFTPFile(TEST_FTP_FILE);
 
@@ -484,7 +550,25 @@ class FTPConnectionUnitTest {
                 .willReturn(true);
         doThrow(IOException.class).when(ftpClient).mlistFile(TEST_FTP_FILE);
 
+        assertThrows(FTPCommandFailedException.class, () -> ftpConnection.getFTPFile(TEST_FTP_FILE));
+        assertTrue(ftpConnection.isConnected());
+        assertTrue(ftpConnection.isLoggedIn());
+        verify(ftpClient).hasFeature("MLST");
+        verify(ftpClient).mlistFile(TEST_FTP_FILE);
+        verify(ftpClient, times(0)).listFiles(TEST_FTP_FILE);
+    }
+
+    @Test
+    void shouldThrowIfConnectionErrorOccursWithMLSTGetFTPFile() throws IOException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        given(ftpClient.hasFeature("MLST"))
+                .willReturn(true);
+        doThrow(FTPConnectionClosedException.class).when(ftpClient).mlistFile(TEST_FTP_FILE);
+
         assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.getFTPFile(TEST_FTP_FILE));
+        assertFalse(ftpConnection.isConnected());
+        assertFalse(ftpConnection.isLoggedIn());
         verify(ftpClient).hasFeature("MLST");
         verify(ftpClient).mlistFile(TEST_FTP_FILE);
         verify(ftpClient, times(0)).listFiles(TEST_FTP_FILE);
@@ -498,7 +582,25 @@ class FTPConnectionUnitTest {
                 .willReturn(false);
         doThrow(IOException.class).when(ftpClient).listFiles(TEST_FTP_FILE);
 
+        assertThrows(FTPCommandFailedException.class, () -> ftpConnection.getFTPFile(TEST_FTP_FILE));
+        assertTrue(ftpConnection.isConnected());
+        assertTrue(ftpConnection.isLoggedIn());
+        verify(ftpClient).hasFeature("MLST");
+        verify(ftpClient).listFiles(TEST_FTP_FILE);
+        verify(ftpClient, times(0)).mlistFile(TEST_FTP_FILE);
+    }
+
+    @Test
+    void shouldThrowIfConnectionErrorOccursWithLISTGetFTPFile() throws IOException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        given(ftpClient.hasFeature("MLST"))
+                .willReturn(false);
+        doThrow(FTPConnectionClosedException.class).when(ftpClient).listFiles(TEST_FTP_FILE);
+
         assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.getFTPFile(TEST_FTP_FILE));
+        assertFalse(ftpConnection.isConnected());
+        assertFalse(ftpConnection.isLoggedIn());
         verify(ftpClient).hasFeature("MLST");
         verify(ftpClient).listFiles(TEST_FTP_FILE);
         verify(ftpClient, times(0)).mlistFile(TEST_FTP_FILE);
