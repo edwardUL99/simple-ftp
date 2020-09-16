@@ -27,8 +27,6 @@ import org.apache.commons.net.ftp.FTPReply;
 import org.apache.commons.net.io.CopyStreamException;
 
 import java.io.*;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 /**
  * This is the main class used for provided a client connection to a FTP server
@@ -43,8 +41,6 @@ import java.time.format.DateTimeFormatter;
  * Note that if a FTPConnectionFailedException is thrown by any method of this class, it indicates a serious connection error occurred.
  * This means that this FTPConnection is no longer viable as isConnected() and isLoggedIn() will now return false.
  */
-@NoArgsConstructor
-@AllArgsConstructor
 @With
 @Slf4j
 public class FTPConnection {
@@ -53,13 +49,20 @@ public class FTPConnection {
      */
     protected FTPClient ftpClient;
     /**
+     * The lookup object backing retrieval services in terms of information, not downloads
+     */
+    protected FTPLookup ftpLookup;
+    /**
      * The FTPServer object providing all the login details and server parameters
      */
     @Getter
+    @Setter
     protected FTPServer ftpServer;
     /**
      * Provides details to this connection like page size etc
      */
+    @Getter
+    @Setter
     protected FTPConnectionDetails ftpConnectionDetails;
     /**
      * A boolean flag to indicate if this connection is actively connected or not
@@ -68,6 +71,62 @@ public class FTPConnection {
     protected boolean connected;
     @Getter
     protected boolean loggedIn;
+
+    /**
+     * Constructs a default object
+     */
+    public FTPConnection() {
+        ftpClient = new FTPClient();
+        ftpLookup = new FTPLookup(ftpClient);
+        ftpServer = new FTPServer();
+        ftpConnectionDetails = new FTPConnectionDetails();
+    }
+
+    /**
+     * Constructs a connection object with the specified parameters.
+     * Can be used if you want to specify a different FTPClient rather than a default one
+     * @param ftpClient the client object to back this connection
+     * @param ftpServer the object storing the server parameters
+     * @param ftpConnectionDetails the object storing the connection details
+     */
+    public FTPConnection(FTPClient ftpClient, FTPServer ftpServer, FTPConnectionDetails ftpConnectionDetails) {
+        this.ftpClient = ftpClient;
+        ftpLookup = new FTPLookup(ftpClient);
+        this.ftpServer = ftpServer;
+        this.ftpConnectionDetails = ftpConnectionDetails;
+    }
+
+    /*
+     * Constructs a FTPConnection with all specified parameters.
+     * Not recommended for use. Useful for testing only.
+     * @param ftpClient the FTPClient object backing this connection
+     * @param ftpLookup the lookup object providing look-up features
+     * @param ftpServer the object storing the server parameters
+     * @param ftpConnectionDetails the object storing the connection details
+     * @param connected a parameter specifying if this connection is connected
+     * @param loggedIn a parameter specifying if this connection is logged in
+     */
+    public FTPConnection(FTPClient ftpClient, FTPLookup ftpLookup, FTPServer ftpServer, FTPConnectionDetails ftpConnectionDetails, boolean connected, boolean loggedIn) {
+        this.ftpClient = ftpClient;
+        this.ftpLookup = ftpLookup;
+        this.ftpServer = ftpServer;
+        this.ftpConnectionDetails = ftpConnectionDetails;
+        this.connected = connected;
+        this.loggedIn = loggedIn;
+    }
+
+    /**
+     * Constructs a FTPConnection object with the specified ftp server details and connection details.
+     * This is the constructor that guarantees the most correct functionality
+     * @param ftpServer the object storing the server parameters
+     * @param ftpConnectionDetails the object storing the connection details
+     */
+    public FTPConnection(FTPServer ftpServer, FTPConnectionDetails ftpConnectionDetails) {
+        this.ftpClient = new FTPClient();
+        this.ftpLookup = new FTPLookup(ftpClient);
+        this.ftpServer = ftpServer;
+        this.ftpConnectionDetails = ftpConnectionDetails;
+    }
 
     //add methods to connect, disconnect, get files, add, remove etc
 
@@ -286,25 +345,7 @@ public class FTPConnection {
         }
     }
 
-    private FTPFile retrieveFTPFile(String path) throws IOException {
-        if (ftpClient.hasFeature("MLST")) {
-            // this is the preferred command as it supports more precise timestamps and other features
-            log.info("Using MLST command to retrieve file {}", path);
-            return ftpClient.mlistFile(path);
-        } else {
-            // server doesn't support MLST, using LIST
-            log.info("Using LIST command to attempt to retrieve the file {}", path);
-            FTPFile[] file = ftpClient.listFiles(path);
-
-            if (file != null && file.length > 0) {
-                log.info("File retrieved successfully from server");
-                return file[0];
-            } else {
-                log.info("File cannot be retrieved from server");
-                return null;
-            }
-        }
-    }
+    //implement get working directory
 
     /**
      * Attempts to retrieve the FTP File specified at the path
@@ -322,7 +363,8 @@ public class FTPConnection {
 
         try {
             if (loggedIn) {
-                return retrieveFTPFile(path);
+                log.info("Retrieving FTPFile for path {} from server", path);
+                return ftpLookup.getFTPFile(path);
             }
 
             log.info("User is not logged in, cannot get FTPFile");
@@ -337,15 +379,16 @@ public class FTPConnection {
         }
     }
 
-    private FTPFile writeLocalFileToRemote(File file, String path) throws IOException, FTPConnectionFailedException, FTPNotConnectedException, FTPCommandFailedException {
+    private FTPFile writeLocalFileToRemote(File file, String path) throws IOException {
         String name = file.getName();
+        String remoteFileName = path + "/" + name;
 
         FileInputStream fileInputStream = new FileInputStream(file);
-        boolean stored = ftpClient.storeFile(path, fileInputStream);
+        boolean stored = ftpClient.storeFile(remoteFileName, fileInputStream);
 
         if (stored) {
             log.info("File {} was uploaded successfully to {}", name, path);
-            return getFTPFile(path);
+            return ftpLookup.getFTPFile(remoteFileName);
         } else {
             log.info("File {} was not uploaded successfully to {}", name, path);
             return null;
@@ -355,7 +398,7 @@ public class FTPConnection {
     /**
      * Saves the file specified to the path on the server and returns the FTPFile representation of it
      * @param file the standard Java IO file to add to the server
-     * @param path the path to store the file in
+     * @param path the path to store the file in (directory)
      * @return FTPFile representation of uploaded file, null if the file provided doesn't exist/is a directory, path doesn't exist or user not logged in
      * @throws FTPNotConnectedException if this is called when isConnected() returns false
      * @throws FTPConnectionFailedException if an error occurred
@@ -368,17 +411,17 @@ public class FTPConnection {
                                                              FTPCommandFailedException {
         String name = file.getName();
 
-        if (!file.exists() || file.isDirectory() || !remotePathExists(path, true) || !remotePathExists(path, false) || !loggedIn) {
-            log.info("File does not exist or is a directory, or user is not logged in or the remote path doesn't exist, aborting upload");
-            return null;
-        }
-
         if (!connected) {
             log.error("Cannot save file {} to {} as FTPConnection is not connected", name, path);
             throw new FTPNotConnectedException("FTPConnection is not connected to the sever, cannot add file to it", FTPNotConnectedException.ActionType.UPLOAD);
         }
 
         try {
+            if (!file.exists() || file.isDirectory() || !ftpLookup.remotePathExists(path, true)  || !loggedIn) {
+                log.info("Local file does not exist or is a directory, or user is not logged in or the remote path doesn't exist, aborting upload");
+                return null;
+            }
+
             return writeLocalFileToRemote(file, path);
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection when uploading file");
@@ -438,7 +481,7 @@ public class FTPConnection {
     }
 
     private String addFileNameToLocalPath(String localPath, FTPFile file) throws FTPError {
-        String separator = System.getProperty("path.separator");
+        String separator = System.getProperty("file.separator");
         if (!localPath.endsWith(separator))
             localPath += separator;
         return localPath + getFileBasename(file);
@@ -464,7 +507,7 @@ public class FTPConnection {
      * You need to be logged in, otherwise this will always return null
      * If either remotePath or localPath does not exist, this method will return null
      * @param remotePath the path to the remote file
-     * @param localPath the path to where to save the remote file to locally (without filename)
+     * @param localPath the path to where to save the remote file to locally (without filename, i.e. directory)
      * @return a File object representing the local file that was downloaded
      * @throws FTPNotConnectedException if isConnected() returns false when called
      * @throws FTPConnectionFailedException if a connection error occurs
@@ -480,34 +523,36 @@ public class FTPConnection {
             throw new FTPNotConnectedException("FTPConnection is not connected to the server, cannot download file", FTPNotConnectedException.ActionType.DOWNLOAD);
         }
 
-        FTPFile remoteFile = getFTPFile(remotePath);
-
-        if (remoteFile == null) {
-            log.info("The remote file {} does not exist", remotePath);
-            return null;
-        }
-        localPath = addFileNameToLocalPath(localPath, remoteFile);
-
-        if (remotePathExists(remotePath, true) || !localFileExists(localPath) || !loggedIn) {
-            log.info("Either remote path {} or local path {} does not exist or remote path is a directory or the user is not logged in", remotePath, localPath);
-            return null;
-        } else {
-            try {
-                return writeRemoteFileToLocal(remotePath, localPath);
-            } catch (FTPConnectionClosedException cl) {
-                log.error("FTPConnection unexpectedly closed the connection while downloading file");
-                resetConnectionValues();
-                throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while downloading the file", cl, ftpServer);
-            } catch (FileNotFoundException ex) {
-                log.error("A file not found exception error occurred with creating an output stream for {}", localPath);
-                throw new FTPError("An output stream could not be created for local file", ex);
-            } catch (CopyStreamException cs) {
-                log.error("An error occurred in transferring the file {} from server to local {}", remotePath, localPath);
-                throw new FTPError("An error occurred transferring the file from server to local machine", cs);
-            } catch (IOException ex1) {
-                log.error("An error occurred when downloading file {} from server to {}", remotePath, localPath);
-                throw new FTPConnectionFailedException("An error occurred when downloading remote file to local path", ex1, ftpServer);
+        File local = new File(localPath);
+        try {
+            if (ftpLookup.remotePathExists(remotePath, true) || !local.isDirectory() || !loggedIn) {
+                log.info("Either remote path {} or local path {} does not exist or remote path is a directory or the user is not logged in", remotePath, localPath);
+                return null;
             }
+
+            FTPFile remoteFile = ftpLookup.getFTPFile(remotePath);
+
+            if (remoteFile == null) {
+                log.info("The remote file {} does not exist", remotePath);
+                return null;
+            }
+
+            localPath = addFileNameToLocalPath(localPath, remoteFile);
+
+            return writeRemoteFileToLocal(remotePath, localPath);
+        } catch (FTPConnectionClosedException cl) {
+            log.error("FTPConnection unexpectedly closed the connection while downloading file");
+            resetConnectionValues();
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while downloading the file", cl, ftpServer);
+        } catch (FileNotFoundException ex) {
+            log.error("A file not found exception error occurred with creating an output stream for {}", localPath);
+            throw new FTPError("An output stream could not be created for local file", ex);
+        } catch (CopyStreamException cs) {
+            log.error("An error occurred in transferring the file {} from server to local {}", remotePath, localPath);
+            throw new FTPError("An error occurred transferring the file from server to local machine", cs);
+        } catch (IOException ex1) {
+            log.error("An error occurred when downloading file {} from server to {}", remotePath, localPath);
+            throw new FTPCommandFailedException("An error occurred when downloading remote file to local path", ex1);
         }
     }
 
@@ -525,9 +570,16 @@ public class FTPConnection {
             throw new FTPNotConnectedException("FTPConnection not connected to server so cannot remove file", FTPNotConnectedException.ActionType.MODIFICATION);
         }
 
+        //may need to check if the file path exists here like above methods, or maybe its enough for IO exception to be thrown, research docs
+
         try {
-            log.info("Removing file {} from the server", filePath);
-            return ftpClient.deleteFile(filePath);
+            if (loggedIn) {
+                log.info("Removing file {} from the server", filePath);
+                return ftpClient.deleteFile(filePath);
+            }
+
+            log.info("Not removing file {} from server as user is not logged in", filePath);
+            return false;
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection while removing file");
             resetConnectionValues();
@@ -562,30 +614,19 @@ public class FTPConnection {
         try {
             log.info("Querying if remote path {} exists", remotePath);
 
-            boolean remotePathExists;
-
-            if (dir) {
-                String currentWorkingDirectory = ftpClient.printWorkingDirectory();
-
-                if (currentWorkingDirectory == null) {
-                    log.error("Cannot determine the current working directory, cannot proceed with checking if directory exists");
-                    throw new FTPError("Cannot determine if remotePath exists on this server");
-                }
-
-                remotePathExists = ftpClient.changeWorkingDirectory(remotePath);
-                ftpClient.changeWorkingDirectory(currentWorkingDirectory); //return to the current directory
-            } else {
-                remotePathExists = ftpClient.listFiles(remotePath).length >= 1;
+            if (loggedIn) {
+                return ftpLookup.remotePathExists(remotePath, dir);
             }
 
-            return remotePathExists;
+            log.info("User is not logged in, cannot check if remote path exists");
+            return false;
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection while checking if path exists");
             resetConnectionValues();
             throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while checking if path exists", cl, ftpServer);
         } catch (IOException ex) {
             log.error("An error occurred when checking if path {} exists", remotePath);
-            throw new FTPConnectionFailedException("An error occurred when checking if path {} exists", ex, ftpServer);
+            throw new FTPCommandFailedException("An error occurred when checking if path {} exists", ex);
         }
     }
 
@@ -604,7 +645,12 @@ public class FTPConnection {
 
         try {
             log.info("Retrieving server status");
-            return ftpClient.getStatus();
+            if (loggedIn) {
+                return ftpLookup.getStatus();
+            }
+
+            log.info("User is not logged in, cannot check status");
+            return null;
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection while retrieving status");
             resetConnectionValues();
@@ -630,8 +676,13 @@ public class FTPConnection {
         }
 
         try {
-            log.info("Retrieving file status of file with path {}", filePath);
-            return ftpClient.getStatus(filePath);
+            if (loggedIn) {
+                log.info("Retrieving file status of file with path {}", filePath);
+                return ftpLookup.getFileStatus(filePath);
+            }
+
+            log.info("Cannot retrieve file status as user is not logged in");
+            return null;
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection while retrieving file status");
             resetConnectionValues();
@@ -657,8 +708,13 @@ public class FTPConnection {
         }
 
         try {
-            log.info("Retrieving size for the file with path {}", path);
-            return ftpClient.getSize(path);
+            if (loggedIn) {
+                log.info("Retrieving size for the file with path {}", path);
+                return ftpLookup.getFileSize(path);
+            }
+
+            log.info("Cannot retrieve file size as user is not logged on");
+            return null;
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection while retrieving file size");
             resetConnectionValues();
@@ -684,11 +740,13 @@ public class FTPConnection {
         }
 
         try {
-            log.info("Retrieving modification time for file with path {}", path);
-            String timestamp = ftpClient.getModificationTime(path);
-            LocalDateTime dateTime = LocalDateTime.parse(timestamp, DateTimeFormatter.ofPattern("YYYYMMDDhhmmss"));
-            String targetTime = dateTime.format(DateTimeFormatter.RFC_1123_DATE_TIME);
-            return targetTime;
+            if (loggedIn) {
+                log.info("Retrieving modification time for file with path {}", path);
+                return ftpLookup.getModificationTime(path);
+            }
+
+            log.info("Cannot retrieve modification time as user is not logged on");
+            return null;
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection while retrieving modification time");
             resetConnectionValues();
@@ -710,13 +768,25 @@ public class FTPConnection {
      */
     public FTPPathStats getPathStats(String filePath) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         try {
-            return new FTPPathStats(filePath, getModificationTime(filePath), getFileStatus(filePath), getFileSize(filePath));
-        } catch (FTPNotConnectedException nc) {
-            throw new FTPNotConnectedException("FTPConnection is not connected, so cannot retrieve FTPPathStats", nc, FTPNotConnectedException.ActionType.STATUS_CHECK);
-        } catch (FTPConnectionFailedException cf) {
-            throw new FTPConnectionFailedException("A connection error occurred, so cannot retrieve FTPPathStats", cf, ftpServer);
-        } catch (FTPCommandFailedException commf) {
-            throw new FTPCommandFailedException("An error occurred, so cannot retrieve FTPPathStats", commf);
+            if (!connected) {
+                log.error("FTPConnection is not connected, cannot retrieve path stats");
+                throw new FTPNotConnectedException("FTPConnection is not connected, cannot retrieve path stats", FTPNotConnectedException.ActionType.STATUS_CHECK);
+            }
+
+            if (loggedIn) {
+                log.info("Retrieving path stats for path {}", filePath);
+                return ftpLookup.getPathStats(filePath);
+            }
+
+            log.info("User is not logged in, cannot retrieve path stats");
+            return null;
+        } catch (FTPConnectionClosedException cl) {
+            log.error("FTPConnection unexpectedly closed the connection when retrieving path stats");
+            resetConnectionValues();
+            throw new FTPConnectionFailedException("A connection error occurred, so cannot retrieve FTPPathStats", cl, ftpServer);
+        } catch (IOException ex) {
+            log.error("An error occurred retrieving file stats");
+            throw new FTPCommandFailedException("An error occurred, so cannot retrieve FTPPathStats", ex);
         }
     }
 
@@ -737,6 +807,7 @@ public class FTPConnection {
         if (!connected) {
             if (ftpConnectionDetails == null) {
                 log.error("Cannot set timeout time, there is no FTPConnectionDetails object associated with this FTPConnection");
+                resetConnectionValues();
                 throw new FTPConnectionFailedException("Cannot set timeout time, there is no FTPConnectionDetails object associated with this FTPConnection", ftpServer);
             }
 

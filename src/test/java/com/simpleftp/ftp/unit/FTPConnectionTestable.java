@@ -32,9 +32,8 @@ class FTPConnectionTestable extends FTPConnection {
     FTPConnectionTestable() {
         super();
     }
-
     FTPConnectionTestable(FTPClient ftpClient, FTPServer ftpServer, FTPConnectionDetails ftpConnectionDetails, boolean connected) {
-        super(ftpClient, ftpServer, ftpConnectionDetails, connected, false);
+        super(ftpClient, ftpServer, ftpConnectionDetails);
     }
 
     void setConnected(boolean connected) {
