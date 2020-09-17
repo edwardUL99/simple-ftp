@@ -17,7 +17,6 @@
 
 package com.simpleftp.ftp.unit;
 
-import com.simpleftp.ftp.FTPConnectionDetails;
 import com.simpleftp.ftp.FTPLookup;
 import com.simpleftp.ftp.FTPPathStats;
 import com.simpleftp.ftp.FTPServer;

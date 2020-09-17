@@ -17,7 +17,6 @@
 
 package com.simpleftp.ftp.config;
 
-import lombok.NoArgsConstructor;
 import org.apache.commons.net.ftp.FTPClientConfig;
 
 /**

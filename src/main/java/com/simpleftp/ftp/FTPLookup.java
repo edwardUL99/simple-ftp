@@ -17,20 +17,15 @@
 
 package com.simpleftp.ftp;
 
-import com.simpleftp.ftp.exceptions.FTPCommandFailedException;
-import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
 import com.simpleftp.ftp.exceptions.FTPError;
-import com.simpleftp.ftp.exceptions.FTPNotConnectedException;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.net.ftp.FTPClient;
-import org.apache.commons.net.ftp.FTPConnectionClosedException;
 import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 
 /**
@@ -105,7 +100,13 @@ public class FTPLookup {
             remotePathExists = ftpClient.changeWorkingDirectory(remotePath);
             ftpClient.changeWorkingDirectory(currentWorkingDirectory); //return to the current directory
         } else {
-            remotePathExists = Arrays.asList(ftpClient.listFiles(remotePath))
+            FTPFile[] files = ftpClient.listFiles(remotePath);
+            if (files == null) {
+                log.info("Remote path does not exist");
+                return false;
+            }
+
+            remotePathExists = Arrays.asList(files)
                                     .stream()
                                     .map(FTPFile::getName)
                                     .anyMatch(name -> name.equals(remotePath));
@@ -125,9 +126,9 @@ public class FTPLookup {
     }
 
     /**
-     * Retrieves the file status of the file specified by the path
-     * @param filePath the path of the file to query the status of
-     * @return status for the specified file
+     * Retrieves the file status of the file/directory specified by the path
+     * @param filePath the path of the file/directory to query the status of
+     * @return status for the specified file/directory
      * @throws IOException if a connection or io error occurs
      */
     public String getFileStatus(String filePath) throws IOException {
@@ -149,15 +150,23 @@ public class FTPLookup {
     /**
      * Returns the modification time for the file specified by the path
      * @param path the path of the file
-     * @return last modified time of the file specified by path in the format DAY NAME, DAY MONTH NAME YEAR hh:mm:ss e.g. Tue, 3 Jun 2008 11:05:30 GMT
+     * @return last modified time of the file specified by path in the format DAY_NAME MONTH DAY_NUMBER hh:MM:ss Timezone
      * @throws IOException if a connection error occurs or an IO error
      */
     public String getModificationTime(String path) throws IOException {
         log.info("Retrieving modification time for file with path {}", path);
         String timestamp = ftpClient.getModificationTime(path);
-        LocalDateTime dateTime = LocalDateTime.parse(timestamp, DateTimeFormatter.ofPattern("YYYYMMDDhhmmss"));
-        String targetTime = dateTime.format(DateTimeFormatter.RFC_1123_DATE_TIME);
-        return targetTime;
+        if (timestamp == null) {
+            log.info("Could not retrieve modification time for {}", path);
+            return null;
+        }
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddhhmmss");
+
+        try {
+            return dateFormat.parse(timestamp).toString();
+        } catch (ParseException ex) {
+            return null;
+        }
     }
 
     /**
