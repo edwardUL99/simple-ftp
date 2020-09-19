@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ftp.unit;
+package com.simpleftp.ftp.tests.unit;
 
 import com.simpleftp.ftp.FTPLookup;
 import com.simpleftp.ftp.FTPPathStats;
@@ -24,9 +24,11 @@ import com.simpleftp.ftp.exceptions.FTPCommandFailedException;
 import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
 import com.simpleftp.ftp.exceptions.FTPError;
 import com.simpleftp.ftp.exceptions.FTPNotConnectedException;
+import com.simpleftp.ftp.tests.FTPConnectionTestable;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPConnectionClosedException;
 import org.apache.commons.net.ftp.FTPFile;
+import org.apache.commons.net.ftp.FTPReply;
 import org.apache.commons.net.io.CopyStreamException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -1308,6 +1310,37 @@ class FTPConnectionUnitTest {
     void shouldThrowIfFTPConnectionDetailsIsNull() {
         ftpConnection.setFtpConnectionDetails(null);
         assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.setTimeoutTime(TEST_TIMEOUT_SECS));
+        verifyNoInteractions(ftpClient);
+    }
+
+    @Test
+    void shouldGetReplyCodeSuccessfully() throws FTPNotConnectedException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        int expectedReplyCode = FTPReply.COMMAND_OK;
+
+        given(ftpClient.getReplyCode())
+                .willReturn(expectedReplyCode);
+
+        int code = ftpConnection.getReplyCode();
+
+        assertEquals(expectedReplyCode, code);
+        verify(ftpClient).getReplyCode();
+    }
+
+    @Test
+    void shouldNotGetReplyCodeIfNotLoggedIn() throws FTPNotConnectedException {
+        ftpConnection.setConnected(true);
+
+        int reply = ftpConnection.getReplyCode();
+
+        assertEquals(-1, reply);
+        verifyNoInteractions(ftpClient);
+    }
+
+    @Test
+    void shouldThrowIfNotConnectedOnGetReplyCode() {
+        assertThrows(FTPNotConnectedException.class, () -> ftpConnection.getReplyCode());
         verifyNoInteractions(ftpClient);
     }
 }

@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -109,7 +110,10 @@ public class FTPLookup {
             remotePathExists = Arrays.asList(files)
                                     .stream()
                                     .map(FTPFile::getName)
-                                    .anyMatch(name -> name.equals(remotePath));
+                                    .anyMatch(name -> name.equals(new File(remotePath).getName()) || name.equals(remotePath));
+            /* This can be replaced with remotePathExists = files.length == 1 && files[0].getName().equals(new File(remotePath).getName()) || files[0].getName().equals(remotePath);
+                But being defensive in case more than one result is returned in files
+             */
         }
 
         return remotePathExists;

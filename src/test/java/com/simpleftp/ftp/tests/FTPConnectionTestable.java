@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ftp.unit;
+package com.simpleftp.ftp.tests;
 
 import com.simpleftp.ftp.FTPConnection;
 import com.simpleftp.ftp.FTPConnectionDetails;
@@ -26,21 +26,22 @@ import org.apache.commons.net.ftp.FTPClient;
  * Set up to allow testing of the FTPConnection class in a much more flexible way.
  * It uses all the code of FTPConnection but offers way to alter how it works, like the ability to set certain fields
  *
- * This is only accessible within the com.simpleftp.ftp.unit package of the src/tests directory
+ * This should only be used for testing. Not guaranteed the results if used for the actual connection
  */
-class FTPConnectionTestable extends FTPConnection {
-    FTPConnectionTestable() {
+public class FTPConnectionTestable extends FTPConnection {
+    public FTPConnectionTestable() {
         super();
     }
-    FTPConnectionTestable(FTPClient ftpClient, FTPServer ftpServer, FTPConnectionDetails ftpConnectionDetails, boolean connected) {
+
+    public FTPConnectionTestable(FTPClient ftpClient, FTPServer ftpServer, FTPConnectionDetails ftpConnectionDetails, boolean connected) {
         super(ftpClient, ftpServer, ftpConnectionDetails);
     }
 
-    void setConnected(boolean connected) {
+    public void setConnected(boolean connected) {
         this.connected = connected;
     }
 
-    void setLoggedIn(boolean loggedIn) {
+    public void setLoggedIn(boolean loggedIn) {
         this.loggedIn = loggedIn;
     }
 }

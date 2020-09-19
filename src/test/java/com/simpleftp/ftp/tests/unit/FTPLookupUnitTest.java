@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ftp.unit;
+package com.simpleftp.ftp.tests.unit;
 
 import com.simpleftp.ftp.FTPLookup;
 import com.simpleftp.ftp.FTPPathStats;
