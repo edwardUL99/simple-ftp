@@ -728,7 +728,7 @@ public class FTPConnection {
     /**
      * Returns the modification time for the file specified by the path
      * @param path the path of the file
-     * @return last modified time of the file specified by path in the format DAY NAME, DAY MONTH NAME YEAR hh:mm:ss e.g. Tue, 3 Jun 2008 11:05:30 GMT
+     * @return last modified time of the file specified by path in the format HH:mm:ss dd/MM/yyyy
      * @throws FTPNotConnectedException if isConnected() returns false
      * @throws FTPConnectionFailedException if a connection error occurred retrieving modification time
      * @throws FTPCommandFailedException if an error occurs executing the command

@@ -27,6 +27,8 @@ import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 
 /**
@@ -154,7 +156,7 @@ public class FTPLookup {
     /**
      * Returns the modification time for the file specified by the path
      * @param path the path of the file
-     * @return last modified time of the file specified by path in the format DAY_NAME MONTH DAY_NUMBER hh:MM:ss Timezone
+     * @return last modified time of the file specified by path in the format HH:mm:ss dd/MM/yyyy
      * @throws IOException if a connection error occurs or an IO error
      */
     public String getModificationTime(String path) throws IOException {
@@ -164,13 +166,9 @@ public class FTPLookup {
             log.info("Could not retrieve modification time for {}", path);
             return null;
         }
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddhhmmss");
 
-        try {
-            return dateFormat.parse(timestamp).toString();
-        } catch (ParseException ex) {
-            return null;
-        }
+        LocalDateTime time = LocalDateTime.parse(timestamp, DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        return time.format(DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy"));
     }
 
     /**

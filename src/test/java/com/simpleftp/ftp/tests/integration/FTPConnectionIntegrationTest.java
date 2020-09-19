@@ -17,7 +17,6 @@
 
 package com.simpleftp.ftp.tests.integration;
 
-import com.simpleftp.ftp.FTPConnection;
 import com.simpleftp.ftp.FTPPathStats;
 import com.simpleftp.ftp.FTPServer;
 import com.simpleftp.ftp.exceptions.FTPCommandFailedException;
@@ -25,11 +24,16 @@ import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
 import com.simpleftp.ftp.exceptions.FTPError;
 import com.simpleftp.ftp.exceptions.FTPNotConnectedException;
 import com.simpleftp.ftp.tests.FTPConnectionTestable;
+import net.bytebuddy.asm.Advice;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPFile;
+import org.apache.commons.net.ftp.FTPReply;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockftpserver.core.command.AbstractCommandHandler;
+import org.mockftpserver.core.command.Command;
+import org.mockftpserver.core.session.Session;
 import org.mockftpserver.fake.FakeFtpServer;
 import org.mockftpserver.fake.UserAccount;
 import org.mockftpserver.fake.filesystem.DirectoryEntry;
@@ -39,6 +43,8 @@ import org.mockftpserver.fake.filesystem.UnixFakeFileSystem;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -64,6 +70,7 @@ public class FTPConnectionIntegrationTest {
         fileSystem.add(new FileEntry(TEST_FTP_FILE, "abcdef"));
         ftpServer.setFileSystem(fileSystem);
         ftpServer.setServerControlPort(TEST_SERVER_PORT);
+        ftpServer.setCommandHandler("MDTM", new MDTMHandler());
 
         ftpServer.start();
 
@@ -249,6 +256,7 @@ public class FTPConnectionIntegrationTest {
 
         String time = ftpConnection.getModificationTime(TEST_FTP_FILE);
         assertNotEquals("", time);
+        assertDoesNotThrow(() -> LocalDateTime.parse(time, DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy")));
     }
 
     @Test
@@ -258,5 +266,16 @@ public class FTPConnectionIntegrationTest {
 
         FTPPathStats stats = ftpConnection.getPathStats(TEST_FTP_FILE);
         assertNotNull(stats);
+    }
+}
+
+class MDTMHandler extends AbstractCommandHandler {
+    @Override
+    public void handleCommand(Command command, Session session) throws Exception {
+        if (command.getName().equals("MDTM")) {
+            LocalDateTime current = LocalDateTime.now();
+            String time = current.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+            session.sendReply(FTPReply.COMMAND_OK, time);
+        }
     }
 }

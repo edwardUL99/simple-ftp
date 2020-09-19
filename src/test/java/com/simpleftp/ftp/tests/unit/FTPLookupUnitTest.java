@@ -48,7 +48,7 @@ public class FTPLookupUnitTest {
     private static final String TEST_FTP_FILE = TEST_PATH + "/test-ftp-file";
     private static final String TEST_STATUS = "test-status";
     private static final String TEST_SIZE = "test-size";
-    private static final String TEST_TIME = "Tue Jun 03 11:05:30 " + TimeZone.getDefault().getDisplayName(TimeZone.getDefault().observesDaylightTime(), TimeZone.SHORT) + " 2008";
+    private static final String TEST_TIME = "11:05:30 12/03/2008";
     private static final String TEST_FILE_STATUS = " test-file-status";
 
     private AutoCloseable closeable;
@@ -288,7 +288,7 @@ public class FTPLookupUnitTest {
     @Test
     void shouldGetModificationTimeSuccessfully() throws IOException {
         given(ftpClient.getModificationTime(TEST_FTP_FILE))
-                .willReturn("20080603110530");
+                .willReturn("20080312110530");
 
         String result = ftpLookup.getModificationTime(TEST_FTP_FILE);
 
@@ -319,7 +319,7 @@ public class FTPLookupUnitTest {
     void shouldGetPathStatsSuccessfully() throws IOException {
         FTPPathStats pathStats = new FTPPathStats(TEST_FTP_FILE, TEST_TIME, TEST_FILE_STATUS, TEST_SIZE);
         given(ftpClient.getModificationTime(TEST_FTP_FILE))
-                .willReturn("20080603110530");
+                .willReturn("20080312110530");
         given(ftpClient.getStatus(TEST_FTP_FILE))
                 .willReturn(TEST_FILE_STATUS);
         given(ftpClient.getSize(TEST_FTP_FILE))
