@@ -345,7 +345,37 @@ public class FTPConnection {
         }
     }
 
-    //implement get working directory
+    /**
+     * Retrieves the current working directory on the FTP server
+     * @return current ftp working directory, null if cannot be determined
+     * @throws FTPNotConnectedException if isConnected() returns false when this is called
+     * @throws FTPConnectionFailedException if a connection error occurs on execution of this command
+     * @throws FTPCommandFailedException if an error occurs sending the command
+     */
+    public String getWorkingDirectory() throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
+        if (!connected) {
+            log.error("FTPConnection is not connected to the server, cannot retrieve current working directory");
+            throw new FTPNotConnectedException("FTPConnection is not connected to the server, cannot retrieve current working directory", FTPNotConnectedException.ActionType.STATUS_CHECK);
+        }
+
+        try {
+            if (loggedIn) {
+                String workingDirectory = ftpLookup.getWorkingDirectory();
+                log.info("Retrieved current working directory as {}", workingDirectory);
+                return workingDirectory;
+            }
+
+            log.info("User is not logged in, cannot retrieve current working directory");
+            return null;
+        } catch (FTPConnectionClosedException cl) {
+            log.error("The connection was unexpectedly closed when retrieving the current working directory");
+            resetConnectionValues();
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed the connection when retrieving current working directory", cl, ftpServer);
+        } catch (IOException ex) {
+            log.error("An error occurred when retrieving the current working directory");
+            throw new FTPCommandFailedException("An error occurred retrieving the current working directory", ex);
+        }
+    }
 
     /**
      * Attempts to retrieve the FTP File specified at the path

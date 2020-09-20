@@ -138,6 +138,33 @@ public class FTPLookupUnitTest {
     }
 
     @Test
+    void shouldGetWorkingDirectorySuccessfully() throws IOException {
+        given(ftpClient.printWorkingDirectory())
+                .willReturn(TEST_PATH);
+
+        String currentDirectory = ftpLookup.getWorkingDirectory();
+
+        assertEquals(currentDirectory, TEST_PATH);
+        verify(ftpClient).printWorkingDirectory();
+    }
+
+    @Test
+    void shouldThrowConnectionErrorOnGetWorkingDirectory() throws IOException {
+        doThrow(FTPConnectionClosedException.class).when(ftpClient).printWorkingDirectory();
+
+        assertThrows(FTPConnectionClosedException.class, () -> ftpLookup.getWorkingDirectory());
+        verify(ftpClient).printWorkingDirectory();
+    }
+
+    @Test
+    void shouldThrowIOExceptionOnGetWorkingDirectory() throws IOException {
+        doThrow(IOException.class).when(ftpClient).printWorkingDirectory();
+
+        assertThrows(IOException.class, () -> ftpLookup.getWorkingDirectory());
+        verify(ftpClient).printWorkingDirectory();
+    }
+
+    @Test
     void shouldDoRemotePathExistsDirSuccessfully() throws IOException, FTPError {
         given(ftpClient.printWorkingDirectory())
                 .willReturn(TEST_PATH);

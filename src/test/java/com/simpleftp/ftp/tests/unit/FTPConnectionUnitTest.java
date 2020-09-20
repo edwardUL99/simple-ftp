@@ -448,6 +448,59 @@ class FTPConnectionUnitTest {
         verify(ftpClient).changeToParentDirectory();
     }
 
+    @Test
+    void shouldGetWorkingDirectorySuccessfully() throws IOException, FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        given(ftpLookup.getWorkingDirectory())
+                .willReturn(TEST_PATH);
+
+        String directory = ftpConnection.getWorkingDirectory();
+
+        assertEquals(directory, TEST_PATH);
+        verify(ftpLookup).getWorkingDirectory();
+    }
+
+    @Test
+    void shouldReturnNullIfLoggedOutOnGetWorkingDirectory() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+        ftpConnection.setConnected(true);
+
+        String directory = ftpConnection.getWorkingDirectory();
+
+        assertNull(directory);
+        verifyNoInteractions(ftpLookup);
+    }
+
+    @Test
+    void shouldThrowIfNotConnectedOnGetWorkingDirectory() {
+        assertThrows(FTPNotConnectedException.class, () -> ftpConnection.getWorkingDirectory());
+        verifyNoInteractions(ftpLookup);
+    }
+
+    @Test
+    void shouldThrowIfConnectionErrorOccursOnGetWorkingDirectory() throws IOException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        doThrow(FTPConnectionClosedException.class).when(ftpLookup).getWorkingDirectory();
+
+        assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.getWorkingDirectory());
+        assertFalse(ftpConnection.isConnected());
+        assertFalse(ftpConnection.isLoggedIn());
+        verify(ftpLookup).getWorkingDirectory();
+    }
+
+    @Test
+    void shouldThrowIfIOExceptionOccursOnGetWorkingDirectory() throws IOException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        doThrow(IOException.class).when(ftpLookup).getWorkingDirectory();
+
+        assertThrows(FTPCommandFailedException.class, () -> ftpConnection.getWorkingDirectory());
+        assertTrue(ftpConnection.isConnected());
+        assertTrue(ftpConnection.isLoggedIn());
+        verify(ftpLookup).getWorkingDirectory();
+    }
+
     private FTPFile getTestFTPFile() {
         FTPFile ftpFile = new FTPFile();
         ftpFile.setUser(TEST_SERVER_USER);

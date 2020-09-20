@@ -37,6 +37,7 @@ import java.util.Arrays;
  *
  * This class is intended to be a helper for FTPConnection and so you must have an active and logged in connection before using this
  * All exceptions here are expected to be caught by the FTPConnection class
+ * All IOExceptions are either FTPConnectionClosedExceptions or IOExceptions
  */
 @RequiredArgsConstructor
 @Slf4j
@@ -77,7 +78,15 @@ public class FTPLookup {
         return retrieveFTPFile(path);
     }
 
-    //implement get working directory
+    /**
+     * Attempts to retrieve the current working directory on the ftp server
+     * @return current working directory on the ftp server
+     * @throws IOException if a connection error or I/O error occurs
+     */
+    public String getWorkingDirectory() throws IOException {
+        log.info("Retrieving the current working directory on the server");
+        return ftpClient.printWorkingDirectory();
+    }
 
     /**
      * Checks if the specified remote path exists and returns the outcome

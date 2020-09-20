@@ -134,6 +134,13 @@ public class FTPConnectionIntegrationTest {
     }
 
     @Test
+    void shouldGetWorkingDirectorySuccessfully() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+        assertTrue(ftpConnection.connect());
+        assertTrue(ftpConnection.login());
+        assertEquals(ftpConnection.getWorkingDirectory(), TEST_HOME);
+    }
+
+    @Test
     void shouldGetFTPFileSuccessfully() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
         assertTrue(ftpConnection.connect());
         assertTrue(ftpConnection.login());
