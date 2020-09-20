@@ -69,6 +69,7 @@ class FTPConnectionUnitTest {
     private static final String TEST_SERVER_PASSWORD = "test-user-password";
     private static final int TEST_SERVER_PORT = 1234;
     private static final String TEST_PATH = "ftp://test/path";
+    private static final String TEST_DIR = TEST_PATH + "/directory1";
     private static final String TEST_FTP_FILE = TEST_PATH + "/test-ftp-file";
     private static final String TEST_STATUS = "test-status";
     private static final String TEST_SIZE = "test-size";
@@ -986,6 +987,117 @@ class FTPConnectionUnitTest {
         verify(ftpClient).retrieveFile(eq(TEST_FTP_FILE), any(FileOutputStream.class));
         verify(ftpLookup).getFTPFile(TEST_FTP_FILE);
         verify(ftpLookup).remotePathExists(TEST_FTP_FILE, true);
+    }
+
+    @Test
+    void shouldMakeDirectorySuccessfully() throws IOException, FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException, FTPError {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+
+        given(ftpClient.makeDirectory(TEST_DIR))
+                .willReturn(true);
+        given(ftpLookup.remotePathExists(TEST_DIR, true))
+                .willReturn(false);
+        given(ftpLookup.remotePathExists(TEST_DIR, false))
+                .willReturn(false);
+
+        boolean result = ftpConnection.makeDirectory(TEST_DIR);
+
+        assertTrue(result);
+        verify(ftpClient).makeDirectory(TEST_DIR);
+        verify(ftpLookup).remotePathExists(TEST_DIR, true);
+        verify(ftpLookup).remotePathExists(TEST_DIR, false);
+    }
+
+    @Test
+    void shouldNotMakeDirectoryIfAlreadyADir() throws FTPConnectionFailedException, FTPError, FTPNotConnectedException, FTPCommandFailedException, IOException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+
+        given(ftpLookup.remotePathExists(TEST_DIR, true))
+                .willReturn(true);
+        given(ftpLookup.remotePathExists(TEST_DIR, false))
+                .willReturn(false);
+
+        boolean result = ftpConnection.makeDirectory(TEST_DIR);
+
+        assertFalse(result);
+        verifyNoInteractions(ftpClient);
+        verify(ftpLookup).remotePathExists(TEST_DIR, true);
+    }
+
+    @Test
+    void shouldNotMakeDirectoryIfAlreadyAFile() throws FTPConnectionFailedException, FTPError, FTPNotConnectedException, FTPCommandFailedException, IOException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+
+        given(ftpLookup.remotePathExists(TEST_DIR, true))
+                .willReturn(false);
+        given(ftpLookup.remotePathExists(TEST_DIR, false))
+                .willReturn(true);
+
+        boolean result = ftpConnection.makeDirectory(TEST_DIR);
+
+        assertFalse(result);
+        verifyNoInteractions(ftpClient);
+        verify(ftpLookup).remotePathExists(TEST_DIR, true);
+        verify(ftpLookup).remotePathExists(TEST_DIR, false);
+    }
+
+    @Test
+    void shouldNotMakeDirectoryIfNotLoggedIn() throws FTPConnectionFailedException, FTPError, FTPNotConnectedException, FTPCommandFailedException {
+        ftpConnection.setConnected(true);
+
+        boolean result = ftpConnection.makeDirectory(TEST_DIR);
+
+        assertFalse(result);
+        verifyNoInteractions(ftpClient);
+        verifyNoInteractions(ftpLookup);
+    }
+
+    @Test
+    void shouldThrowIfNotConnectedOnMakeDirectory() {
+        assertThrows(FTPNotConnectedException.class, () -> ftpConnection.makeDirectory(TEST_DIR));
+        verifyNoInteractions(ftpLookup);
+        verifyNoInteractions(ftpClient);
+    }
+
+    @Test
+    void shouldThrowIfConnectionErrorOccursOnMakeDirectory() throws IOException, FTPError {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+
+        given(ftpLookup.remotePathExists(TEST_DIR, true))
+                .willReturn(false);
+        given(ftpLookup.remotePathExists(TEST_DIR, false))
+                .willReturn(false);
+        doThrow(FTPConnectionClosedException.class).when(ftpClient).makeDirectory(TEST_DIR);
+
+        assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.makeDirectory(TEST_DIR));
+        assertFalse(ftpConnection.isConnected());
+        assertFalse(ftpConnection.isLoggedIn());
+        verify(ftpLookup).remotePathExists(TEST_DIR, true);
+        verify(ftpLookup).remotePathExists(TEST_DIR, false);
+        verify(ftpClient).makeDirectory(TEST_DIR);
+    }
+
+    @Test
+    void shouldThrowIfIOExceptionOccursOnMakeDirectory() throws IOException, FTPError {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+
+        given(ftpLookup.remotePathExists(TEST_DIR, true))
+                .willReturn(false);
+        given(ftpLookup.remotePathExists(TEST_DIR, false))
+                .willReturn(false);
+        doThrow(IOException.class).when(ftpClient).makeDirectory(TEST_DIR);
+
+        assertThrows(FTPCommandFailedException.class, () -> ftpConnection.makeDirectory(TEST_DIR));
+        assertTrue(ftpConnection.isConnected());
+        assertTrue(ftpConnection.isLoggedIn());
+        verify(ftpLookup).remotePathExists(TEST_DIR, true);
+        verify(ftpLookup).remotePathExists(TEST_DIR, false);
+        verify(ftpClient).makeDirectory(TEST_DIR);
     }
 
     @Test

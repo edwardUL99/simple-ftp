@@ -57,6 +57,8 @@ public class FTPConnectionIntegrationTest {
     private static final String TEST_HOME = "/test";
     private static final String TEST_PATH = "/test/path";
     private static final String TEST_FTP_FILE = "/test/path/test-ftp-file";
+    private static final String TEST_DIR1 = "/test/path/dir1";
+    private static final String TEST_DIR2 = "dir2";
 
     @BeforeEach
     public void setup() {
@@ -192,6 +194,22 @@ public class FTPConnectionIntegrationTest {
         assertTrue(file.exists());
 
         file.delete();
+    }
+
+    @Test
+    void shouldMakeDirSuccessfullyAsAbsolutePath() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException, FTPError {
+        assertTrue(ftpConnection.connect());
+        assertTrue(ftpConnection.login());
+        assertTrue(ftpConnection.makeDirectory(TEST_DIR1));
+        assertTrue(ftpServer.getFileSystem().exists(TEST_DIR1));
+    }
+
+    @Test
+    void shouldMakeDirSuccessfullyAsAbstractPath() throws FTPConnectionFailedException, FTPError, FTPNotConnectedException, FTPCommandFailedException {
+        assertTrue(ftpConnection.connect());
+        assertTrue(ftpConnection.login());
+        assertTrue(ftpConnection.makeDirectory(TEST_DIR2));
+        assertTrue(ftpServer.getFileSystem().exists("/test/dir2"));
     }
 
     @Test

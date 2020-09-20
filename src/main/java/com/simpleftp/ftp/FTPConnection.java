@@ -511,12 +511,6 @@ public class FTPConnection {
         return uploadFile(new File(localPath), path);
     }
 
-    //add append to file too
-
-    private boolean localFileExists(String localPath) {
-        return new File(localPath).exists();
-    }
-
     private String getFileBasename(FTPFile file) throws FTPError {
         String name = file.getName();
 
@@ -608,6 +602,45 @@ public class FTPConnection {
         } catch (IOException ex1) {
             log.error("An error occurred when downloading file {} from server to {}", remotePath, localPath);
             throw new FTPCommandFailedException("An error occurred when downloading remote file to local path", ex1);
+        }
+    }
+
+    /**
+     * Attempts to make a directory specified by the path provided. Expected in the format path/to/[directory-name] or as an abstract path
+     * If the path already exists as either a directory or a file, this returns false.
+     * @return true if successful, false if not
+     * @throws FTPNotConnectedException if called when isConnected() returns false
+     * @throws FTPConnectionFailedException if a connection error occurs
+     * @throws FTPCommandFailedException if an error occurs sending the command or receiving a reply
+     * @throws FTPError if a general ftp error occurs
+     */
+    public boolean makeDirectory(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException, FTPError {
+        if (!connected) {
+            log.error("FTPConnection is not connected to the server, cannot make directory {}", path);
+            throw new FTPNotConnectedException("FTPConnection is not connected to the server, cannot make directory", FTPNotConnectedException.ActionType.NAVIGATE);
+        }
+
+        try {
+
+            if (loggedIn) {
+                if (ftpLookup.remotePathExists(path, true) || ftpLookup.remotePathExists(path, false)) {
+                    log.info("Path {} exists as a directory already or a file", path);
+                    return false;
+                }
+
+                log.info("Creating directory {} on the server", path);
+                return ftpClient.makeDirectory(path);
+            }
+
+            log.info("User is not logged into the server, cannot create a directory");
+            return false;
+        } catch (FTPConnectionClosedException cl) {
+            log.error("FTPConnection unexpectedly closed the connection while making directory {}", path);
+            resetConnectionValues();
+            throw new FTPConnectionFailedException("FTPConnection unexpectedly closed the connection while making a directory", cl, ftpServer);
+        } catch (IOException ex) {
+            log.error("An error occurred making directory {}", path);
+            throw new FTPCommandFailedException("An error occurred sending the make directory command", ex);
         }
     }
 
