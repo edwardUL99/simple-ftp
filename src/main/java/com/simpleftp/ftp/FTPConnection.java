@@ -194,6 +194,8 @@ public class FTPConnection {
             if (loggedIn) {
                 log.info("A user is logged into the FTP server, logging out before disconnecting");
                 logout();
+                if (loggedIn)
+                    loggedIn = false; //in case logout fails, enforce that loggedIn should be false
             }
             ftpClient.disconnect();
             connected = false;

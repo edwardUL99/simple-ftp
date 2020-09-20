@@ -1451,4 +1451,57 @@ class FTPConnectionUnitTest {
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.getReplyCode());
         verifyNoInteractions(ftpClient);
     }
+
+    /**
+     * This is testing the assertion that <b>If connected = false, loggedIn should also be false</b>.
+     * Implemented as per issue 10 {@see https://github.com/edwardUL99/simple-ftp/issues/10}
+     */
+    @Test
+    void ifNotConnectedUserShouldNotBeLoggedIn() {
+        /*
+         *  SCENARIO 1:
+         * 1- Attempt to login while not connected and ignore any exceptions
+         * 2- Try and logout
+         * 3- Logout should be a no-op
+         */
+        try {
+            ftpConnection.login();
+        } catch (Exception ex) {
+            // ignore
+        }
+        assertFalse(ftpConnection.isConnected());
+        assertFalse(ftpConnection.isLoggedIn());
+        try {
+            ftpConnection.logout();
+        } catch(Exception ec) {
+            // ignore
+        }
+        assertFalse(ftpConnection.isConnected());
+        assertFalse(ftpConnection.isLoggedIn());
+        verifyNoInteractions(ftpClient);
+
+        reset(ftpClient);
+        /*
+         * SCENARIO 2:
+         * 1- Have the server be connected and logged in successfully
+         * 2- Without calling logout(), call disconnect()
+         * 3- Call logout(), this should be a no-op
+         */
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+
+        try {
+            ftpConnection.disconnect();
+            assertFalse(ftpConnection.isConnected());
+            assertFalse(ftpConnection.isLoggedIn());
+            verify(ftpClient).disconnect();
+            reset(ftpClient);
+            ftpConnection.logout();
+            verifyNoInteractions(ftpClient);
+            assertFalse(ftpConnection.isConnected());
+            assertFalse(ftpConnection.isLoggedIn());
+        } catch (Exception ex) {
+            fail("An exception occurred where it should not have");
+        }
+    }
 }
