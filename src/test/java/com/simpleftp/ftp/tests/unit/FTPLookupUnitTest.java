@@ -31,7 +31,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
-import java.util.TimeZone;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
@@ -135,6 +134,34 @@ public class FTPLookupUnitTest {
         assertThrows(IOException.class, () -> ftpLookup.getFTPFile(TEST_FTP_FILE));
         verify(ftpClient).hasFeature("MLST");
         verify(ftpClient).listFiles(TEST_FTP_FILE);
+    }
+
+    @Test
+    void shouldListFTPFilesSuccessfully() throws IOException {
+        FTPFile[] files = {getTestFTPFile()};
+        given(ftpClient.listFiles(TEST_PATH))
+                .willReturn(files);
+
+        FTPFile[] result = ftpLookup.listFTPFiles(TEST_PATH);
+
+        assertEquals(result, files);
+        verify(ftpClient).listFiles(TEST_PATH);
+    }
+
+    @Test
+    void shouldThrowOnConnectionErrorOnListFTPFiles() throws IOException {
+        doThrow(FTPConnectionClosedException.class).when(ftpClient).listFiles(TEST_PATH);
+
+        assertThrows(FTPConnectionClosedException.class, () -> ftpLookup.listFTPFiles(TEST_PATH));
+        verify(ftpClient).listFiles(TEST_PATH);
+    }
+
+    @Test
+    void shouldThrowIOExceptionOnListFTPFiles() throws IOException {
+        doThrow(IOException.class).when(ftpClient).listFiles(TEST_PATH);
+
+        assertThrows(IOException.class, () -> ftpLookup.listFTPFiles(TEST_PATH));
+        verify(ftpClient).listFiles(TEST_PATH);
     }
 
     @Test

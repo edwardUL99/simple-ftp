@@ -409,6 +409,29 @@ public class FTPConnection {
         }
     }
 
+    public FTPFile[] listFiles(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
+        if (!connected) {
+            log.error("FTPConnection not connected to the server, cannot list files for path {}", path);
+            throw new FTPNotConnectedException("FTPConnection not connected to the server, cannot list files", FTPNotConnectedException.ActionType.DOWNLOAD);
+        }
+
+        try {
+            if (loggedIn) {
+                return ftpLookup.listFTPFiles(path);
+            }
+
+            log.info("User is not logged in, so cannot list files");
+            return null;
+        } catch (FTPConnectionClosedException cl) {
+            log.error("FTPConnection unexpectedly closed the connection, cannot retrieve files");
+            resetConnectionValues();
+            throw new FTPConnectionFailedException("FTPConnection unexpectedly closed the connection, cannot retrieve files", cl, ftpServer);
+        } catch (IOException ex) {
+            log.error("An error occurred when listing files");
+            throw new FTPCommandFailedException("An error occurred when listing files", ex);
+        }
+    }
+
     private FTPFile writeLocalFileToRemote(File file, String path) throws IOException {
         String name = file.getName();
         String remoteFileName = path + "/" + name;

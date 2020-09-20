@@ -576,6 +576,61 @@ class FTPConnectionUnitTest {
         verify(ftpLookup).getFTPFile(TEST_FTP_FILE);
     }
 
+    @Test
+    void shouldListFilesSuccessfully() throws IOException, FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+
+        FTPFile[] files = {getTestFTPFile()};
+        given(ftpLookup.listFTPFiles(TEST_PATH))
+                .willReturn(files);
+
+        FTPFile[] result = ftpConnection.listFiles(TEST_PATH);
+
+        assertEquals(result, files);
+        verify(ftpLookup).listFTPFiles(TEST_PATH);
+    }
+
+    @Test
+    void shouldReturnNullIfNotLoggedInOnListFiles() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+        ftpConnection.setConnected(true);
+
+        FTPFile[] result = ftpConnection.listFiles(TEST_PATH);
+
+        assertNull(result);
+        verifyNoInteractions(ftpLookup);
+    }
+
+    @Test
+    void shouldThrowIfNotConnectedOnListFiles() {
+        assertThrows(FTPNotConnectedException.class, () -> ftpConnection.listFiles(TEST_PATH));
+        verifyNoInteractions(ftpLookup);
+    }
+
+    @Test
+    void shouldThrowIfConnectionErrorOccursOnListFiles() throws IOException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        doThrow(FTPConnectionClosedException.class).when(ftpLookup).listFTPFiles(TEST_PATH);
+
+        assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.listFiles(TEST_PATH));
+        assertFalse(ftpConnection.isConnected());
+        assertFalse(ftpConnection.isLoggedIn());
+        verify(ftpLookup).listFTPFiles(TEST_PATH);
+    }
+
+    @Test
+    void shouldThrowIfIOExceptionOccursOnListFiles() throws IOException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        doThrow(IOException.class).when(ftpLookup).listFTPFiles(TEST_PATH);
+
+        assertThrows(FTPCommandFailedException.class, () -> ftpConnection.listFiles(TEST_PATH));
+        assertTrue(ftpConnection.isConnected());
+        assertTrue(ftpConnection.isLoggedIn());
+        verify(ftpLookup).listFTPFiles(TEST_PATH);
+    }
+
     private File getTestFile(boolean create) throws IOException {
         File file = new File(tempDir.getAbsolutePath() + "/" + "test-ftp-file");
 

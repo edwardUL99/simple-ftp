@@ -24,8 +24,6 @@ import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
 import com.simpleftp.ftp.exceptions.FTPError;
 import com.simpleftp.ftp.exceptions.FTPNotConnectedException;
 import com.simpleftp.ftp.tests.FTPConnectionTestable;
-import net.bytebuddy.asm.Advice;
-import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
 import org.junit.jupiter.api.AfterEach;
@@ -148,6 +146,13 @@ public class FTPConnectionIntegrationTest {
     }
 
     @Test
+    void shouldListFilesSuccessfully() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+        assertTrue(ftpConnection.connect());
+        assertTrue(ftpConnection.login());
+        assertNotNull(ftpConnection.listFiles(TEST_PATH));
+    }
+
+    @Test
     void shouldUploadFileSuccessfully() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException, IOException, FTPError {
         assertTrue(ftpConnection.connect());
         assertTrue(ftpConnection.login());
@@ -237,7 +242,7 @@ public class FTPConnectionIntegrationTest {
     }
 
     @Test
-    void shouldFetFileStatusSuccessfully() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+    void shouldGetFileStatusSuccessfully() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
         assertTrue(ftpConnection.connect());
         assertTrue(ftpConnection.login());
 

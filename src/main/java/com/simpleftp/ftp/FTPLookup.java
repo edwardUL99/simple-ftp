@@ -25,8 +25,6 @@ import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.File;
 import java.io.IOException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -76,6 +74,11 @@ public class FTPLookup {
     public FTPFile getFTPFile(String path) throws IOException {
         log.info("Attempting to retrieve file from path {}", path);
         return retrieveFTPFile(path);
+    }
+
+    public FTPFile[] listFTPFiles(String path) throws IOException {
+        log.info("Attempting to return list of files from server with path {}", path);
+        return ftpClient.listFiles(path);
     }
 
     /**
