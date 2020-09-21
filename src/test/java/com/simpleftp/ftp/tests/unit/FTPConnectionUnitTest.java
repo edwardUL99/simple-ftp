@@ -1101,6 +1101,60 @@ class FTPConnectionUnitTest {
     }
 
     @Test
+    void shouldRenameFileSuccessfully() throws IOException, FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+
+        given(ftpClient.rename(TEST_PATH, TEST_FTP_FILE))
+                .willReturn(true);
+
+        boolean result = ftpConnection.renameFile(TEST_PATH, TEST_FTP_FILE);
+
+        assertTrue(result);
+        verify(ftpClient).rename(TEST_PATH, TEST_FTP_FILE);
+    }
+
+    @Test
+    void shouldNotRenameFileIfNotLoggedIn() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+        ftpConnection.setConnected(true);
+
+        boolean result = ftpConnection.renameFile(TEST_PATH, TEST_FTP_FILE);
+
+        assertFalse(result);
+        verifyNoInteractions(ftpClient);
+    }
+
+    @Test
+    void shouldThrowIfNotConnectedOnRenameFile() {
+        assertThrows(FTPNotConnectedException.class, () -> ftpConnection.renameFile(TEST_PATH, TEST_FTP_FILE));
+        verifyNoInteractions(ftpClient);
+    }
+
+    @Test
+    void shouldThrowIfConnectionErrorOccursOnRenameFile() throws IOException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        doThrow(FTPConnectionClosedException.class).when(ftpClient).rename(TEST_PATH, TEST_FTP_FILE);
+
+        assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.renameFile(TEST_PATH, TEST_FTP_FILE));
+        assertFalse(ftpConnection.isConnected());
+        assertFalse(ftpConnection.isLoggedIn());
+        verify(ftpClient).rename(TEST_PATH, TEST_FTP_FILE);
+    }
+
+    @Test
+    void shouldThrowIfIOExceptionOccursOnRenameFile() throws IOException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        doThrow(IOException.class).when(ftpClient).rename(TEST_PATH, TEST_FTP_FILE);
+
+        assertThrows(FTPCommandFailedException.class, () -> ftpConnection.renameFile(TEST_PATH, TEST_FTP_FILE));
+        assertTrue(ftpConnection.isConnected());
+        assertTrue(ftpConnection.isLoggedIn());
+        verify(ftpClient).rename(TEST_PATH, TEST_FTP_FILE);
+    }
+
+    @Test
     void shouldRemoveFileSuccessfully() throws IOException, FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);

@@ -57,6 +57,7 @@ public class FTPConnectionIntegrationTest {
     private static final String TEST_HOME = "/test";
     private static final String TEST_PATH = "/test/path";
     private static final String TEST_FTP_FILE = "/test/path/test-ftp-file";
+    private static final String TEST_FTP_FILE_RENAMED = "/test/path/test-ftp-file.txt";
     private static final String TEST_DIR1 = "/test/path/dir1";
     private static final String TEST_DIR2 = "dir2";
 
@@ -210,6 +211,23 @@ public class FTPConnectionIntegrationTest {
         assertTrue(ftpConnection.login());
         assertTrue(ftpConnection.makeDirectory(TEST_DIR2));
         assertTrue(ftpServer.getFileSystem().exists("/test/dir2"));
+    }
+
+    @Test
+    void shouldRenameFileSuccessfully() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+        assertTrue(ftpConnection.connect());
+        assertTrue(ftpConnection.login());
+        assertTrue(ftpServer.getFileSystem().exists(TEST_FTP_FILE));
+        assertTrue(ftpConnection.renameFile(TEST_FTP_FILE, TEST_FTP_FILE_RENAMED));
+        assertTrue(ftpServer.getFileSystem().exists(TEST_FTP_FILE_RENAMED));
+        assertFalse(ftpServer.getFileSystem().exists(TEST_FTP_FILE));
+    }
+
+    @Test
+    void shouldNotRenameFileThatDoesntExist() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+        assertTrue(ftpConnection.connect());
+        assertTrue(ftpConnection.login());
+        assertFalse(ftpConnection.renameFile("NOT_EXISTS", "EXISTS"));
     }
 
     @Test

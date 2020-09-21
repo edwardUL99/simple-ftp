@@ -617,7 +617,7 @@ public class FTPConnection {
     public boolean makeDirectory(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException, FTPError {
         if (!connected) {
             log.error("FTPConnection is not connected to the server, cannot make directory {}", path);
-            throw new FTPNotConnectedException("FTPConnection is not connected to the server, cannot make directory", FTPNotConnectedException.ActionType.NAVIGATE);
+            throw new FTPNotConnectedException("FTPConnection is not connected to the server, cannot make directory", FTPNotConnectedException.ActionType.MODIFICATION);
         }
 
         try {
@@ -641,6 +641,39 @@ public class FTPConnection {
         } catch (IOException ex) {
             log.error("An error occurred making directory {}", path);
             throw new FTPCommandFailedException("An error occurred sending the make directory command", ex);
+        }
+    }
+
+    /**
+     * Renames the file specified by from to the name specified by to
+     * @param from the old path/name (abstract)
+     * @param to the new path/name (abstract)
+     * @return true if successful, false if not
+     * @throws FTPNotConnectedException if isConnected() returns false when this is called
+     * @throws FTPConnectionFailedException if a connection error occurs
+     * @throws IOException if an error occurs sending the command or receiving a reply from the server
+     */
+    public boolean renameFile(String from, String to) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
+        if (!connected) {
+            log.error("Cannot rename from {} to {}, as FTPConnection is not connected to the server", from, to);
+            throw new FTPNotConnectedException("FTPConnection not connected to server, cannot rename file", FTPNotConnectedException.ActionType.MODIFICATION);
+        }
+
+        try {
+            if (loggedIn) {
+                log.info("Renaming file from {} to {}", from, to);
+                return ftpClient.rename(from, to);
+            }
+
+            log.info("Cannot rename file from {} to {} as user is not logged into the server", from, to);
+            return false;
+        } catch (FTPConnectionClosedException cl) {
+            log.error("The FTPConnection unexpectedly closed the connection when renaming file");
+            resetConnectionValues();
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed the connection when renaming file", cl, ftpServer);
+        } catch (IOException ex) {
+            log.error("An error occurred renaming the file");
+            throw new FTPCommandFailedException("An error occurred renaming the file", ex);
         }
     }
 

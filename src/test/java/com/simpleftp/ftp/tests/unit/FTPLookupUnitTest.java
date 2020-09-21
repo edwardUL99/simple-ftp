@@ -137,8 +137,25 @@ public class FTPLookupUnitTest {
     }
 
     @Test
-    void shouldListFTPFilesSuccessfully() throws IOException {
+    void shouldListFTPFilesMListDirSuccessfully() throws IOException {
         FTPFile[] files = {getTestFTPFile()};
+        given(ftpClient.hasFeature("MLSD"))
+                .willReturn(true);
+        given(ftpClient.mlistDir(TEST_PATH))
+                .willReturn(files);
+
+        FTPFile[] result = ftpLookup.listFTPFiles(TEST_PATH);
+
+        assertEquals(result, files);
+        verify(ftpClient).mlistDir(TEST_PATH);
+        verify(ftpClient).hasFeature("MLSD");
+    }
+
+    @Test
+    void shouldListFTPFilesUsingListFilesSuccessfully() throws IOException {
+        FTPFile[] files = {getTestFTPFile()};
+        given(ftpClient.hasFeature("MLSD"))
+                .willReturn(false);
         given(ftpClient.listFiles(TEST_PATH))
                 .willReturn(files);
 
@@ -146,6 +163,7 @@ public class FTPLookupUnitTest {
 
         assertEquals(result, files);
         verify(ftpClient).listFiles(TEST_PATH);
+        verify(ftpClient).hasFeature("MLSD");
     }
 
     @Test

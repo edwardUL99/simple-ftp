@@ -76,9 +76,19 @@ public class FTPLookup {
         return retrieveFTPFile(path);
     }
 
+    private FTPFile[] retrieveFilesListing(String path) throws IOException {
+        if (ftpClient.hasFeature("MLSD")) {
+            log.info("Using MLSD to list files in path {}", path);
+            return ftpClient.mlistDir(path);
+        } else {
+            log.info("Using LIST to list all files in path {}", path);
+            return ftpClient.listFiles(path);
+        }
+    }
+
     public FTPFile[] listFTPFiles(String path) throws IOException {
         log.info("Attempting to return list of files from server with path {}", path);
-        return ftpClient.listFiles(path);
+        return retrieveFilesListing(path);
     }
 
     /**
