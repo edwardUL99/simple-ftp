@@ -1211,6 +1211,62 @@ class FTPConnectionUnitTest {
     }
 
     @Test
+    void shouldRemoveDirectorySuccessfully() throws IOException, FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+
+        given(ftpClient.removeDirectory(TEST_PATH))
+                .willReturn(true);
+
+        boolean result = ftpConnection.removeDirectory(TEST_PATH);
+
+        assertTrue(result);
+        verify(ftpClient).removeDirectory(TEST_PATH);
+    }
+
+    @Test
+    void shouldNotRemoveDirectoryIfNotLoggedIn() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+        ftpConnection.setConnected(true);
+
+        boolean result = ftpConnection.removeDirectory(TEST_PATH);
+
+        assertFalse(result);
+        verifyNoInteractions(ftpClient);
+    }
+
+    @Test
+    void shouldThrowIfNotConnectedOnRemovingDirectory() {
+        assertThrows(FTPNotConnectedException.class, () -> ftpConnection.removeDirectory(TEST_PATH));
+        verifyNoInteractions(ftpClient);
+    }
+
+    @Test
+    void shouldThrowIfConnectionCloseOnRemovingDirectory() throws IOException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+
+        doThrow(FTPConnectionClosedException.class).when(ftpClient).removeDirectory(TEST_PATH);
+
+        assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.removeDirectory(TEST_PATH));
+        assertFalse(ftpConnection.isConnected());
+        assertFalse(ftpConnection.isLoggedIn());
+        verify(ftpClient).removeDirectory(TEST_PATH);
+    }
+
+    @Test
+    void shouldThrowIfIOExceptionOccursOnRemovingDirectory() throws IOException {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+
+        doThrow(IOException.class).when(ftpClient).removeDirectory(TEST_PATH);
+
+        assertThrows(FTPCommandFailedException.class, () -> ftpConnection.removeDirectory(TEST_PATH));
+        assertTrue(ftpConnection.isConnected());
+        assertTrue(ftpConnection.isLoggedIn());
+        verify(ftpClient).removeDirectory(TEST_PATH);
+    }
+
+    @Test
     void shouldGetRemotePathExistsSuccessfully() throws IOException, FTPError, FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);

@@ -239,6 +239,25 @@ public class FTPConnectionIntegrationTest {
     }
 
     @Test
+    void shouldRemoveDirectorySuccessfully() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+        String emptyDir = "/test/path/empty-dir";
+        assertTrue(ftpConnection.connect());
+        assertTrue(ftpConnection.login());
+        ftpServer.getFileSystem().add(new DirectoryEntry(emptyDir));
+        assertTrue(ftpServer.getFileSystem().exists(emptyDir));
+        assertTrue(ftpConnection.removeDirectory(emptyDir));
+        assertFalse(ftpServer.getFileSystem().exists(emptyDir));
+    }
+
+    @Test
+    void shouldNOtRemoveNonEmptyDirectory() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+        assertTrue(ftpConnection.connect());
+        assertTrue(ftpConnection.login());
+        assertFalse(ftpConnection.removeDirectory(TEST_PATH));
+        assertTrue(ftpServer.getFileSystem().exists(TEST_PATH));
+    }
+
+    @Test
     void shouldCheckIfRemoteDirExistsSuccessfully() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException, FTPError {
         assertTrue(ftpConnection.connect());
         assertTrue(ftpConnection.login());

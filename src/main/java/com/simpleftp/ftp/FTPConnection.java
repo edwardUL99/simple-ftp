@@ -711,7 +711,37 @@ public class FTPConnection {
         }
     }
 
-    //implement get working directory
+    /**
+     * Attempts to remove a directory if it is empty
+     * @param path the path to the empty directory
+     * @return true if successful, false if not
+     * @throws FTPNotConnectedException if isConnected() returns false when this is called
+     * @throws FTPConnectionFailedException if a connection error occurs when removing the directory
+     * @throws FTPCommandFailedException if an error occurs sending the command or receiving a reply
+     */
+    public boolean removeDirectory(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
+        if (!connected) {
+            log.error("FTPConnection is not connected to the server, cannot remove directory {}", path);
+            throw new FTPNotConnectedException("FTPConnection is not connected to the server, cannot remove directory", FTPNotConnectedException.ActionType.MODIFICATION);
+        }
+
+        try {
+            if (loggedIn) {
+                log.info("Attempting to remove directory {}", path);
+                return ftpClient.removeDirectory(path);
+            }
+
+            log.info("User is not logged in, cannot remove directory {}", path);
+            return false;
+        } catch (FTPConnectionClosedException cl) {
+            log.error("The FTPConnection unexpectedly closed the connection when removing directory");
+            resetConnectionValues();
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed the connection when removing directory", cl, ftpServer);
+        } catch (IOException ex) {
+            log.error("An error occurred sending the command or receiving a reply from the server");
+            throw new FTPCommandFailedException("An error occurred sending the command or receiving a reply from the server", ex);
+        }
+    }
 
     /**
      * Checks if the specified remote path exists and returns the outcome
