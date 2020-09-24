@@ -334,6 +334,19 @@ public class FTPConnectionIntegrationTest {
         FTPPathStats stats = ftpConnection.getPathStats(TEST_FTP_FILE);
         assertNotNull(stats);
     }
+
+    @Test
+    void shouldGetReplyCodeSuccessfully() throws FTPConnectionFailedException {
+        assertTrue(ftpConnection.connect());
+        assertEquals(220, ftpConnection.getReplyCode());
+    }
+
+    @Test
+    void shouldGetReplyStringSuccessfully() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+        assertTrue(ftpConnection.connect());
+        assertTrue(ftpConnection.login());
+        assertEquals("230 User logged in, proceed.\r\n", ftpConnection.getReplyString());
+    }
 }
 
 class MDTMHandler extends AbstractCommandHandler {

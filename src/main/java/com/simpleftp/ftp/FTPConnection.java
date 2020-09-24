@@ -974,21 +974,19 @@ public class FTPConnection {
 
     /**
      * Returns the reply code of the last command called. This is a code that is defined in the org.apache.commons.net.ftp.FTPReply class
-     * @return reply code of the last command or -1 if user is not logged in
-     * @throws FTPNotConnectedException if called when isConnected() returns false
+     * @return reply code of the last command
      */
-    public int getReplyCode() throws FTPNotConnectedException {
-        if (!connected) {
-            log.error("FTPConnection is not connected, failed to retrieve reply code");
-            throw new FTPNotConnectedException("FTPConnection is not connected to the server, cannot retrieve reply code", FTPNotConnectedException.ActionType.STATUS_CHECK);
-        }
+    public int getReplyCode() {
+        log.info("Retrieving reply code of last command");
+        return ftpClient.getReplyCode();
+    }
 
-        if (loggedIn) {
-            log.info("Retrieving reply code of last command");
-            return ftpClient.getReplyCode();
-        }
-
-        log.info("User is not logged in, cannot check reply code");
-        return -1;
+    /**
+     * Returns the reply string from the previously executed command
+     * @return reply string from last command
+     */
+    public String getReplyString() {
+        log.info("Retrieving reply string from the last executed command");
+        return ftpClient.getReplyString();
     }
 }

@@ -1644,7 +1644,7 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldGetReplyCodeSuccessfully() throws FTPNotConnectedException {
+    void shouldGetReplyCodeSuccessfully() {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);
         int expectedReplyCode = FTPReply.COMMAND_OK;
@@ -1659,19 +1659,15 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldNotGetReplyCodeIfNotLoggedIn() throws FTPNotConnectedException {
-        ftpConnection.setConnected(true);
+    void shouldGetReplyStringSuccessfully() {
+        String reply = "TEST_REPLY";
+        given(ftpClient.getReplyString())
+                .willReturn(reply);
 
-        int reply = ftpConnection.getReplyCode();
+        String result = ftpConnection.getReplyString();
 
-        assertEquals(-1, reply);
-        verifyNoInteractions(ftpClient);
-    }
-
-    @Test
-    void shouldThrowIfNotConnectedOnGetReplyCode() {
-        assertThrows(FTPNotConnectedException.class, () -> ftpConnection.getReplyCode());
-        verifyNoInteractions(ftpClient);
+        assertEquals(reply, result);
+        verify(ftpClient).getReplyString();
     }
 
     /**
