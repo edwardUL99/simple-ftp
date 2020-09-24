@@ -43,6 +43,7 @@ import java.io.*;
  */
 @With
 @Slf4j
+@EqualsAndHashCode(of = {"ftpServer", "ftpConnectionDetails", "connected", "loggedIn"})
 public class FTPConnection {
     /**
      * The FTP Client which provides the main FTP functionality
