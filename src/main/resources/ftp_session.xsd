@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~  Copyright (C) 2020  Edward Lynch-Milner
+  ~
+  ~  This program is free software: you can redistribute it and/or modify
+  ~  it under the terms of the GNU General Public License as published by
+  ~  the Free Software Foundation, either version 3 of the License, or
+  ~  (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tns="urn:simple:ftp" targetNamespace="urn:simple:ftp">
+    <xs:element name="SimpleFTP" type="tns:SimpleFTPV01"/>
+
+    <xs:simpleType name="Max80Text">
+        <xs:restriction base="xs:string">
+            <xs:minLength value="1"/>
+            <xs:maxLength value="80"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="HostNameText">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[A-Za-z0-9.]{1,80}"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:complexType name="FTPServerV01">
+        <xs:sequence>
+            <xs:element name="Host" type="tns:HostNameText"/>
+            <xs:element name="User" type="tns:Max80Text"/>
+            <xs:element name="Port" type="xs:integer"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="ConnectionDetailsV01">
+        <xs:sequence>
+            <xs:element name="PageSize" type="xs:integer"/>
+            <xs:element name="Timeout" type="xs:integer"/>
+            <!-- will  be adding more here -->
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="LastSessionV01">
+        <xs:sequence>
+            <xs:element name="LastWD" type="xs:string">
+                <xs:annotation>
+                    <xs:documentation>This tag stores the working directory the user was in before they saved this session</xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="SavedTime" type="xs:dateTime">
+                <xs:annotation>
+                    <xs:documentation>This tag stores the time at which this session (i.e. represents last session) was saved</xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <!-- others will go here -->
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="SessionV01">
+        <xs:sequence>
+            <xs:element name="FTPServer" type="tns:FTPServerV01"/>
+            <xs:element name="ConnectionDetails" type="tns:ConnectionDetailsV01"/>
+            <xs:element name="LastSession" type="tns:LastSessionV01"/>
+            <!-- other elements will go here -->
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="SimpleFTPV01">
+        <xs:sequence>
+            <xs:element name="Session" type="tns:SessionV01" minOccurs="1" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+</xs:schema>
