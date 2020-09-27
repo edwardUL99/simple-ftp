@@ -45,9 +45,14 @@
     </xs:complexType>
     <xs:complexType name="LastSessionV01">
         <xs:sequence>
-            <xs:element name="LastWD" type="xs:string">
+            <xs:element name="LastRemoteWD" type="xs:string">
                 <xs:annotation>
-                    <xs:documentation>This tag stores the working directory the user was in before they saved this session</xs:documentation>
+                    <xs:documentation>This tag stores the remote working directory the user was in before they saved this session</xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="LastLocalWD" type="xs:string">
+                <xs:annotation>
+                    <xs:documentation>This tag stores the local working directory the user was in before they saved this session</xs:documentation>
                 </xs:annotation>
             </xs:element>
             <xs:element name="SavedTime" type="xs:dateTime">

@@ -33,6 +33,10 @@ public class FTPServer {
     private String user;
     private String password;
     private int port;
+    /**
+     * The default port for FTP
+     */
+    public static final int DEFAULT_PORT = 21;
 
     /**
      * Overrides Object's toString
