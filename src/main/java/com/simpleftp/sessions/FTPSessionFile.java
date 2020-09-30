@@ -28,7 +28,7 @@ import java.util.List;
  * This represents a file which can contain 1 or more saved sessions.
  * This class is transformed into an XML file by the SessionSaver class
  */
-@EqualsAndHashCode(of = {"fileName"})
+@EqualsAndHashCode
 public class FTPSessionFile {
     @Getter
     private String fileName;

@@ -19,6 +19,7 @@ package com.simpleftp.sessions;
 
 import com.simpleftp.ftp.FTPConnectionDetails;
 import com.simpleftp.ftp.FTPServer;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -32,6 +33,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
+@EqualsAndHashCode
 public class SavedSession {
     private FTPServer ftpServerDetails;
     private FTPConnectionDetails ftpConnectionDetails;
@@ -49,6 +51,7 @@ public class SavedSession {
     @Getter
     @Setter
     @NoArgsConstructor
+    @EqualsAndHashCode
     public static class LastSession {
         private String lastRemoteWD;
         private String lastLocalWD;

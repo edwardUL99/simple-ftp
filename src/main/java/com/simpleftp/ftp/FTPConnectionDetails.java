@@ -17,10 +17,7 @@
 
 package com.simpleftp.ftp;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.With;
+import lombok.*;
 
 /**
  * This class provides details to be used in creating a FTPConnection
@@ -30,6 +27,7 @@ import lombok.With;
 @AllArgsConstructor
 @With
 @Data
+@EqualsAndHashCode
 public class FTPConnectionDetails {
     /**
      * The page size for listing files in the server

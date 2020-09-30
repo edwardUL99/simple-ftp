@@ -21,6 +21,8 @@ import static com.simpleftp.sessions.XMLConstants.*;
 import com.ctc.wstx.stax.WstxInputFactory;
 import com.simpleftp.ftp.FTPConnectionDetails;
 import com.simpleftp.ftp.FTPServer;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import org.codehaus.stax2.XMLStreamReader2;
 
 import javax.xml.stream.XMLStreamException;
@@ -31,13 +33,30 @@ import java.time.LocalDateTime;
 /**
  * This class loads in saved sessions from a specified xml file
  */
+@NoArgsConstructor
+@AllArgsConstructor
 public class SessionLoader {
     private XMLStreamReader2 reader;
+    private String currentFile;
 
-    private void initialiseReader(String fileName) throws XMLStreamException {
+    /**
+     * Initialises the loader's reader instance with the specified file name
+     * @param fileName the name of the file to read
+     * @throws XMLStreamException if an error occurs
+     */
+    public void initialiseReader(String fileName) throws XMLStreamException {
         WstxInputFactory inputFactory = new WstxInputFactory();
         inputFactory.configureForXmlConformance();
         reader = inputFactory.createXMLStreamReader(new File(fileName));
+        currentFile = fileName;
+    }
+
+    /**
+     * Allows the reader for this class to be overridden
+     * @param streamReader2 the read to override the default
+     */
+    public void setReader(XMLStreamReader2 streamReader2) {
+        this.reader = streamReader2;
     }
 
     private boolean isText(String text) {
@@ -166,19 +185,16 @@ public class SessionLoader {
     }
 
     /**
-     * Loads the file specified by the fileName into a FTPSessionFile.
+     * Loads the file specified by the fileName in initialiseReader into a FTPSessionFile.
      * It is undefined if the XML file specified by filename is not valid
-     * @param fileName the name of the XML SimpleFTP file
      * @return FTPSessionFile with loaded in sessions
      * @throws SessionLoadException if an error occurs
      */
-    public FTPSessionFile loadFile(String fileName) throws SessionLoadException {
+    public FTPSessionFile loadFile() throws SessionLoadException {
         try {
-            initialiseReader(fileName);
-            return load(fileName);
+            return load(currentFile);
         } catch (XMLStreamException e) {
-            e.printStackTrace();
-            throw new SessionLoadException("An error occurred loading file " + fileName, e);
+            throw new SessionLoadException("An error occurred loading file " + currentFile, e);
         }
     }
 }
