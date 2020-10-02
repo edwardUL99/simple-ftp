@@ -609,6 +609,7 @@ public class FTPConnection {
     /**
      * Attempts to make a directory specified by the path provided. Expected in the format path/to/[directory-name] or as an abstract path
      * If the path already exists as either a directory or a file, this returns false.
+     * @param path the path for the new directory
      * @return true if successful, false if not
      * @throws FTPNotConnectedException if called when isConnected() returns false
      * @throws FTPConnectionFailedException if a connection error occurs
@@ -652,7 +653,7 @@ public class FTPConnection {
      * @return true if successful, false if not
      * @throws FTPNotConnectedException if isConnected() returns false when this is called
      * @throws FTPConnectionFailedException if a connection error occurs
-     * @throws IOException if an error occurs sending the command or receiving a reply from the server
+     * @throws FTPCommandFailedException if an error occurs sending or receiving a reply from the server
      */
     public boolean renameFile(String from, String to) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
