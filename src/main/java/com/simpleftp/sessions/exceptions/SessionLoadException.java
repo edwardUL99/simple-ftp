@@ -15,34 +15,34 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.sessions;
+package com.simpleftp.sessions.exceptions;
 
 /**
- * This class represents any exception that occurs when saving a Session
+ * This class represents any exception that occurs when loading a Session file
  */
-public class SessionSaveException extends Exception {
+public class SessionLoadException extends Exception {
 
     /**
      * Constructs a default exception
      */
-    public SessionSaveException() {
-       super();
+    public SessionLoadException() {
+        super();
     }
 
     /**
      * Constructs an exception with the specified message
      * @param message the message for this exception to display
      */
-   public SessionSaveException(String message) {
-       super(message);
-   }
+    public SessionLoadException(String message) {
+        super(message);
+    }
 
     /**
      * Constructs an exception with the specified message and causing exception
      * @param message the message for this exception to display
      * @param throwable the throwable that caused this exception
      */
-   public SessionSaveException(String message, Throwable throwable) {
-       super(message, throwable);
-   }
+    public SessionLoadException(String message, Throwable throwable) {
+        super(message, throwable);
+    }
 }

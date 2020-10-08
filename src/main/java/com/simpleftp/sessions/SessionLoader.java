@@ -21,6 +21,7 @@ import static com.simpleftp.sessions.XMLConstants.*;
 import com.ctc.wstx.stax.WstxInputFactory;
 import com.simpleftp.ftp.FTPConnectionDetails;
 import com.simpleftp.ftp.FTPServer;
+import com.simpleftp.sessions.exceptions.SessionLoadException;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import org.codehaus.stax2.XMLStreamReader2;

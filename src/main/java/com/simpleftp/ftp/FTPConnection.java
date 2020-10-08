@@ -48,23 +48,23 @@ public class FTPConnection {
     /**
      * The FTP Client which provides the main FTP functionality
      */
-    protected FTPClient ftpClient;
+    private FTPClient ftpClient;
     /**
      * The lookup object backing retrieval services in terms of information, not downloads
      */
-    protected FTPLookup ftpLookup;
+    private FTPLookup ftpLookup;
     /**
      * The FTPServer object providing all the login details and server parameters
      */
     @Getter
     @Setter
-    protected FTPServer ftpServer;
+    private FTPServer ftpServer;
     /**
      * Provides details to this connection like page size etc
      */
     @Getter
     @Setter
-    protected FTPConnectionDetails ftpConnectionDetails;
+    private FTPConnectionDetails ftpConnectionDetails;
     /**
      * A boolean flag to indicate if this connection is actively connected or not
      */

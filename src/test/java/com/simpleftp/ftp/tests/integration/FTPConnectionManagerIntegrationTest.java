@@ -47,7 +47,7 @@ public class FTPConnectionManagerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        manager = FTPConnectionManager.getInstance();
+        manager = new FTPConnectionManager();
         ftpServer = new FakeFtpServer();
         ftpServer.addUserAccount(new UserAccount(TEST_SERVER_USER, TEST_SERVER_PASSWORD, "/home"));
         FileSystem fileSystem = new UnixFakeFileSystem();

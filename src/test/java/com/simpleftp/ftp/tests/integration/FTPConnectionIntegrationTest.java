@@ -62,7 +62,7 @@ public class FTPConnectionIntegrationTest {
     private static final String TEST_DIR2 = "dir2";
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         ftpServer = new FakeFtpServer();
         ftpServer.addUserAccount(new UserAccount(TEST_SERVER_USER, TEST_SERVER_PASSWORD, TEST_HOME));
 
@@ -81,7 +81,7 @@ public class FTPConnectionIntegrationTest {
     }
 
     @AfterEach
-    public void tearDown() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+    void tearDown() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
         if (ftpConnection.isConnected())
             ftpConnection.disconnect();
         ftpServer.stop();

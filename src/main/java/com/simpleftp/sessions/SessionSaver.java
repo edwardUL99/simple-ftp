@@ -20,6 +20,7 @@ package com.simpleftp.sessions;
 import com.ctc.wstx.stax.WstxOutputFactory;
 import com.simpleftp.ftp.FTPConnectionDetails;
 import com.simpleftp.ftp.FTPServer;
+import com.simpleftp.sessions.exceptions.SessionSaveException;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 

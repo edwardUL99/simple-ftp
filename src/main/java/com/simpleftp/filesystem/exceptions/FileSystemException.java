@@ -15,34 +15,33 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.sessions;
+package com.simpleftp.filesystem.exceptions;
 
 /**
- * This class represents any exception that occurs when loading a Session file
+ * This class represents an exception related to the FileSystem
  */
-public class SessionLoadException extends Exception {
-
+public class FileSystemException extends Exception {
     /**
-     * Constructs a default exception
+     * Creates a default exception object
      */
-    public SessionLoadException() {
+    public FileSystemException() {
         super();
     }
 
     /**
-     * Constructs an exception with the specified message
-     * @param message the message for this exception to display
+     * Creates an exception object
+     * @param message the message to display
      */
-    public SessionLoadException(String message) {
+    public FileSystemException(String message) {
         super(message);
     }
 
     /**
-     * Constructs an exception with the specified message and causing exception
-     * @param message the message for this exception to display
-     * @param throwable the throwable that caused this exception
+     * Creates an exception object
+     * @param message the message to display
+     * @param ex the causing exception
      */
-    public SessionLoadException(String message, Throwable throwable) {
-        super(message, throwable);
+    public FileSystemException(String message, Exception ex) {
+
     }
 }

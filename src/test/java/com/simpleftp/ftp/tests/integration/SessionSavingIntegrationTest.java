@@ -20,6 +20,8 @@ package com.simpleftp.ftp.tests.integration;
 import com.simpleftp.ftp.FTPConnectionDetails;
 import com.simpleftp.ftp.FTPServer;
 import com.simpleftp.sessions.*;
+import com.simpleftp.sessions.exceptions.SessionLoadException;
+import com.simpleftp.sessions.exceptions.SessionSaveException;
 import org.codehaus.stax2.XMLStreamReader2;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
