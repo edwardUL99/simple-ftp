@@ -188,6 +188,7 @@ public class FTPConnection {
     public void disconnect() throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
             log.error("Attempted to disconnect from a connection that doesn't exist");
+            loggedIn = false;
             throw new FTPNotConnectedException("Cannot disconnect from a server that wasn't connected to in the first place", FTPNotConnectedException.ActionType.DISCONNECT);
         }
 
@@ -219,6 +220,7 @@ public class FTPConnection {
 
         if (!connected) {
             log.error("FTPConnection is not connected to the server, cannot continue login process with user {}", user);
+            loggedIn = false;
             throw new FTPNotConnectedException("Cannot login as the FTPConnection is not connected to the server", FTPNotConnectedException.ActionType.LOGIN);
         }
 
@@ -296,6 +298,7 @@ public class FTPConnection {
     public boolean changeWorkingDirectory(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
             log.error("Cannot change to directory {} as the FTPConnection is not connected", path);
+            loggedIn = false;
             throw new FTPNotConnectedException("Cannot change directory as FTPConnection is not connected to the server", FTPNotConnectedException.ActionType.NAVIGATE);
         }
 
@@ -327,6 +330,7 @@ public class FTPConnection {
     public boolean changeToParentDirectory() throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
             log.error("Cannot change to parent directory as the FTPConnection is not connected");
+            loggedIn = false;
             throw new FTPNotConnectedException("Cannot change to parent directory as FTPConnection is not connected to the server", FTPNotConnectedException.ActionType.NAVIGATE);
         }
 
@@ -358,6 +362,7 @@ public class FTPConnection {
     public String getWorkingDirectory() throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
             log.error("FTPConnection is not connected to the server, cannot retrieve current working directory");
+            loggedIn = false;
             throw new FTPNotConnectedException("FTPConnection is not connected to the server, cannot retrieve current working directory", FTPNotConnectedException.ActionType.STATUS_CHECK);
         }
 
@@ -389,8 +394,9 @@ public class FTPConnection {
      * @throws FTPCommandFailedException if an error occurs executing the command
      */
     public FTPFile getFTPFile(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
-        if (!isConnected()) {
+        if (!connected) {
             log.error("Cannot retrieve file specified by {} as the FTPConnection is not connected", path);
+            loggedIn = false;
             throw new FTPNotConnectedException("FTPConnection is not connected to the server, so cannot retrieve file", FTPNotConnectedException.ActionType.DOWNLOAD);
         }
 
@@ -415,6 +421,7 @@ public class FTPConnection {
     public FTPFile[] listFiles(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
             log.error("FTPConnection not connected to the server, cannot list files for path {}", path);
+            loggedIn = false;
             throw new FTPNotConnectedException("FTPConnection not connected to the server, cannot list files", FTPNotConnectedException.ActionType.DOWNLOAD);
         }
 
@@ -469,6 +476,7 @@ public class FTPConnection {
 
         if (!connected) {
             log.error("Cannot save file {} to {} as FTPConnection is not connected", name, path);
+            loggedIn = false;
             throw new FTPNotConnectedException("FTPConnection is not connected to the sever, cannot add file to it", FTPNotConnectedException.ActionType.UPLOAD);
         }
 
@@ -570,6 +578,7 @@ public class FTPConnection {
                                                                     FTPCommandFailedException {
         if (!connected) {
             log.error("FTPConnection is not connected to the server, cannot get file from remote path {}", remotePath);
+            loggedIn = false;
             throw new FTPNotConnectedException("FTPConnection is not connected to the server, cannot download file", FTPNotConnectedException.ActionType.DOWNLOAD);
         }
 
@@ -619,6 +628,7 @@ public class FTPConnection {
     public boolean makeDirectory(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException, FTPError {
         if (!connected) {
             log.error("FTPConnection is not connected to the server, cannot make directory {}", path);
+            loggedIn = false;
             throw new FTPNotConnectedException("FTPConnection is not connected to the server, cannot make directory", FTPNotConnectedException.ActionType.MODIFICATION);
         }
 
@@ -658,6 +668,7 @@ public class FTPConnection {
     public boolean renameFile(String from, String to) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
             log.error("Cannot rename from {} to {}, as FTPConnection is not connected to the server", from, to);
+            loggedIn = false;
             throw new FTPNotConnectedException("FTPConnection not connected to server, cannot rename file", FTPNotConnectedException.ActionType.MODIFICATION);
         }
 
@@ -690,6 +701,7 @@ public class FTPConnection {
     public boolean removeFile(String filePath) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
             log.error("Cannot remove file {} from the server as FTPConnection is not connected", filePath);
+            loggedIn = false;
             throw new FTPNotConnectedException("FTPConnection not connected to server so cannot remove file", FTPNotConnectedException.ActionType.MODIFICATION);
         }
 
@@ -724,6 +736,7 @@ public class FTPConnection {
     public boolean removeDirectory(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
             log.error("FTPConnection is not connected to the server, cannot remove directory {}", path);
+            loggedIn = false;
             throw new FTPNotConnectedException("FTPConnection is not connected to the server, cannot remove directory", FTPNotConnectedException.ActionType.MODIFICATION);
         }
 
@@ -761,6 +774,7 @@ public class FTPConnection {
                                                                            FTPCommandFailedException {
         if (!connected) {
             log.error("FTPConnection not connected to the server, cannot check if path {} exists", remotePath);
+            loggedIn = false;
             throw new FTPNotConnectedException("FTPConnection not connected to the server, cannot check if path exists", FTPNotConnectedException.ActionType.STATUS_CHECK);
         }
 
@@ -793,6 +807,7 @@ public class FTPConnection {
     public String getStatus() throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
             log.error("Cannot retrieve status from server as the FTPConnection is not connected to the server");
+            loggedIn = false;
             throw new FTPNotConnectedException("Failed retrieving status as FTPConnection is not connected to the server", FTPNotConnectedException.ActionType.STATUS_CHECK);
         }
 
@@ -825,6 +840,7 @@ public class FTPConnection {
     public String getFileStatus(String filePath) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
             log.error("FTPConnection is not connected to the server, failed to retrieve file status of path {}", filePath);
+            loggedIn = false;
             throw new FTPNotConnectedException("FTPConnection is not connected to the server, cannot retrieve status for the file", FTPNotConnectedException.ActionType.STATUS_CHECK);
         }
 
@@ -857,6 +873,7 @@ public class FTPConnection {
     public String getFileSize(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
             log.error("FTPConnection is not connected to the server, cannot retrieve file size of path {}", path);
+            loggedIn = false;
             throw new FTPNotConnectedException("FTPConnection is not connected to the server, cannot retrieve file size", FTPNotConnectedException.ActionType.STATUS_CHECK);
         }
 
@@ -889,6 +906,7 @@ public class FTPConnection {
     public String getModificationTime(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
             log.error("FTPConnection is not connected to the server, cannot retrieve modification time for file with path {}", path);
+            loggedIn = false;
             throw new FTPNotConnectedException("FTPConnection is not connected to server, cannot retrieve modification time", FTPNotConnectedException.ActionType.STATUS_CHECK);
         }
 
@@ -923,6 +941,7 @@ public class FTPConnection {
         try {
             if (!connected) {
                 log.error("FTPConnection is not connected, cannot retrieve path stats");
+                loggedIn = false;
                 throw new FTPNotConnectedException("FTPConnection is not connected, cannot retrieve path stats", FTPNotConnectedException.ActionType.STATUS_CHECK);
             }
 
@@ -958,6 +977,8 @@ public class FTPConnection {
      */
     public void setTimeoutTime(int seconds) throws FTPConnectionFailedException {
         if (!connected) {
+            loggedIn = false;
+
             if (ftpConnectionDetails == null) {
                 log.error("Cannot set timeout time, there is no FTPConnectionDetails object associated with this FTPConnection");
                 resetConnectionValues();

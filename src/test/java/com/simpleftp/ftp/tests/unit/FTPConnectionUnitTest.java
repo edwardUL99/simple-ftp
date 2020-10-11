@@ -88,6 +88,9 @@ class FTPConnectionUnitTest {
         closeable.close();
     }
 
+    // in all the shouldThrowIfNotConnected tests, logged in is set to true and then tested if false. This should ALWAYS pass since can't be logged in if not connected
+    // just done to catch in a test, if the assertion fails there is a bug somewhere
+
     @Test
     void shouldConnectSuccessfully() throws IOException, FTPConnectionFailedException {
         given(ftpServer.getServer())
@@ -172,8 +175,10 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldThrowIfNotConnectedWhenDisconnecting() {
+        ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.disconnect());
         assertFalse(ftpConnection.isConnected());
+        assertFalse(ftpConnection.isLoggedIn());
     }
 
     @Test
@@ -216,12 +221,15 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldNotLogInIfNotConnected() {
+        ftpConnection.setLoggedIn(true);
         given(ftpServer.getUser())
                 .willReturn(TEST_SERVER_USER);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.login());
         verify(ftpServer).getUser();
+        assertFalse(ftpConnection.isLoggedIn());
         verify(ftpServer, times(0)).getPassword();
         verifyNoInteractions(ftpClient);
+
     }
 
     @Test
@@ -360,6 +368,7 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldThrowIfNotConnectedWhenChangingDirectory() {
+        ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.changeWorkingDirectory(TEST_PATH));
         assertFalse(ftpConnection.isConnected());
         assertFalse(ftpConnection.isLoggedIn());
@@ -419,6 +428,7 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldThrowIfNotConnectedWhenChangingToParentDirectory() {
+        ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.changeToParentDirectory());
         assertFalse(ftpConnection.isConnected());
         assertFalse(ftpConnection.isLoggedIn());
@@ -474,7 +484,9 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldThrowIfNotConnectedOnGetWorkingDirectory() {
+        ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.getWorkingDirectory());
+        assertFalse(ftpConnection.isLoggedIn());
         verifyNoInteractions(ftpLookup);
     }
 
@@ -549,8 +561,10 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldThrowOnGetFTPFileIfNotConnected() {
+        ftpConnection.setLoggedIn(true);
         assertFalse(ftpConnection.isConnected());
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.getFTPFile(TEST_FTP_FILE));
+        assertFalse(ftpConnection.isLoggedIn());
     }
 
     @Test
@@ -604,7 +618,9 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldThrowIfNotConnectedOnListFiles() {
+        ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.listFiles(TEST_PATH));
+        assertFalse(ftpConnection.isLoggedIn());
         verifyNoInteractions(ftpLookup);
     }
 
@@ -667,7 +683,9 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldThrowIfNotConnectedWhenUploadingFile() {
+        ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.uploadFile(getTestFile(true), TEST_PATH));
+        assertFalse(ftpConnection.isLoggedIn());
         verifyNoInteractions(ftpClient);
         verifyNoInteractions(ftpLookup);
     }
@@ -908,7 +926,9 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldThrowIfNotConnected() {
+        ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.downloadFile(TEST_FTP_FILE, tempDir.getAbsolutePath()));
+        assertFalse(ftpConnection.isLoggedIn());
         verifyNoInteractions(ftpClient);
         verifyNoInteractions(ftpLookup);
     }
@@ -952,7 +972,7 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldThrowIfCopyStreamExceptionOnDownload() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException, FTPError, IOException {
+    void shouldThrowIfCopyStreamExceptionOnDownload() throws FTPError, IOException {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);
 
@@ -971,7 +991,7 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldThrowIfIOExceptionOnDownload() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException, FTPError, IOException {
+    void shouldThrowIfIOExceptionOnDownload() throws FTPError, IOException {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);
 
@@ -1057,7 +1077,9 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldThrowIfNotConnectedOnMakeDirectory() {
+        ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.makeDirectory(TEST_DIR));
+        assertFalse(ftpConnection.isLoggedIn());
         verifyNoInteractions(ftpLookup);
         verifyNoInteractions(ftpClient);
     }
@@ -1126,7 +1148,9 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldThrowIfNotConnectedOnRenameFile() {
+        ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.renameFile(TEST_PATH, TEST_FTP_FILE));
+        assertFalse(ftpConnection.isLoggedIn());
         verifyNoInteractions(ftpClient);
     }
 
@@ -1180,7 +1204,9 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldThrowIfNotConnectedOnRemovingFile() {
+        ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.removeFile(TEST_FTP_FILE));
+        assertFalse(ftpConnection.isLoggedIn());
         verifyNoInteractions(ftpClient);
     }
 
@@ -1236,7 +1262,9 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldThrowIfNotConnectedOnRemovingDirectory() {
+        ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.removeDirectory(TEST_PATH));
+        assertFalse(ftpConnection.isLoggedIn());
         verifyNoInteractions(ftpClient);
     }
 
@@ -1348,7 +1376,9 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldThrowIfNotConnectedOnStatus() {
+        ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.getStatus());
+        assertFalse(ftpConnection.isLoggedIn());
         verifyNoInteractions(ftpLookup);
     }
 
@@ -1404,7 +1434,9 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldThrowIfNotConnectedOnFileStatus() {
+        ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.getFileStatus(TEST_FTP_FILE));
+        assertFalse(ftpConnection.isLoggedIn());
         verifyNoInteractions(ftpLookup);
     }
 
@@ -1460,7 +1492,9 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldThrowIfNotConnectedOnFileSize() {
+        ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.getFileSize(TEST_FTP_FILE));
+        assertFalse(ftpConnection.isLoggedIn());
         verifyNoInteractions(ftpLookup);
     }
 
@@ -1516,7 +1550,9 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldThrowIfNotConnectedOnModificationTime() {
+        ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.getModificationTime(TEST_FTP_FILE));
+        assertFalse(ftpConnection.isLoggedIn());
         verifyNoInteractions(ftpLookup);
     }
 
@@ -1574,7 +1610,9 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldThrowIfNotConnectedOnGetPathStats() {
+        ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.getPathStats(TEST_FTP_FILE));
+        assertFalse(ftpConnection.isLoggedIn());
         verifyNoInteractions(ftpLookup);
     }
 
