@@ -152,7 +152,7 @@ public class FTPConnectionManager {
             String cPass = connection.getFtpServer().getPassword();
             int cPort = connection.getFtpServer().getPort();
 
-            if (cServer == null && cUser == null && cPass == null && cPort == 0) {
+            if (cServer.equals("") && cUser.equals("") && cPass.equals("") && cPort == 0) {
                 // we have a dead connection, just return null as a dead connection can be edited afterwards and will then be caught by the other methods if it exists for same parameters
                 return null;
             }

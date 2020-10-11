@@ -21,7 +21,6 @@ package com.simpleftp.ftp;
 import lombok.*;
 
 //This will represent a FTP server
-@NoArgsConstructor
 @AllArgsConstructor
 @With
 @Data
@@ -35,6 +34,14 @@ public class FTPServer {
      * The default port for FTP
      */
     public static final int DEFAULT_PORT = 21;
+
+    /**
+     * Initialises every field to empty string or 0
+     */
+    public FTPServer() {
+        server = user = password = "";
+        port = 0;
+    }
 
     /**
      * Overrides Object's toString
