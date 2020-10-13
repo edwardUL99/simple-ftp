@@ -19,10 +19,7 @@ package com.simpleftp.sessions;
 
 import com.simpleftp.ftp.FTPConnectionDetails;
 import com.simpleftp.ftp.FTPServer;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -33,17 +30,13 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
 @EqualsAndHashCode
 public class SavedSession {
+    private String sessionId;
     private FTPServer ftpServerDetails;
     private FTPConnectionDetails ftpConnectionDetails;
     private LastSession lastSession;
-
-    public SavedSession(FTPServer ftpServerDetails, FTPConnectionDetails ftpConnectionDetails, LastSession lastSession) {
-        this.ftpServerDetails = ftpServerDetails;
-        this.ftpConnectionDetails = ftpConnectionDetails;
-        this.lastSession = lastSession;
-    }
 
     /**
      * Represents the LastSessionV01 type of the ftp_session.xsd

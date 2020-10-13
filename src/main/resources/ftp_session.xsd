@@ -33,6 +33,7 @@
         <xs:sequence>
             <xs:element name="Host" type="tns:HostNameText"/>
             <xs:element name="User" type="tns:Max80Text"/>
+            <xs:element name="Password" type="tns:Max80Text"/>
             <xs:element name="Port" type="xs:integer"/>
         </xs:sequence>
     </xs:complexType>
@@ -65,6 +66,7 @@
     </xs:complexType>
     <xs:complexType name="SessionV01">
         <xs:sequence>
+            <xs:element name="Id" type="tns:Max20IDText"/>
             <xs:element name="FTPServer" type="tns:FTPServerV01"/>
             <xs:element name="ConnectionDetails" type="tns:ConnectionDetailsV01"/>
             <xs:element name="LastSession" type="tns:LastSessionV01"/>
@@ -76,4 +78,9 @@
             <xs:element name="Session" type="tns:SessionV01" minOccurs="1" maxOccurs="unbounded"/>
         </xs:sequence>
     </xs:complexType>
+    <xs:simpleType name="Max20IDText">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[A-Za-z0-9\-]{1,20}"/>
+        </xs:restriction>
+    </xs:simpleType>
 </xs:schema>

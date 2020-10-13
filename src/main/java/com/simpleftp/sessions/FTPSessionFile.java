@@ -77,6 +77,14 @@ public class FTPSessionFile {
     }
 
     /**
+     * Sets the saved sessions list for this file
+     * @param savedSessions the list of sessions
+     */
+    public void setSavedSessions(List<SavedSession> savedSessions) {
+        this.savedSessions = savedSessions;
+    }
+
+    /**
      * Returns the number of saved sessions in this file
      * @return number of saved sessions
      */

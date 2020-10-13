@@ -26,9 +26,13 @@ import lombok.*;
 @Data
 @EqualsAndHashCode
 public class FTPServer {
+    @NonNull
     private String server;
+    @NonNull
     private String user;
+    @NonNull
     private String password;
+    @NonNull
     private int port;
     /**
      * The default port for FTP

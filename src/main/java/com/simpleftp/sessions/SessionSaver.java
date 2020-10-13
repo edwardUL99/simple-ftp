@@ -20,6 +20,7 @@ package com.simpleftp.sessions;
 import com.ctc.wstx.stax.WstxOutputFactory;
 import com.simpleftp.ftp.FTPConnectionDetails;
 import com.simpleftp.ftp.FTPServer;
+import com.simpleftp.security.PasswordEncryption;
 import com.simpleftp.sessions.exceptions.SessionSaveException;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
@@ -65,8 +66,9 @@ public class SessionSaver {
     }
 
     private void writeFTPServer(FTPServer ftpServer) throws XMLStreamException {
-        String[] tags = {"FTPServer", "Host", "User", "Port"};
-        String[] values = {ftpServer.getServer(), ftpServer.getUser(), "" + ftpServer.getPort()};
+        String[] tags = {"FTPServer", "Host", "User", "Password", "Port"};
+        String password = PasswordEncryption.encrypt(ftpServer.getPassword());
+        String[] values = {ftpServer.getServer(), ftpServer.getUser(), password, "" + ftpServer.getPort()};
         int valuesIndex = 0;
 
         for (String s : tags) {
@@ -122,6 +124,9 @@ public class SessionSaver {
 
         for (SavedSession session : currentFile.getSavedSessions()) {
             writer.writeStartElement("Session");
+            writer.writeStartElement("Id");
+            writer.writeCharacters(session.getSessionId());
+            writer.writeEndElement();
             writeFTPServer(session.getFtpServerDetails());
             writeConnectionDetails(session.getFtpConnectionDetails());
             writeLastSession(session.getLastSession());

@@ -60,6 +60,8 @@ public class SessionSavingIntegrationTest {
 
     private static final String FILE_NAME = "test.xml";
 
+    private static final String TEST_ID = "1234-TEST-5678";
+
     private AutoCloseable autoCloseable;
 
     @BeforeEach
@@ -77,9 +79,9 @@ public class SessionSavingIntegrationTest {
     private FTPSessionFile getFTPSessionFile() {
         FTPSessionFile file = new FTPSessionFile(FILE_NAME);
         SavedSession.LastSession lastSession = new SavedSession.LastSession("/last/remote/dir", "/last/local/dir");
-        FTPServer server = new FTPServer("ftp.server.com", "user", "", FTPServer.DEFAULT_PORT);
+        FTPServer server = new FTPServer("ftp.server.com", "user", "Tester", FTPServer.DEFAULT_PORT);
         FTPConnectionDetails connectionDetails = new FTPConnectionDetails(2, 100);
-        SavedSession savedSession = new SavedSession(server, connectionDetails, lastSession);
+        SavedSession savedSession = new SavedSession(TEST_ID, server, connectionDetails, lastSession);
         file.addSavedSession(savedSession);
 
         return file;

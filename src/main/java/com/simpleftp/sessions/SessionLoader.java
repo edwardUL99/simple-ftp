@@ -21,6 +21,7 @@ import static com.simpleftp.sessions.XMLConstants.*;
 import com.ctc.wstx.stax.WstxInputFactory;
 import com.simpleftp.ftp.FTPConnectionDetails;
 import com.simpleftp.ftp.FTPServer;
+import com.simpleftp.security.PasswordEncryption;
 import com.simpleftp.sessions.exceptions.SessionLoadException;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
@@ -30,6 +31,9 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.events.XMLEvent;
 import java.io.File;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 
 /**
  * This class loads in saved sessions from a specified xml file
@@ -80,6 +84,8 @@ public class SessionLoader {
                         server.setServer(text);
                     } else if (tag.equals(FTP_SERVER_USER)) {
                         server.setUser(text);
+                    } else if (tag.equals(FTP_SERVER_PASSWORD)) {
+                        server.setPassword(PasswordEncryption.decrypt(text));
                     } else if (tag.equals(FTP_SERVER_PORT)) {
                         server.setPort(Integer.parseInt(text));
                     }
@@ -155,6 +161,7 @@ public class SessionLoader {
     private FTPSessionFile load(String fileName) throws XMLStreamException {
         FTPSessionFile sessionFile = new FTPSessionFile(fileName);
         SavedSession savedSession = null;
+        boolean setId = false;
 
         while (reader.hasNext()) {
             int event = reader.next();
@@ -163,6 +170,8 @@ public class SessionLoader {
 
                 if (elementName.equals(SESSION)) {
                     savedSession = new SavedSession();
+                } else if (elementName.equals(SESSION_ID)) {
+                    setId = true;
                 } else if (elementName.equals(FTP_SERVER)) {
                     savedSession.setFtpServerDetails(readFTPServer());
                 } else if (elementName.equals(CONNECTION_DETAILS)) {
@@ -170,7 +179,12 @@ public class SessionLoader {
                 } else if (elementName.equals(LAST_SESSION)) {
                     savedSession.setLastSession(readLastSession());
                 }
-            } if (event ==  XMLEvent.END_ELEMENT) {
+            } else if (event == XMLEvent.CHARACTERS) {
+                if (setId) {
+                    savedSession.setSessionId(reader.getText());
+                    setId = false;
+                }
+            } else if (event == XMLEvent.END_ELEMENT) {
                 String elementName = reader.getLocalName();
 
                 if (elementName.equals(SESSION)) {

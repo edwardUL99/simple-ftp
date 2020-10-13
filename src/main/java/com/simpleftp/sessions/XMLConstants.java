@@ -31,6 +31,10 @@ public final class XMLConstants {
      */
     public static final String SESSION = "Session";
     /**
+     * The tag representing a session id
+     */
+    public static final String SESSION_ID = "Id";
+    /**
      * The tag representing server details
      */
     public static final String FTP_SERVER = "FTPServer";
@@ -42,6 +46,10 @@ public final class XMLConstants {
      * The tag representing a FTP Server username
      */
     public static final String FTP_SERVER_USER = "User";
+    /**
+     * The tag representing a FTP Server password
+     */
+    public static final String FTP_SERVER_PASSWORD = "Password";
     /**
      * The tag representing a FTP Server port
      */
