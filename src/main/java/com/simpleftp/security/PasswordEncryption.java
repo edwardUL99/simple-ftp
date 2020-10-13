@@ -34,6 +34,7 @@ import org.apache.commons.codec.binary.Base64;
  * Default one in the jar can be overriden to provide a configurable encryption string
  *
  * Attempts to find on the classpath a file with extension password.encrypt which contains the encryption key or -Dsimpleftp.passwordEncryptFile=<file>
+ * If not found, it's searched for in the property identified by user.dir
  */
 public class PasswordEncryption {
     private static final String UNICODE_FORMAT = "UTF8";
@@ -56,7 +57,13 @@ public class PasswordEncryption {
             }
 
             if (inputStream == null) {
-                throw new RuntimeException("Could not find a file called password.encrypt on the CLASSPATH or file specified by -Dsimpleftp.passwordEncryptFile does not exist");
+                // as last resort attempt to find in user directory
+                File encryptFile = new File(System.getProperty("user.dir") + System.getProperty("file.separator") + "password.encrypt");
+                if (encryptFile.exists() && encryptFile.isFile()) {
+                    inputStream = new FileInputStream(encryptFile);
+                } else {
+                    throw new RuntimeException("Could not find a file called password.encrypt on the CLASSPATH or file specified by -Dsimpleftp.passwordEncryptFile does not exist");
+                }
             }
 
             encryptionKey = new BufferedReader(
