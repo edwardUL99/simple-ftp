@@ -21,20 +21,56 @@ import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.DESedeKeySpec;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.security.spec.KeySpec;
+import java.util.stream.Collectors;
+
 import org.apache.commons.codec.binary.Base64;
 
 /**
  * This class is used for encrypting and decrypting passwords
+ *
+ * Default one in the jar can be overriden to provide a configurable encryption string
+ *
+ * Attempts to find on the classpath a file with extension password.encrypt which contains the encryption key or -Dsimpleftp.passwordEncryptFile=<file>
  */
 public class PasswordEncryption {
     private static final String UNICODE_FORMAT = "UTF8";
     private static final String DESEDE_ENCRYPTION_SCHEME = "DESede";
     private static SecretKey key;
+    private static String encryptionKey;
+
+    private static String getEncryptionKey() throws IOException {
+        if (encryptionKey == null) {
+            InputStream inputStream = null;
+            String property = System.getProperty("simpleftp.passwordEncryptFile");
+
+            if (property == null) {
+                inputStream = ClassLoader.getSystemResourceAsStream("password.encrypt");
+            } else {
+                File encryptFile = new File(property);
+                if (encryptFile.exists() && encryptFile.isFile()) {
+                    inputStream = new FileInputStream(property);
+                }
+            }
+
+            if (inputStream == null) {
+                throw new RuntimeException("Could not find a file called password.encrypt on the CLASSPATH or file specified by -Dsimpleftp.passwordEncryptFile does not exist");
+            }
+
+            encryptionKey = new BufferedReader(
+                    new InputStreamReader(inputStream, StandardCharsets.UTF_8))
+	                .lines()
+                    .collect(Collectors.joining("\n"));
+        }
+
+        return encryptionKey;
+    }
 
     private static SecretKey getSecretKey() throws Exception {
         if (key == null) {
-            String encryptionKey = "abcdefghijklmnoshsgdgdjsjbbdejhddkfkajcnjkdscdcbdbckjawcbwdjecbwkdjcwBAGGSJGJSGGhahaH";
+            String encryptionKey = getEncryptionKey();
             byte[] arrayBytes = encryptionKey.getBytes(UNICODE_FORMAT);
             KeySpec keySpec = new DESedeKeySpec(arrayBytes);
             SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance(DESEDE_ENCRYPTION_SCHEME);
