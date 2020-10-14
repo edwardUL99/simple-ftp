@@ -45,12 +45,20 @@ public class PasswordEncryption {
     private static String getEncryptionKey() throws IOException {
         if (encryptionKey == null) {
             InputStream inputStream = null;
+            String encryptionFile;
+
             String property = System.getProperty("simpleftp.passwordEncryptFile");
 
             if (property == null) {
-                inputStream = ClassLoader.getSystemResourceAsStream("password.encrypt");
+                encryptionFile = "password.encrypt";
             } else {
-                File encryptFile = new File(property);
+                encryptionFile = property;
+            }
+
+            inputStream = ClassLoader.getSystemResourceAsStream(encryptionFile);
+
+            if (inputStream == null) {
+                File encryptFile = new File(encryptionFile);
                 if (encryptFile.exists() && encryptFile.isFile()) {
                     inputStream = new FileInputStream(property);
                 }
@@ -58,11 +66,11 @@ public class PasswordEncryption {
 
             if (inputStream == null) {
                 // as last resort attempt to find in user directory
-                File encryptFile = new File(System.getProperty("user.dir") + System.getProperty("file.separator") + "password.encrypt");
+                File encryptFile = new File(System.getProperty("user.dir") + System.getProperty("file.separator") + encryptionFile);
                 if (encryptFile.exists() && encryptFile.isFile()) {
                     inputStream = new FileInputStream(encryptFile);
                 } else {
-                    throw new RuntimeException("Could not find a file called password.encrypt on the CLASSPATH or file specified by -Dsimpleftp.passwordEncryptFile does not exist");
+                    throw new RuntimeException("Could not find a file called " + encryptionFile + " on the CLASSPATH or file specified by -Dsimpleftp.passwordEncryptFile does not exist");
                 }
             }
 
