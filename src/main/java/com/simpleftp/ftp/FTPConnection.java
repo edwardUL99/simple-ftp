@@ -294,8 +294,9 @@ public class FTPConnection {
      * @throws FTPNotConnectedException if this is attempted when isConnected() returns false
      * @throws FTPConnectionFailedException if a connection error occurs
      * @throws FTPCommandFailedException if an error occurs sending the command or receiving a reply from the server
+     * @throws FTPError if a general error occurs
      */
-    public boolean changeWorkingDirectory(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
+    public boolean changeWorkingDirectory(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException, FTPError, FTPRemotePathNotFoundException {
         if (!connected) {
             log.error("Cannot change to directory {} as the FTPConnection is not connected", path);
             loggedIn = false;
@@ -304,6 +305,10 @@ public class FTPConnection {
 
         try {
             if (loggedIn) {
+                if (!ftpLookup.remotePathExists(path, true)) {
+                    log.error("Path {} does not exist or is a file", path);
+                    throw new FTPRemotePathNotFoundException("A given path is either a file or does not exist", path);
+                }
                 log.info("Changing working directory to {}", path);
                 return ftpClient.changeWorkingDirectory(path);
             }
@@ -314,7 +319,7 @@ public class FTPConnection {
             log.error("The FTPConnection unexpectedly closed the connection when changing working directory");
             resetConnectionValues();
             throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while changing working directory", cl, ftpServer);
-        }catch (IOException ex) {
+        } catch (IOException ex) {
             log.error("An error occurred when changing working directory to {}", path);
             throw new FTPCommandFailedException("An error occurred changing working directory", ex);
         }
@@ -393,7 +398,7 @@ public class FTPConnection {
      * @throws FTPConnectionFailedException if a connection error occurs
      * @throws FTPCommandFailedException if an error occurs executing the command
      */
-    public FTPFile getFTPFile(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
+    public FTPFile getFTPFile(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException, FTPRemotePathNotFoundException, FTPError {
         if (!connected) {
             log.error("Cannot retrieve file specified by {} as the FTPConnection is not connected", path);
             loggedIn = false;
@@ -402,6 +407,10 @@ public class FTPConnection {
 
         try {
             if (loggedIn) {
+                if (!ftpLookup.remotePathExists(path)) {
+                    log.error("The specified path {} does not exist", path);
+                    throw new FTPRemotePathNotFoundException("A provided path to retrieve a remote file does not exist", path);
+                }
                 log.info("Retrieving FTPFile for path {} from server", path);
                 return ftpLookup.getFTPFile(path);
             }
@@ -795,6 +804,22 @@ public class FTPConnection {
             log.error("An error occurred when checking if path {} exists", remotePath);
             throw new FTPCommandFailedException("An error occurred when checking if path {} exists", ex);
         }
+    }
+
+    /**
+     * Checks for genral existence of a file and not specifically as a directory or file
+     * @param remotePath the path to check
+     * @return true if the path exists
+     * @throws FTPNotConnectedException if this is called when isConnected returns false
+     * @throws FTPConnectionFailedException if a connection error occurs
+     * @throws FTPError if a general error occurs
+     * @throws FTPCommandFailedException if an error occurs sending or receiving the command
+     */
+    public boolean remotePathExists(String remotePath) throws FTPNotConnectedException,
+                                                              FTPConnectionFailedException,
+                                                              FTPError,
+                                                              FTPCommandFailedException {
+        return remotePathExists(remotePath, true) || remotePathExists(remotePath, false);
     }
 
     /**

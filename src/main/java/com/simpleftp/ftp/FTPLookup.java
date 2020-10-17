@@ -110,7 +110,7 @@ public class FTPLookup {
      * @throws FTPError if the current working directory could not be determined
      */
     public boolean remotePathExists(String remotePath, boolean dir) throws IOException, FTPError {
-        log.info("Querying if remote path {} exists", remotePath);
+        log.info("Querying if remote path {} exists as a ", remotePath, dir ? "directory":"file");
 
         boolean remotePathExists;
 
@@ -122,7 +122,7 @@ public class FTPLookup {
                 throw new FTPError("Cannot determine if remotePath exists on this server");
             }
 
-            remotePathExists = ftpClient.changeWorkingDirectory(remotePath);
+            remotePathExists = ftpClient.changeWorkingDirectory(remotePath); // if you changed to the directory successfully, it exists
             ftpClient.changeWorkingDirectory(currentWorkingDirectory); //return to the current directory
         } else {
             FTPFile[] files = ftpClient.listFiles(remotePath);
@@ -141,6 +141,18 @@ public class FTPLookup {
         }
 
         return remotePathExists;
+    }
+
+    /**
+     * Checks if the path exists as either a directory or a file.
+     * This method is useful for when you want to do a check but don't care if it is a directory or a file, just want to know it exists
+     * @param remotePath the path to check existence of
+     * @return true if it exists
+     * @throws IOException if an error occurs sending or retrieving the command
+     * @throws FTPError if an error retrieving working directory occirs
+     */
+    public boolean remotePathExists(String remotePath) throws IOException, FTPError {
+        return remotePathExists(remotePath, true) || remotePathExists(remotePath, false);
     }
 
     /**

@@ -19,10 +19,7 @@ package com.simpleftp.ftp.tests.integration;
 
 import com.simpleftp.ftp.FTPPathStats;
 import com.simpleftp.ftp.FTPServer;
-import com.simpleftp.ftp.exceptions.FTPCommandFailedException;
-import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
-import com.simpleftp.ftp.exceptions.FTPError;
-import com.simpleftp.ftp.exceptions.FTPNotConnectedException;
+import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.ftp.tests.FTPConnectionTestable;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
@@ -120,14 +117,14 @@ public class FTPConnectionIntegrationTest {
     }
 
     @Test
-    void shouldChangeWorkingDirectorySuccessfully() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+    void shouldChangeWorkingDirectorySuccessfully() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException, FTPError, FTPRemotePathNotFoundException {
         assertTrue(ftpConnection.connect());
         assertTrue(ftpConnection.login());
         assertTrue(ftpConnection.changeWorkingDirectory(TEST_PATH));
     }
 
     @Test
-    void shouldChangeToParentDirectorySuccessfully() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+    void shouldChangeToParentDirectorySuccessfully() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException, FTPError, FTPRemotePathNotFoundException {
         assertTrue(ftpConnection.connect());
         assertTrue(ftpConnection.login());
         assertTrue(ftpConnection.changeWorkingDirectory(TEST_PATH));
@@ -142,7 +139,7 @@ public class FTPConnectionIntegrationTest {
     }
 
     @Test
-    void shouldGetFTPFileSuccessfully() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+    void shouldGetFTPFileSuccessfully() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException, FTPRemotePathNotFoundException, FTPError {
         assertTrue(ftpConnection.connect());
         assertTrue(ftpConnection.login());
         assertNotNull(ftpConnection.getFTPFile(TEST_FTP_FILE));
@@ -250,7 +247,7 @@ public class FTPConnectionIntegrationTest {
     }
 
     @Test
-    void shouldNOtRemoveNonEmptyDirectory() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
+    void shouldNotRemoveNonEmptyDirectory() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException {
         assertTrue(ftpConnection.connect());
         assertTrue(ftpConnection.login());
         assertFalse(ftpConnection.removeDirectory(TEST_PATH));
@@ -262,6 +259,7 @@ public class FTPConnectionIntegrationTest {
         assertTrue(ftpConnection.connect());
         assertTrue(ftpConnection.login());
         assertTrue(ftpConnection.remotePathExists(TEST_PATH, true));
+        assertTrue(ftpServer.getFileSystem().exists(TEST_PATH));
     }
 
     @Test
@@ -276,6 +274,7 @@ public class FTPConnectionIntegrationTest {
         assertTrue(ftpConnection.connect());
         assertTrue(ftpConnection.login());
         assertTrue(ftpConnection.remotePathExists(TEST_FTP_FILE, false));
+        assertTrue(ftpServer.getFileSystem().exists(TEST_FTP_FILE));
     }
 
     @Test
@@ -283,6 +282,16 @@ public class FTPConnectionIntegrationTest {
         assertTrue(ftpConnection.connect());
         assertTrue(ftpConnection.login());
         assertFalse(ftpConnection.remotePathExists(TEST_FTP_FILE, true));
+    }
+
+    @Test
+    void shouldCheckIfFileGenerallyExistsSuccessfully() throws FTPConnectionFailedException, FTPError, FTPNotConnectedException, FTPCommandFailedException {
+        assertTrue(ftpConnection.connect());
+        assertTrue(ftpConnection.login());
+        assertTrue(ftpConnection.remotePathExists(TEST_PATH));
+        assertTrue(ftpServer.getFileSystem().exists(TEST_PATH));
+        assertTrue(ftpConnection.remotePathExists(TEST_FTP_FILE));
+        assertTrue(ftpServer.getFileSystem().exists(TEST_FTP_FILE));
     }
 
     @Test

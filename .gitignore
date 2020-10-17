@@ -28,3 +28,4 @@ docs
 test*.xml
 dependency-reduced-pom.xml
 src/main/java/TestSessionSaver.java
+*.png
