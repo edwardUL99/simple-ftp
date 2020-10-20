@@ -17,6 +17,7 @@
 
 package com.simpleftp.ftp.tests.integration;
 
+import com.simpleftp.FTPSystem;
 import com.simpleftp.ftp.FTPPathStats;
 import com.simpleftp.ftp.FTPServer;
 import com.simpleftp.ftp.exceptions.*;
@@ -75,6 +76,7 @@ public class FTPConnectionIntegrationTest {
         FTPServer serverDetails = new FTPServer("localhost", TEST_SERVER_USER, TEST_SERVER_PASSWORD, TEST_SERVER_PORT);
         ftpConnection = new FTPConnectionTestable();
         ftpConnection.setFtpServer(serverDetails);
+        FTPSystem.setSystemTestingFlag(true);
     }
 
     @AfterEach

@@ -17,6 +17,7 @@
 
 package com.simpleftp.ftp.tests.integration;
 
+import com.simpleftp.FTPSystem;
 import com.simpleftp.ftp.FTPConnectionDetails;
 import com.simpleftp.ftp.FTPServer;
 import com.simpleftp.sessions.*;
@@ -69,6 +70,7 @@ public class SessionSavingIntegrationTest {
         sessionSaver = new SessionSaver();
         sessionLoader = new SessionLoader();
         autoCloseable = MockitoAnnotations.openMocks(this);
+        FTPSystem.setSystemTestingFlag(true);
     }
 
     @AfterEach

@@ -15,9 +15,12 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ftp;
+package com.simpleftp.ftp.connections;
 
+import com.simpleftp.ftp.FTPServer;
+import com.simpleftp.ftp.connections.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
+import lombok.Setter;
 
 import java.util.ArrayList;
 
@@ -26,6 +29,7 @@ import java.util.ArrayList;
  * It is a single class, so can only use one instance of it
  */
 public class FTPConnectionManager {
+    @Setter
     private ArrayList<FTPConnection> managedConnections; // this list may be used later to monitor each connection
     private enum ConnectionTypes {
         IDLE,

@@ -17,6 +17,7 @@
 
 package com.simpleftp.ftp.tests.integration;
 
+import com.simpleftp.FTPSystem;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.RemoteFileSystem;
@@ -62,6 +63,8 @@ public class RemoteFileSystemIntegrationTest {
         fileSystem.add(new DirectoryEntry(TEST_PATH));
         ftpServer.setFileSystem(fileSystem);
         ftpServer.setServerControlPort(TEST_SERVER_PORT);
+
+        FTPSystem.setSystemTestingFlag(true);
 
         ftpServer.start();
         setupProperties();

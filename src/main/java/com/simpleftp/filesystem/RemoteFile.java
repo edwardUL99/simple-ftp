@@ -19,11 +19,11 @@ package com.simpleftp.filesystem;
 
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
-import com.simpleftp.ftp.FTPConnection;
-import com.simpleftp.ftp.FTPConnectionManager;
+import com.simpleftp.ftp.connections.FTPConnection;
+import com.simpleftp.ftp.connections.FTPConnectionManager;
+import com.simpleftp.ftp.connections.FTPConnectionManagerBuilder;
 import com.simpleftp.ftp.exceptions.*;
 import lombok.AllArgsConstructor;
-import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPFile;
 
 import java.util.Properties;
@@ -49,7 +49,10 @@ public class RemoteFile extends FTPFile implements CommonFile {
      * @param fileName the name of the file
      */
     public RemoteFile(String fileName) throws FileSystemException {
-        this(fileName, new FTPConnectionManager());
+        this(fileName, new FTPConnectionManagerBuilder()
+                        .useSystemConnectionManager(true)
+                        .setBuiltManagerAsSystemManager(true)
+                        .build());
     }
 
     /**

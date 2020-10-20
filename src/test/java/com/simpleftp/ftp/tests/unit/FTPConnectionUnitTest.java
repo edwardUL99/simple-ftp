@@ -17,6 +17,7 @@
 
 package com.simpleftp.ftp.tests.unit;
 
+import com.simpleftp.FTPSystem;
 import com.simpleftp.ftp.FTPLookup;
 import com.simpleftp.ftp.FTPPathStats;
 import com.simpleftp.ftp.FTPServer;
@@ -78,6 +79,7 @@ class FTPConnectionUnitTest {
     @BeforeEach
     void init() {
         closeable = MockitoAnnotations.openMocks(this);
+        FTPSystem.setSystemTestingFlag(true);
     }
 
     @AfterEach
