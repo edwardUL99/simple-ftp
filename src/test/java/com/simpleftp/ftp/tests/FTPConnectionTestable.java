@@ -17,7 +17,7 @@
 
 package com.simpleftp.ftp.tests;
 
-import com.simpleftp.ftp.FTPConnection;
+import com.simpleftp.ftp.connections.FTPConnection;
 import com.simpleftp.ftp.FTPConnectionDetails;
 import com.simpleftp.ftp.FTPServer;
 import org.apache.commons.net.ftp.FTPClient;

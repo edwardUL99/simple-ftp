@@ -17,13 +17,14 @@
 
 package com.simpleftp.ftp.tests.unit;
 
+import com.simpleftp.FTPSystem;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.LocalFileSystem;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
-import com.simpleftp.ftp.FTPConnection;
-import com.simpleftp.ftp.FTPConnectionManager;
+import com.simpleftp.ftp.connections.FTPConnection;
+import com.simpleftp.ftp.connections.FTPConnectionManager;
 import com.simpleftp.ftp.FTPServer;
 import com.simpleftp.ftp.exceptions.*;
 import org.junit.jupiter.api.AfterEach;
@@ -65,6 +66,7 @@ public class LocalFileSystemUnitTest {
         closeable = MockitoAnnotations.openMocks(this);
         setupProperties();
         mockConnection();
+        FTPSystem.setSystemTestingFlag(true);
     }
 
     @AfterEach

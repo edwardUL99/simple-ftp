@@ -17,13 +17,14 @@
 
 package com.simpleftp.ftp.tests.unit;
 
+import com.simpleftp.FTPSystem;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.RemoteFileSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
-import com.simpleftp.ftp.FTPConnection;
-import com.simpleftp.ftp.FTPConnectionManager;
+import com.simpleftp.ftp.connections.FTPConnection;
+import com.simpleftp.ftp.connections.FTPConnectionManager;
 import com.simpleftp.ftp.FTPServer;
 import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
 import com.simpleftp.ftp.exceptions.FTPException;
@@ -68,6 +69,7 @@ public class RemoteFileSystemUnitTest {
     @BeforeEach
     void init() {
         closeable = MockitoAnnotations.openMocks(this);
+        FTPSystem.setSystemTestingFlag(true);
     }
 
     @AfterEach

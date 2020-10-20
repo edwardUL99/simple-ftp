@@ -17,8 +17,9 @@
 
 package com.simpleftp.ftp.tests.integration;
 
-import com.simpleftp.ftp.FTPConnection;
-import com.simpleftp.ftp.FTPConnectionManager;
+import com.simpleftp.FTPSystem;
+import com.simpleftp.ftp.connections.FTPConnection;
+import com.simpleftp.ftp.connections.FTPConnectionManager;
 import com.simpleftp.ftp.FTPServer;
 import com.simpleftp.ftp.exceptions.FTPCommandFailedException;
 import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
@@ -56,6 +57,7 @@ public class FTPConnectionManagerIntegrationTest {
         ftpServer.setServerControlPort(TEST_SERVER_PORT);
 
         ftpServer.start();
+        FTPSystem.setSystemTestingFlag(true);
     }
 
     @AfterEach

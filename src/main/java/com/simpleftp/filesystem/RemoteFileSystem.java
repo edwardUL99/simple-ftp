@@ -20,13 +20,13 @@ package com.simpleftp.filesystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.filesystem.interfaces.FileSystem;
-import com.simpleftp.ftp.FTPConnection;
-import com.simpleftp.ftp.FTPConnectionManager;
+import com.simpleftp.ftp.connections.FTPConnection;
+import com.simpleftp.ftp.connections.FTPConnectionManager;
+import com.simpleftp.ftp.connections.FTPConnectionManagerBuilder;
 import com.simpleftp.ftp.exceptions.*;
 import lombok.AllArgsConstructor;
 import org.apache.commons.net.ftp.FTPFile;
 
-import java.io.File;
 import java.util.Properties;
 
 /**
@@ -46,7 +46,10 @@ public class RemoteFileSystem implements FileSystem {
     private FTPConnectionManager ftpConnectionManager;
 
     public RemoteFileSystem() throws FileSystemException {
-        this(new FTPConnectionManager());
+        this(new FTPConnectionManagerBuilder()
+                .useSystemConnectionManager(true)
+                .setBuiltManagerAsSystemManager(true)
+                .build());
     }
 
     public RemoteFileSystem(FTPConnectionManager connectionManager) throws FileSystemException {

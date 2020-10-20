@@ -20,17 +20,16 @@ package com.simpleftp.filesystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.filesystem.interfaces.FileSystem;
-import com.simpleftp.ftp.FTPConnection;
-import com.simpleftp.ftp.FTPConnectionManager;
+import com.simpleftp.ftp.connections.FTPConnection;
+import com.simpleftp.ftp.connections.FTPConnectionManager;
+import com.simpleftp.ftp.connections.FTPConnectionManagerBuilder;
 import com.simpleftp.ftp.exceptions.FTPException;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.Properties;
-import java.util.stream.Collector;
 
 /**
  * Represents a local file system "linked" to a remote FTP Connection.
@@ -51,7 +50,10 @@ public class LocalFileSystem implements FileSystem {
     private FTPConnectionManager ftpConnectionManager;
 
     public LocalFileSystem() throws FileSystemException {
-        this(new FTPConnectionManager());
+        this(new FTPConnectionManagerBuilder()
+                .useSystemConnectionManager(true)
+                .setBuiltManagerAsSystemManager(true)
+                .build());
     }
 
     public LocalFileSystem(FTPConnectionManager connectionManager) throws FileSystemException {

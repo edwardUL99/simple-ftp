@@ -17,12 +17,14 @@
 
 package com.simpleftp.ftp.tests.integration;
 
+import com.simpleftp.FTPSystem;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.LocalFileSystem;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.FTPServer;
+import com.simpleftp.ftp.connections.FTPConnectionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,6 +65,8 @@ public class LocalFileSystemIntegrationTest {
         fileSystem.add(new FileEntry(TEST_FTP_FILE, "abcdef"));
         ftpServer.setFileSystem(fileSystem);
         ftpServer.setServerControlPort(TEST_SERVER_PORT);
+
+        FTPSystem.setSystemTestingFlag(true);
 
         ftpServer.start();
         setupProperties();
