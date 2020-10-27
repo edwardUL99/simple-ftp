@@ -184,7 +184,11 @@ public class FTPConnectionManager {
     }
 
     /**
-     * Adds the specific connection to the manager
+     * Adds the specific connection to the manager.
+     * If you have a connection that is connected and logged in and you want FileSystems to use this (they call createReadyConnection), it should be added with this so that when used in those classes
+     * with the same credentials, you will get the same connection.
+     * If that connection somehow loses connection, createReadyConnection, will return a new one as the conditions for createReadyConnection to return an existing connection won't work.
+     * Unless that same connection is re-connected and logged in, add the new connected and logged in one with same credentials here
      * @param connection the connection to add
      */
     public void addConnection(FTPConnection connection) {

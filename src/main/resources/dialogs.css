@@ -1,0 +1,28 @@
+.exceptionDialog:header *.header-panel{
+    -fx-background-color: red;
+}
+
+.exceptionDialog:header *.header-panel *.label{
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-fill: #292929;
+}
+
+.exceptionDialog {
+    -fx-background-color: white;
+}
+
+.errorDialog:header *.header-panel{
+    -fx-background-color: red;
+}
+
+.errorDialog:header *.header-panel *.label{
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-fill: #292929;
+}
+
+.errorDialog {
+    -fx-background-color: white;
+}
+

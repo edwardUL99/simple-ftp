@@ -23,6 +23,7 @@ import com.simpleftp.ftp.connections.FTPConnection;
 import com.simpleftp.ftp.connections.FTPConnectionManager;
 import com.simpleftp.ftp.connections.FTPConnectionManagerBuilder;
 import com.simpleftp.ftp.exceptions.*;
+import com.simpleftp.security.PasswordEncryption;
 import lombok.AllArgsConstructor;
 import org.apache.commons.net.ftp.FTPFile;
 
@@ -35,6 +36,7 @@ import java.util.Properties;
  *      ftp-pass=<password>
  *      ftp-server=<host>
  *      ftp-port=<port>
+ * Password is expected to be result of PasswordEncryption.encrypt()
  *
  * These should be set before calling this class by using System.setProperty
  * Can be set from command line too using -Dproperty=value but safer programatically as it's not secure passing in password on cli
@@ -64,7 +66,7 @@ public class RemoteFile extends FTPFile implements CommonFile {
         super.setName(fileName);
         Properties properties = System.getProperties();
         ftpConnectionManager = connectionManager;
-        this.connection = ftpConnectionManager.createReadyConnection(properties.getProperty("ftp-server"), properties.getProperty("ftp-user"), properties.getProperty("ftp-pass"), Integer.parseInt(properties.getProperty("ftp-port")));
+        this.connection = ftpConnectionManager.createReadyConnection(properties.getProperty("ftp-server"), properties.getProperty("ftp-user"), PasswordEncryption.decrypt(properties.getProperty("ftp-pass")), Integer.parseInt(properties.getProperty("ftp-port")));
         if (this.connection == null) {
             throw new FileSystemException("Could not configure the FTP Server, did you set the System properties ftp-server ftp-user ftp-pass and ftp-port?");
         }

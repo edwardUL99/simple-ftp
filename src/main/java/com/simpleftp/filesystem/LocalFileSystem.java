@@ -24,6 +24,7 @@ import com.simpleftp.ftp.connections.FTPConnection;
 import com.simpleftp.ftp.connections.FTPConnectionManager;
 import com.simpleftp.ftp.connections.FTPConnectionManagerBuilder;
 import com.simpleftp.ftp.exceptions.FTPException;
+import com.simpleftp.security.PasswordEncryption;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -40,6 +41,7 @@ import java.util.Properties;
  *        ftp-server=<host>
  *        ftp-port=<port>
  *
+ * Password is expected to be result of PasswordEncryption.encrypt()
  * These should be set before calling this class by using System.setProperty.
  */
 @AllArgsConstructor
@@ -64,7 +66,7 @@ public class LocalFileSystem implements FileSystem {
         }
         ftpConnection = ftpConnectionManager.createReadyConnection(properties.getProperty("ftp-server"),
                 properties.getProperty("ftp-user"),
-                properties.getProperty("ftp-pass"),
+                PasswordEncryption.decrypt(properties.getProperty("ftp-pass")),
                 Integer.parseInt(properties.getProperty("ftp-port")));
 
         if (ftpConnection == null)

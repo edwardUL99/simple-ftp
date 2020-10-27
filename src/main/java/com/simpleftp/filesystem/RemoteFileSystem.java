@@ -24,6 +24,7 @@ import com.simpleftp.ftp.connections.FTPConnection;
 import com.simpleftp.ftp.connections.FTPConnectionManager;
 import com.simpleftp.ftp.connections.FTPConnectionManagerBuilder;
 import com.simpleftp.ftp.exceptions.*;
+import com.simpleftp.security.PasswordEncryption;
 import lombok.AllArgsConstructor;
 import org.apache.commons.net.ftp.FTPFile;
 
@@ -37,6 +38,8 @@ import java.util.Properties;
  *        ftp-pass=<password>
  *        ftp-server=<host>
  *        ftp-port=<port>
+ *
+ * Password is expected to be result of PasswordEncryption.encrypt()
  *
  * These should be set before calling this class by using System.setProperty.
  */
@@ -60,7 +63,7 @@ public class RemoteFileSystem implements FileSystem {
         }
         ftpConnection = ftpConnectionManager.createReadyConnection(properties.getProperty("ftp-server"),
                 properties.getProperty("ftp-user"),
-                properties.getProperty("ftp-pass"),
+                PasswordEncryption.decrypt(properties.getProperty("ftp-pass")),
                 Integer.parseInt(properties.getProperty("ftp-port")));
         if (ftpConnection == null) {
             throw new FileSystemException("Could not configure the FTP Connection backing this RemoteFileSystem");

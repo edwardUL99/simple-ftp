@@ -25,6 +25,7 @@ import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.FTPServer;
 import com.simpleftp.ftp.connections.FTPConnectionManager;
+import com.simpleftp.security.PasswordEncryption;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -81,7 +82,7 @@ public class LocalFileSystemIntegrationTest {
     private void setupProperties() {
         System.setProperty("ftp-server", TEST_SERVER);
         System.setProperty("ftp-user", TEST_SERVER_USER);
-        System.setProperty("ftp-pass", TEST_SERVER_PASSWORD);
+        System.setProperty("ftp-pass", PasswordEncryption.encrypt(TEST_SERVER_PASSWORD));
         System.setProperty("ftp-port", "" + TEST_SERVER_PORT);
     }
 

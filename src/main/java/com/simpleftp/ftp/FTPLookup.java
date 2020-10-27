@@ -110,7 +110,7 @@ public class FTPLookup {
      * @throws FTPError if the current working directory could not be determined
      */
     public boolean remotePathExists(String remotePath, boolean dir) throws IOException, FTPError {
-        log.info("Querying if remote path {} exists as a ", remotePath, dir ? "directory":"file");
+        log.info("Querying if remote path {} exists as a {}", remotePath, dir ? "directory":"file");
 
         boolean remotePathExists;
 
@@ -149,7 +149,7 @@ public class FTPLookup {
      * @param remotePath the path to check existence of
      * @return true if it exists
      * @throws IOException if an error occurs sending or retrieving the command
-     * @throws FTPError if an error retrieving working directory occirs
+     * @throws FTPError if an error retrieving working directory occurs
      */
     public boolean remotePathExists(String remotePath) throws IOException, FTPError {
         return remotePathExists(remotePath, true) || remotePathExists(remotePath, false);

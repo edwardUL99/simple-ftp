@@ -17,6 +17,7 @@
 
 package com.simpleftp.ftp.connections;
 
+import com.simpleftp.FTPSystem;
 import com.simpleftp.ftp.FTPConnectionDetails;
 import com.simpleftp.ftp.FTPLookup;
 import com.simpleftp.ftp.FTPPathStats;
@@ -31,6 +32,8 @@ import org.apache.commons.net.ftp.FTPReply;
 import org.apache.commons.net.io.CopyStreamException;
 
 import java.io.*;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * This is the main class used for provided a client connection to a FTP server
@@ -45,7 +48,6 @@ import java.io.*;
  * Note that if a FTPConnectionFailedException is thrown by any method of this class, it indicates a serious connection error occurred.
  * This means that this FTPConnection is no longer viable as isConnected() and isLoggedIn() will now return false.
  */
-@With
 @Slf4j
 @EqualsAndHashCode(of = {"ftpServer", "ftpConnectionDetails", "connected", "loggedIn"})
 public class FTPConnection {
@@ -77,6 +79,8 @@ public class FTPConnection {
     @Getter
     protected boolean loggedIn;
 
+    private NoopDriver noopDriver;
+
     /**
      * Constructs a default object
      */
@@ -85,6 +89,7 @@ public class FTPConnection {
         ftpLookup = new FTPLookup(ftpClient);
         ftpServer = new FTPServer();
         ftpConnectionDetails = new FTPConnectionDetails();
+        setNoopDriver();
     }
 
     /**
@@ -99,6 +104,7 @@ public class FTPConnection {
         ftpLookup = new FTPLookup(ftpClient);
         this.ftpServer = ftpServer;
         this.ftpConnectionDetails = ftpConnectionDetails;
+        setNoopDriver();
     }
 
     /*
@@ -118,6 +124,7 @@ public class FTPConnection {
         this.ftpConnectionDetails = ftpConnectionDetails;
         this.connected = connected;
         this.loggedIn = loggedIn;
+        setNoopDriver();
     }
 
     /**
@@ -131,9 +138,17 @@ public class FTPConnection {
         this.ftpLookup = new FTPLookup(ftpClient);
         this.ftpServer = ftpServer;
         this.ftpConnectionDetails = ftpConnectionDetails;
+        setNoopDriver();
     }
 
-    //add methods to connect, disconnect, get files, add, remove etc
+    private void setNoopDriver() {
+        int timeout = ftpConnectionDetails.getTimeout();
+        if (timeout == 0) {
+            timeout = 300;
+        }
+
+        noopDriver = new NoopDriver(timeout);
+    }
 
     /**
      * Connects to the FTP Server using the details specified in this object's FTPServer field
@@ -234,6 +249,8 @@ public class FTPConnection {
                 loggedIn = ftpClient.login(user, ftpServer.getPassword());
                 if (loggedIn) {
                     log.info("User {} logged into the ftp Server", user);
+                    if (!FTPSystem.isSystemTesting())
+                        noopDriver.start();
                     return true;
                 }
             }
@@ -275,6 +292,8 @@ public class FTPConnection {
             try {
                 loggedIn = !ftpClient.logout();
                 log.info("Status of login to the server is {}", loggedIn);
+                if (!FTPSystem.isSystemTesting())
+                    noopDriver.stop();
                 return !loggedIn;
             } catch (FTPConnectionClosedException cl) {
                 log.error("The FTPConnection unexpectedly closed while logging out");
@@ -811,7 +830,7 @@ public class FTPConnection {
     }
 
     /**
-     * Checks for genral existence of a file and not specifically as a directory or file
+     * Checks for general existence of a file and not specifically as a directory or file
      * @param remotePath the path to check
      * @return true if the path exists
      * @throws FTPNotConnectedException if this is called when isConnected returns false
@@ -1016,6 +1035,7 @@ public class FTPConnection {
 
             log.info("Setting FTPConnection timeout time to {} seconds", seconds);
             ftpConnectionDetails.setTimeout(seconds);
+            noopDriver.timeoutSecs = seconds;
             int mSeconds = seconds * 1000;
 
             ftpClient.setDefaultTimeout(mSeconds);
@@ -1040,5 +1060,44 @@ public class FTPConnection {
     public String getReplyString() {
         log.info("Retrieving reply string from the last executed command");
         return ftpClient.getReplyString();
+    }
+
+    private class NoopDriver {
+        private int timeoutSecs;
+        private Timer timer;
+        private boolean started = false;
+
+        private NoopDriver(int timeoutSecs) {
+            this.timeoutSecs = timeoutSecs;
+            timer = new Timer(true);
+        }
+
+        private void start() {
+            if (!started) {
+                started = true;
+                timer.scheduleAtFixedRate(new TimerTask() {
+                    @Override
+                    public void run() {
+                        NoopDriver.this.run();
+                    }
+                }, 0, timeoutSecs * 1000);
+            }
+        }
+
+        private void stop() {
+            if (started) {
+                timer.cancel();
+                started = false;
+            }
+        }
+
+        private void run() {
+            try {
+                log.info("Sending no-op to server");
+                ftpClient.noop();
+            } catch (IOException ex) {
+                log.warn("An exception occurred sending a no-op, server may time-out");
+            }
+        }
     }
 }

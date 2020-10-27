@@ -17,13 +17,19 @@
 
 package com.simpleftp;
 
+import com.simpleftp.ftp.connections.FTPConnection;
 import com.simpleftp.ftp.connections.FTPConnectionManager;
+import com.simpleftp.ftp.exceptions.FTPException;
 
 /**
  * This class is to be used to keep track of many different static variables/objects used throughout the FTP program
  */
 public class FTPSystem {
     private static FTPConnectionManager connectionManager;
+    /**
+     * The connection to be used throughout the system
+     */
+    private static FTPConnection connection;
     /**
      * Flag to indicate that the system is being tested. If true, getConnectionManager will always return null and setConnectionManager will be a no-op
      */
@@ -56,5 +62,36 @@ public class FTPSystem {
      */
     public static void setSystemTestingFlag(boolean systemTesting) {
         FTPSystem.systemTesting = systemTesting;
+    }
+
+    /**
+     * Returns true if the system is under test
+     * @return system under test status
+     */
+    public static boolean isSystemTesting() {
+        return systemTesting;
+    }
+
+    /**
+     * Sets the connection to be used throughout the system
+     * @param connection the connection to use
+     */
+    public static void setConnection(FTPConnection connection) {
+        if (FTPSystem.connection != null) {
+            try {
+                FTPSystem.connection.disconnect();
+            } catch (FTPException ex) {
+                ex.printStackTrace();
+            }
+        }
+        FTPSystem.connection = connection;
+    }
+
+    /**
+     * Gets the connection used throughout the system
+     * @return the connection being used
+     */
+    public static FTPConnection getConnection() {
+        return connection;
     }
 }

@@ -15,28 +15,17 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ftp;
-
-import lombok.*;
+package com.simpleftp.ui.dialogs;
 
 /**
- * This class provides details to be used in creating a FTPConnection
- * Encapsulates all these details into one place
+ * Wraps a JavaFX Dialog to abstract some of the components
  */
-@NoArgsConstructor
-@AllArgsConstructor
-@With
-@Data
-@EqualsAndHashCode
-public class FTPConnectionDetails {
-    /**
-     * The page size for listing files in the server
-     */
-    private int pageSize;
-    /**
-     * The number of seconds for the server to time out
-     * This is used for all timeouts such a keep alive etc
-     */
-    private int timeout = 300;
-    //this will be added to
+public class ErrorDialog extends javafx.scene.control.Alert {
+    public ErrorDialog(String title, String header, String message) {
+        super(AlertType.ERROR);
+        setHeaderText(header);
+        setTitle(title);
+        setContentText(message);
+        setWidth(getWidth() + 20);
+    }
 }

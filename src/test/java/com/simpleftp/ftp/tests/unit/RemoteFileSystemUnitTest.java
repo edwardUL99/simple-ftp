@@ -28,6 +28,7 @@ import com.simpleftp.ftp.connections.FTPConnectionManager;
 import com.simpleftp.ftp.FTPServer;
 import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
 import com.simpleftp.ftp.exceptions.FTPException;
+import com.simpleftp.security.PasswordEncryption;
 import org.apache.commons.net.ftp.FTPFile;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,7 +81,7 @@ public class RemoteFileSystemUnitTest {
     private void setupProperties() {
         System.setProperty("ftp-server", TEST_SERVER);
         System.setProperty("ftp-user", TEST_USER);
-        System.setProperty("ftp-pass", TEST_PASS);
+        System.setProperty("ftp-pass", PasswordEncryption.encrypt(TEST_PASS));
         System.setProperty("ftp-port", TEST_PORT);
     }
 

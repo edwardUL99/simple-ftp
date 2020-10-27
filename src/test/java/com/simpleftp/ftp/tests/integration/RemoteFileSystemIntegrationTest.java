@@ -24,6 +24,7 @@ import com.simpleftp.filesystem.RemoteFileSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.FTPServer;
+import com.simpleftp.security.PasswordEncryption;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,7 +46,7 @@ public class RemoteFileSystemIntegrationTest {
 
     private static final String TEST_SERVER = "localhost";
     private static final String TEST_SERVER_USER = "test-user";
-    private static final String TEST_SERVER_PASSWORD = "test-user-password";
+    private static final String TEST_SERVER_PASSWORD = "testuserpassword";
     private static final int TEST_SERVER_PORT = 1234;
     private static final String TEST_HOME = "/test";
     private static final String TEST_PATH = "/test/path";
@@ -79,7 +80,7 @@ public class RemoteFileSystemIntegrationTest {
     private void setupProperties() {
         System.setProperty("ftp-server", TEST_SERVER);
         System.setProperty("ftp-user", TEST_SERVER_USER);
-        System.setProperty("ftp-pass", TEST_SERVER_PASSWORD);
+        System.setProperty("ftp-pass", PasswordEncryption.encrypt(TEST_SERVER_PASSWORD));
         System.setProperty("ftp-port", "" + TEST_SERVER_PORT);
     }
 

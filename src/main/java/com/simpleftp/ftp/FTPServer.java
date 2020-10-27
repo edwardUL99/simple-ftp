@@ -32,7 +32,6 @@ public class FTPServer {
     private String user;
     @NonNull
     private String password;
-    @NonNull
     private int port;
     /**
      * The default port for FTP
