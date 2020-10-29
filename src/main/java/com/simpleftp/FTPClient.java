@@ -26,6 +26,7 @@ import com.simpleftp.ftp.connections.FTPConnectionManager;
 import com.simpleftp.ftp.connections.FTPConnectionManagerBuilder;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.security.PasswordEncryption;
+import com.simpleftp.ui.containers.FilePanelContainer;
 import com.simpleftp.ui.panels.FilePanel;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -77,7 +78,8 @@ public class FTPClient extends Application {
         initialiseConnection();
         FTPSystem.getConnectionManager().addConnection(FTPSystem.getConnection()); // add so all remote files use the same
 
-        FilePanel panel = new FilePanel(new RemoteFile("test"));
+        FilePanel panel = new FilePanel(new RemoteFile("/test"));
+        FilePanelContainer panelContainer = new FilePanelContainer(panel);
 
         /*FileLineEntry lineEntry = new FileLineEntry(new LocalFile("/home/eddy/Coding/C++/StudSysCppCLI/ubuntu.login"));
         FileLineEntry lineEntry1 = new FileLineEntry(new LocalFile("/home/eddy/Coding/C++/StudSysCppCLI/sources/ModuleHomePage.cpp"));
@@ -119,6 +121,7 @@ public class FTPClient extends Application {
         }*/
 
         ScrollPane scrollPane = new ScrollPane();
+        scrollPane.setStyle("-fx-background : white");
         scrollPane.setContent(panel);
         scrollPane.setFitToWidth(true);
 

@@ -18,7 +18,6 @@
 package com.simpleftp.ftp.tests.integration;
 
 import com.simpleftp.FTPSystem;
-import com.simpleftp.ftp.FTPConnectionDetails;
 import com.simpleftp.ftp.FTPPathStats;
 import com.simpleftp.ftp.FTPServer;
 import com.simpleftp.ftp.exceptions.*;

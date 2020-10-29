@@ -25,6 +25,7 @@ import com.simpleftp.ftp.connections.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
+import com.simpleftp.ui.UI;
 import javafx.geometry.Pos;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
@@ -34,16 +35,22 @@ import javafx.scene.image.ImageView;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.log4j.Log4j2;
+import org.apache.commons.net.ftp.FTPFile;
 
+import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 
 /**
  * This is an abstract class representing a line entry on the panel.
  * It can represent a Directory or File Line entry
  */
-public abstract class LineEntry extends HBox {
+@Log4j2
+public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     private ImageView image;
     @Getter
     protected CommonFile file;
@@ -52,7 +59,11 @@ public abstract class LineEntry extends HBox {
 
     private HBox imageNamePanel = new HBox();
 
-    protected LineEntry(String imageURL, CommonFile file) throws FTPRemotePathNotFoundException, LocalPathNotFoundException{
+    @Getter
+    @Setter
+    private FilePanel owningPanel;
+
+    protected LineEntry(String imageURL, CommonFile file, FilePanel owningPanel) throws FTPRemotePathNotFoundException, LocalPathNotFoundException{
         setSpacing(30);
         //setBorder(new Border(new BorderStroke(Paint.valueOf("BLACK"), BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));
         //setMaxHeight(5);
@@ -62,60 +73,22 @@ public abstract class LineEntry extends HBox {
         //HBox.setHgrow(this, Priority.ALWAYS);
 
         image = new ImageView();
+        image.setFitWidth(UI.FILE_ICON_SIZE);
+        image.setFitHeight(UI.FILE_ICON_SIZE);
         image.setImage(new Image(ClassLoader.getSystemResourceAsStream(imageURL)));
         this.file = file;
         imageNamePanel.getChildren().add(image);
 
+        this.owningPanel = owningPanel;
+
         init();
     }
 
-    /*private StackPane getModificationPane() {
-        StackPane modificationPane = new StackPane();
-        modificationPane.setPadding(new Insets(0,5,0,5));
-        Text text = new Text(getModificationTime());
-        modificationPane.getChildren().add(text);
-        return modificationPane;
-    }
-
-    private StackPane getPermissionsPane() {
-        StackPane permissionsPane = new StackPane();
-        permissionsPane.setPadding(new Insets(0,5,0,5));
-        Text permissions = new Text(calculatePermissionsString());
-        permissions.setFont(Font.font("Monospaced"));
-        permissionsPane.getChildren().add(permissions);
-        permissionsPane.setMinWidth(100);
-        return permissionsPane;
-    }
-
-    private void setFileNamePanel() {
-        String fileNameString = getFileNameString();
-        Text text = new Text();
-        text.setText(fileNameString);
-        text.setFont(Font.font("Monospaced"));
-        if (fileNameString.contains("...")) {
-            Tooltip tooltip = new Tooltip(file.getName());
-            Tooltip.install(text, tooltip);
-        }
-        imageNamePanel.setAlignment(Pos.CENTER_LEFT);
-        imageNamePanel.getChildren().add(text);
-        setLeft(imageNamePanel);
-    }
-
-    private void setInfoPanel() {
-        HBox rightPanel = new HBox();
-        rightPanel.getChildren().addAll(getModificationPane(), getPermissionsPane());
-
-        setRight(rightPanel);
-    }*/
-
     protected void init() throws FTPRemotePathNotFoundException, LocalPathNotFoundException{
         if (getChildren().size() > 1) {
-            //setRight(null);
             getChildren().clear();
         }
 
-        //setFileNamePanel();
-        //setInfoPanel();
         setAlignment(Pos.CENTER_LEFT);
         String fileNameString = getFileNameString();
         Text text = new Text(fileNameString);
@@ -134,7 +107,7 @@ public abstract class LineEntry extends HBox {
             LocalFile localFile = (LocalFile)file;
             if (localFile.exists()) {
                 modificationTime = new SimpleDateFormat("MMM dd HH:mm").format(localFile.lastModified());
-            } else {
+            } else if (!Files.isSymbolicLink(localFile.toPath())){
                 throw new LocalPathNotFoundException("The file no longer exists", file.getFilePath());
             }
         } else {
@@ -147,7 +120,8 @@ public abstract class LineEntry extends HBox {
                         LocalDateTime dateTime = LocalDateTime.parse(fileModTime, DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy"));
                         modificationTime = dateTime.format(DateTimeFormatter.ofPattern("MMM dd HH:mm"));
                     } else {
-                        throw new FTPRemotePathNotFoundException("The file no longer exists", filePath);
+                        log.warn("Could not determine modification time for file {}", filePath);
+                        return "Cannot be determined";
                     }
                 } catch (FTPException ex) {
                     ex.printStackTrace();
@@ -179,14 +153,118 @@ public abstract class LineEntry extends HBox {
         return paddedName.trim();
     }
 
-    protected abstract String calculatePermissionsString() throws FTPRemotePathNotFoundException, LocalPathNotFoundException;
+    protected String calculatePermissionsString() throws FTPRemotePathNotFoundException, LocalPathNotFoundException {
+        String permissions = "";
+
+        if (file instanceof LocalFile) {
+            LocalFile localFile = (LocalFile)file;
+
+            if (!localFile.exists() && !Files.isSymbolicLink(localFile.toPath())) {
+                throw new LocalPathNotFoundException("The file no longer exists", localFile.getFilePath());
+            }
+
+            if (localFile.canRead()) {
+                permissions += "r";
+            } else {
+                permissions += "-";
+            }
+
+            if (localFile.canWrite()) {
+                permissions += "-w";
+            } else {
+                permissions += "--";
+            }
+
+            if (localFile.canExecute()) {
+                permissions += "-x";
+            } else {
+                permissions += "--";
+            }
+        } else {
+            RemoteFile remoteFile = (RemoteFile)file;
+            try {
+                String filePath = remoteFile.getFilePath();
+                FTPFile file = FTPSystem.getConnection().getFTPFile(filePath);
+                if (file == null) {
+                    throw new FTPRemotePathNotFoundException("The file no longer exists", filePath);
+                } else {
+                    String raw = file.getRawListing();
+                    permissions += raw.substring(1, raw.indexOf(" "));
+                    /*if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.READ_PERMISSION)) {
+                        permissions += "r";
+                    } else {
+                        permissions += "-";
+                    }
+
+                    if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.WRITE_PERMISSION)) {
+                        permissions += "w";
+                    } else {
+                        permissions += "-";
+                    }
+
+                    if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
+                        permissions += "x";
+                    } else {
+                        permissions += "-";
+                    }
+
+                    permissions += "-";
+
+                    if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.READ_PERMISSION)) {
+                        permissions += "r";
+                    } else {
+                        permissions += "-";
+                    }
+
+                    if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.WRITE_PERMISSION)) {
+                        permissions += "w";
+                    } else {
+                        permissions += "-";
+                    }
+
+                    if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
+                        permissions += "x";
+                    } else {
+                        permissions += "-";
+                    }
+
+                    permissions += "-";
+
+                    if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.READ_PERMISSION)) {
+                        permissions += "r";
+                    } else {
+                        permissions += "-";
+                    }
+
+                    if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.WRITE_PERMISSION)) {
+                        permissions += "w";
+                    }
+
+                    if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
+                        permissions += "x";
+                    } else {
+                        permissions += "-";
+                    }*/
+                }
+            } catch (FTPException ex) {
+                ex.printStackTrace();
+                if (ex instanceof FTPRemotePathNotFoundException) {
+                    throw (FTPRemotePathNotFoundException)ex;
+                }
+            }
+        }
+
+        return permissions;//StringUtils.leftPad(permissions, 20);
+    }
 
     /**
      * Refreshes the line entry
      * @throws FTPRemotePathNotFoundException if it is refreshing a remote path and it is not found
      * @throws LocalPathNotFoundException if it is refreshing a local path and it is not found
      */
-    public abstract void refresh() throws FTPRemotePathNotFoundException, LocalPathNotFoundException;
+    public void refresh() throws FTPRemotePathNotFoundException, LocalPathNotFoundException {
+        init();
+    }
 
     protected String getFilePath() {
         String filePath = file.getFilePath();
@@ -196,5 +274,23 @@ public abstract class LineEntry extends HBox {
         }
 
         return filePath;
+    }
+
+    @Override
+    public int compareTo(LineEntry other) {
+        String n1 = this.file.getName();
+        String n2 = other.file.getName();
+
+        int n1Ind = n1.lastIndexOf(".");
+        if (n1Ind != -1) {
+            n1 = n1.substring(0, n1Ind);
+        }
+
+        int n2Ind = n2.lastIndexOf(".");
+        if (n2Ind != -1) {
+            n2 = n2.substring(0, n2Ind);
+        }
+        // we want to compare without extensions
+        return n1.compareTo(n2);
     }
 }

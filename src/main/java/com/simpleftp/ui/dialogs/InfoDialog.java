@@ -17,15 +17,16 @@
 
 package com.simpleftp.ui.dialogs;
 
+import javafx.scene.control.Alert;
+
 /**
- * Wraps a JavaFX Dialog to abstract some of the components
+ * Wraps a JavaFX info dialog
  */
-public class ErrorDialog extends javafx.scene.control.Alert {
-    public ErrorDialog(String header, String message) {
-        super(AlertType.ERROR);
+public class InfoDialog extends Alert {
+    public InfoDialog(String header, String message) {
+        super(AlertType.INFORMATION);
         setHeaderText(header);
-        setTitle("Error Dialog");
+        setTitle("Info Dialog");
         setContentText(message);
-        setWidth(getWidth() + 20);
     }
 }

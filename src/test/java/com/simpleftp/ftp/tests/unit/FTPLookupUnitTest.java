@@ -238,12 +238,10 @@ public class FTPLookupUnitTest {
 
     @Test
     void shouldDoRemotePathExistsSingleFileSuccessfully() throws IOException, FTPError {
-        FTPFile testFTPFile1 = getTestFTPFile();
-        FTPFile testFTPFile2 = getTestFTPFile();
-        testFTPFile2.setName(TEST_FTP_FILE + "/other");
+        FTPFile testFTPFile = getTestFTPFile();
 
         given(ftpClient.listFiles(TEST_FTP_FILE))
-                .willReturn(new FTPFile[]{testFTPFile1, testFTPFile2});
+                .willReturn(new FTPFile[]{testFTPFile});
 
         boolean result = ftpLookup.remotePathExists(TEST_FTP_FILE, false);
 

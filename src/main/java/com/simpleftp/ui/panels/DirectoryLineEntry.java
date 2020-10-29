@@ -15,17 +15,15 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ui.dialogs;
+package com.simpleftp.ui.panels;
 
-/**
- * Wraps a JavaFX Dialog to abstract some of the components
- */
-public class ErrorDialog extends javafx.scene.control.Alert {
-    public ErrorDialog(String header, String message) {
-        super(AlertType.ERROR);
-        setHeaderText(header);
-        setTitle("Error Dialog");
-        setContentText(message);
-        setWidth(getWidth() + 20);
+import com.simpleftp.filesystem.interfaces.CommonFile;
+import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
+import com.simpleftp.local.exceptions.LocalPathNotFoundException;
+
+public class DirectoryLineEntry extends LineEntry {
+
+    protected DirectoryLineEntry(CommonFile file, FilePanel owningPanel) throws FTPRemotePathNotFoundException, LocalPathNotFoundException {
+        super("dir_icon.png", file, owningPanel);
     }
 }
