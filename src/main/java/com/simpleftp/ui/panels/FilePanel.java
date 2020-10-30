@@ -31,23 +31,21 @@ import com.simpleftp.ui.containers.FilePanelContainer;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.input.MouseButton;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
+import lombok.Getter;
 import org.apache.commons.net.ftp.FTPFile;
 
-import javax.sound.sampled.Line;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.stream.Collectors;
 
 /*
 The conditions for determining if an exception or error dialog show up may have to be reconsidered
@@ -64,7 +62,11 @@ public class FilePanel extends VBox {
     private Button up;
     private ArrayList<LineEntry> lineEntries;
     private CommonFile directory; // the directory this FilePanel is viewing
+    @Getter
     private FilePanelContainer parentContainer;
+    // you need a separate VBox for line entries otherwise if in the same VBox as the status panel, any double click on either button seems to get translated to the last file in the panel
+    // a separate box keeps these events separate to their own VBoxs
+    private VBox entriesBox;
 
     /**
      * Constructs a FilePanel object with the specified directory
@@ -72,30 +74,38 @@ public class FilePanel extends VBox {
      * @throws FileSystemException if the directory is not in fact a directory
      */
     public FilePanel(CommonFile directory) throws FileSystemException {
-        //setSpacing(2);
         setStyle("-fx-background-color: white");
+
         statusPanel = new HBox();
         statusPanel.setSpacing(10);
+
         refresh = new Button("Refresh");
         up = new Button("Up");
+
         Label currentDirectoryLabel = new Label("Current Directory: ");
         currentDirectoryLabel.setAlignment(Pos.CENTER_LEFT);
         currentDirectoryLabel.setFont(Font.font("Monospaced", FontWeight.BOLD, currentDirectoryLabel.getFont().getSize()));
+
         currentDirectory = new Label();
         currentDirectory.setAlignment(Pos.CENTER_LEFT);
         currentDirectory.setFont(Font.font("Monospaced"));
         currentDirectory.setTextAlignment(TextAlignment.CENTER);
+
         lineEntries = new ArrayList<>();
+
         refresh.setOnAction(e -> refresh());
         up.setOnAction(e -> up());
+
         statusPanel.getChildren().addAll(refresh, up, currentDirectoryLabel, currentDirectory);
-        getChildren().add(statusPanel);
         statusPanel.setBorder(new Border(new BorderStroke(Paint.valueOf("BLACK"), BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));
         statusPanel.setStyle("-fx-background-color: lightgrey;");
+
+        entriesBox = new VBox();
+
         if (!directory.isADirectory()) {
             throw new FileSystemException("The directory provided is not a directory");
         }
-        this.directory = directory;
+        setDirectory(directory);
         refresh();
         try {
             FTPConnection connection = FTPSystem.getConnection();
@@ -112,11 +122,13 @@ public class FilePanel extends VBox {
     /**
      * Sets the FilePanelContainer that is the parent, i.e. contains this FilePanel.
      * This action hooks the two together.
-     * If this isn't set but is inside a FilePanelContainer, actions performed here, (like refreshing, or changing directory), won't propagate up to the FilePanelContainer
+     * Calling setParentContainer automatically links the given container to this file panel
      * @param parentContainer the container to add this FilePanel to
      */
     public void setParentContainer(FilePanelContainer parentContainer) {
         this.parentContainer = parentContainer;
+        if (this.parentContainer.getFilePanel() != this) // prevent a cycle of infinite recursion
+            this.parentContainer.setFilePanel(this);
     }
 
     private void setCurrDirText(String currentDirectory) {
@@ -264,7 +276,7 @@ public class FilePanel extends VBox {
     }
 
     private void addLineEntriesFromList(ArrayList<LineEntry> lineEntries) {
-        lineEntries.forEach(e -> getChildren().add(e));
+        lineEntries.forEach(entriesBox.getChildren()::add);
     }
 
     /**
@@ -274,7 +286,10 @@ public class FilePanel extends VBox {
         ArrayList<LineEntry> lineEntries = constructListOfFiles();
         if (lineEntries != null) {
             this.lineEntries.clear();
-            getChildren().remove(1, getChildren().size());
+            getChildren().clear();
+            getChildren().add(statusPanel);
+            entriesBox.getChildren().clear();
+            getChildren().add(entriesBox);
             addLineEntriesFromList(lineEntries);
             this.lineEntries = lineEntries;
         }
@@ -373,7 +388,11 @@ public class FilePanel extends VBox {
         }
     }
 
-    private void click(final LineEntry lineEntry) {
+    /**
+     * Provides the click action for the specified line entry
+     * @param lineEntry the line entry to click
+     */
+    public void click(final LineEntry lineEntry) {
         if (parentContainer != null)
             parentContainer.setComboBoxSelection(lineEntry);
     }
@@ -422,7 +441,7 @@ public class FilePanel extends VBox {
     }
 
     private void addLineEntry(final LineEntry lineEntry, ArrayList<LineEntry> lineEntries) {
-        lineEntry.setOnMouseClicked(e -> {
+        /*lineEntry.setOnMouseClicked(e -> {
             if (e.getButton().equals(MouseButton.PRIMARY)) {
                 if (e.getClickCount() == 1) {
                     click(lineEntry);
@@ -430,10 +449,7 @@ public class FilePanel extends VBox {
                     doubleClick(lineEntry);
                 }
             }
-        });
-
-        lineEntry.setOnMouseEntered(e -> lineEntry.setStyle("-fx-background-color: lightgrey;"));
-        lineEntry.setOnMouseExited(e -> lineEntry.setStyle("-fx-background-color: white;"));
+        });*/
 
         getChildren().add(lineEntry);
         lineEntries.add(lineEntry);

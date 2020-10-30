@@ -34,6 +34,7 @@ import javafx.scene.layout.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import lombok.Cleanup;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
@@ -43,7 +44,7 @@ import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
+import java.util.Calendar;
 
 /**
  * This is an abstract class representing a line entry on the panel.
@@ -62,6 +63,8 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     @Getter
     @Setter
     private FilePanel owningPanel;
+
+    private static String DATETIME_FORMAT = "MMM dd HH:mm";
 
     protected LineEntry(String imageURL, CommonFile file, FilePanel owningPanel) throws FTPRemotePathNotFoundException, LocalPathNotFoundException{
         setSpacing(30);
@@ -99,6 +102,27 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         text.setFont(Font.font("Monospaced"));
         getChildren().add(image);
         getChildren().add(text);
+
+        setOnMouseEntered(e -> setStyle("-fx-background-color: lightgrey;"));
+        setOnMouseExited(e -> setStyle("-fx-background-color: white;"));
+        setOnMouseClicked(e -> {
+            if (e.getClickCount() == 1) {
+                owningPanel.click(this);
+            } else {
+                owningPanel.openLineEntry(this);
+            }
+        });
+    }
+
+    private String parseTime(Calendar calendar) {
+        int hour = calendar.get(Calendar.HOUR_OF_DAY);
+        int minute = calendar.get(Calendar.MINUTE);
+        int month = calendar.get(Calendar.MONTH) + 1;
+        int day = calendar.get(Calendar.DAY_OF_MONTH);
+        int year = calendar.get(Calendar.YEAR);
+
+        LocalDateTime localDateTime = LocalDateTime.of(year, month, day, hour, minute);
+        return localDateTime.format(DateTimeFormatter.ofPattern(DATETIME_FORMAT));
     }
 
     private String getModificationTime() throws FTPRemotePathNotFoundException, LocalPathNotFoundException {
@@ -106,7 +130,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         if (file instanceof LocalFile) {
             LocalFile localFile = (LocalFile)file;
             if (localFile.exists()) {
-                modificationTime = new SimpleDateFormat("MMM dd HH:mm").format(localFile.lastModified());
+                modificationTime = new SimpleDateFormat(DATETIME_FORMAT).format(localFile.lastModified());
             } else if (!Files.isSymbolicLink(localFile.toPath())){
                 throw new LocalPathNotFoundException("The file no longer exists", file.getFilePath());
             }
@@ -118,8 +142,15 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
                     String fileModTime = connection.getModificationTime(filePath);
                     if (fileModTime != null) {
                         LocalDateTime dateTime = LocalDateTime.parse(fileModTime, DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy"));
-                        modificationTime = dateTime.format(DateTimeFormatter.ofPattern("MMM dd HH:mm"));
+                        modificationTime = dateTime.format(DateTimeFormatter.ofPattern(DATETIME_FORMAT));
                     } else {
+                        FTPFile[] files = connection.listFiles(connection.getWorkingDirectory());
+                        for (FTPFile f : files) {
+                            if (f.getName().equals(file.getName())) {
+                                return parseTime(f.getTimestamp());
+                            }
+                        }
+
                         log.warn("Could not determine modification time for file {}", filePath);
                         return "Cannot be determined";
                     }

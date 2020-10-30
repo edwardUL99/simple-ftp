@@ -79,7 +79,7 @@ public class FTPClient extends Application {
         FTPSystem.getConnectionManager().addConnection(FTPSystem.getConnection()); // add so all remote files use the same
 
         FilePanel panel = new FilePanel(new RemoteFile("/test"));
-        FilePanelContainer panelContainer = new FilePanelContainer(panel);
+        //FilePanelContainer panelContainer = new FilePanelContainer(panel);
 
         /*FileLineEntry lineEntry = new FileLineEntry(new LocalFile("/home/eddy/Coding/C++/StudSysCppCLI/ubuntu.login"));
         FileLineEntry lineEntry1 = new FileLineEntry(new LocalFile("/home/eddy/Coding/C++/StudSysCppCLI/sources/ModuleHomePage.cpp"));

@@ -30,8 +30,6 @@ import javafx.scene.layout.VBox;
 import lombok.Getter;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.stream.Collectors;
 
 /**
@@ -40,7 +38,7 @@ import java.util.stream.Collectors;
  */
 public class FilePanelContainer extends VBox {
     @Getter
-    private final FilePanel filePanel;
+    private FilePanel filePanel;
     private HBox toolBar;
     private Button delete;
     private Button open;
@@ -51,8 +49,6 @@ public class FilePanelContainer extends VBox {
      * @param filePanel the filePanel this container holds
      */
     public FilePanelContainer(FilePanel filePanel) {
-        this.filePanel = filePanel;
-        filePanel.setParentContainer(this);
         toolBar = new HBox();
         toolBar.setSpacing(5);
         delete = new Button("Delete");
@@ -62,8 +58,9 @@ public class FilePanelContainer extends VBox {
         filePanelPane = new StackPane();
         comboBox = new ComboBox<>();
         toolBar.getChildren().addAll(new Label("Files: "), comboBox, delete, open);
-        filePanelPane.getChildren().addAll(toolBar, filePanel);
-        refreshComboBox();
+        setFilePanel(filePanel);
+        getChildren().add(toolBar);
+        getChildren().add(filePanelPane);
     }
 
     private void refreshComboBox() {
@@ -107,6 +104,22 @@ public class FilePanelContainer extends VBox {
         if (lineEntry != null) {
             filePanel.openLineEntry(lineEntry);
         }
+    }
+
+    /**
+     * Sets the file panel for this container.
+     * Automatically links the file panel by calling FilePanel.setParentContainer
+     * @param filePanel the file panel to set
+     */
+    public void setFilePanel(FilePanel filePanel) {
+        if (this.filePanel != null) {
+            filePanelPane.getChildren().remove(this.filePanel);
+        }
+        this.filePanel = filePanel;
+        if (this.filePanel.getParentContainer() != this) // prevent infinite recursion
+            this.filePanel.setParentContainer(this);
+        filePanelPane.getChildren().add(filePanel);
+        refresh();
     }
 
     /**
