@@ -44,6 +44,7 @@ public class FilePanelContainer extends VBox {
     private Button open;
     private StackPane filePanelPane;
     private ComboBox<String> comboBox;
+
     /**
      * Constructs a FilePanelContainer with the specified filePanel
      * @param filePanel the filePanel this container holds

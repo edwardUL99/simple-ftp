@@ -28,6 +28,7 @@ import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.containers.FilePanelContainer;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -35,7 +36,6 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import lombok.Getter;
 import org.apache.commons.net.ftp.FTPFile;
@@ -60,6 +60,14 @@ public class FilePanel extends VBox {
     private Tooltip currentDirectoryTooltip;
     private Button refresh;
     private Button up;
+    /**
+     * You need to have a flag to enable/disable double click action on file entries inside in entriesBox
+     * Therefore, if the statusPanel is clicked (panel or buttons), doubleClickEnabled is set to false, so double clicks here don't propagate to line entries
+     * On click event into entriesBox, this should be reset to true
+     *
+     * This resolves GitHub issue #42
+      */
+    private boolean doubleClickEnabled;
     private ArrayList<LineEntry> lineEntries;
     private CommonFile directory; // the directory this FilePanel is viewing
     @Getter
@@ -76,6 +84,8 @@ public class FilePanel extends VBox {
     public FilePanel(CommonFile directory) throws FileSystemException {
         setStyle("-fx-background-color: white");
 
+        doubleClickEnabled = true;
+
         statusPanel = new HBox();
         statusPanel.setSpacing(10);
 
@@ -83,24 +93,36 @@ public class FilePanel extends VBox {
         up = new Button("Up");
 
         Label currentDirectoryLabel = new Label("Current Directory: ");
+        currentDirectoryLabel.setPadding(new Insets(5, 0, 0, 0));
         currentDirectoryLabel.setAlignment(Pos.CENTER_LEFT);
         currentDirectoryLabel.setFont(Font.font("Monospaced", FontWeight.BOLD, currentDirectoryLabel.getFont().getSize()));
 
         currentDirectory = new Label();
+        currentDirectory.setPadding(new Insets(5, 0, 0, 0));
         currentDirectory.setAlignment(Pos.CENTER_LEFT);
         currentDirectory.setFont(Font.font("Monospaced"));
-        currentDirectory.setTextAlignment(TextAlignment.CENTER);
 
         lineEntries = new ArrayList<>();
 
-        refresh.setOnAction(e -> refresh());
-        up.setOnAction(e -> up());
+        // Set doubleClickEnabled to false on interaction with the buttons to ensure that double clicks don't propagate to the last line entry
+
+        refresh.setOnAction(e -> {
+            doubleClickEnabled = false;
+            refresh();
+        });
+
+        up.setOnAction(e -> {
+            doubleClickEnabled = false;
+            up();
+        });
 
         statusPanel.getChildren().addAll(refresh, up, currentDirectoryLabel, currentDirectory);
         statusPanel.setBorder(new Border(new BorderStroke(Paint.valueOf("BLACK"), BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));
         statusPanel.setStyle("-fx-background-color: lightgrey;");
+        statusPanel.setOnMouseClicked(e -> doubleClickEnabled = false);
 
         entriesBox = new VBox();
+        entriesBox.setOnMouseClicked(e -> doubleClickEnabled = true);
 
         if (!directory.isADirectory()) {
             throw new FileSystemException("The directory provided is not a directory");
@@ -373,18 +395,20 @@ public class FilePanel extends VBox {
     }
 
     private void doubleClick(final LineEntry lineEntry) {
-        try {
-            if (entryStillExists(lineEntry)) {
-                if (lineEntry instanceof FileLineEntry) {
-                    doubleClickFileEntry((FileLineEntry)lineEntry);
+        if (doubleClickEnabled) {
+            try {
+                if (entryStillExists(lineEntry)) {
+                    if (lineEntry instanceof FileLineEntry) {
+                        doubleClickFileEntry((FileLineEntry) lineEntry);
+                    } else {
+                        doubleClickDirectoryEntry((DirectoryLineEntry) lineEntry);
+                    }
                 } else {
-                    doubleClickDirectoryEntry((DirectoryLineEntry)lineEntry);
+                    UI.doError("File not found", "The file " + lineEntry.getFile().getFilePath() + " does not exist...");
                 }
-            } else {
-                UI.doError("File not found", "The file " + lineEntry.getFile().getFilePath() + " does not exist...");
+            } catch (FileSystemException ex) {
+                UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
             }
-        } catch (FileSystemException ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
         }
     }
 

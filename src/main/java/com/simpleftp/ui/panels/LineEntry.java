@@ -26,9 +26,11 @@ import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.UI;
+import javafx.event.EventType;
 import javafx.geometry.Pos;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 
 import javafx.scene.image.ImageView;
@@ -106,10 +108,12 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         setOnMouseEntered(e -> setStyle("-fx-background-color: lightgrey;"));
         setOnMouseExited(e -> setStyle("-fx-background-color: white;"));
         setOnMouseClicked(e -> {
-            if (e.getClickCount() == 1) {
-                owningPanel.click(this);
-            } else {
-                owningPanel.openLineEntry(this);
+            if (!e.isConsumed()) {
+                if (e.getClickCount() == 1) {
+                    owningPanel.click(this);
+                } else {
+                    owningPanel.openLineEntry(this);
+                }
             }
         });
     }
