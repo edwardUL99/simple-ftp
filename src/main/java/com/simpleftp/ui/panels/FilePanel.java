@@ -104,7 +104,7 @@ public class FilePanel extends VBox {
      * @throws FileSystemException if the directory is not in fact a directory
      */
     public FilePanel(CommonFile directory) throws FileSystemException {
-        setStyle("-fx-background-color: white");
+        setStyle(UI.WHITE_BACKGROUND);
         lineEntries = new ArrayList<>();
 
         initButtons();
@@ -157,7 +157,7 @@ public class FilePanel extends VBox {
         statusPanel.setSpacing(10);
         statusPanel.getChildren().addAll(refresh, up, initCurrentDirectoryLabel(), currentDirectory);
         statusPanel.setBorder(new Border(new BorderStroke(Paint.valueOf("BLACK"), BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));
-        statusPanel.setStyle("-fx-background-color: lightgrey;");
+        statusPanel.setStyle(UI.GREY_BACKGROUND);
     }
 
     /**
@@ -169,7 +169,8 @@ public class FilePanel extends VBox {
         entriesScrollPane.setFitToWidth(true);
         entriesScrollPane.setFitToHeight(true);
         entriesScrollPane.setContent(entriesBox);
-        entriesScrollPane.setStyle("-fx-background-color: white;");
+        entriesScrollPane.setStyle(UI.WHITE_BACKGROUND);
+        entriesBox.setStyle(UI.WHITE_BACKGROUND);
     }
 
     /**
@@ -389,7 +390,6 @@ public class FilePanel extends VBox {
             this.lineEntries.clear();
             getChildren().clear();
             getChildren().add(statusPanel);
-            up.setOnMouseClicked(e -> e.consume());
             entriesBox.getChildren().clear();
             getChildren().add(entriesScrollPane);
             addLineEntriesFromList(lineEntries);
@@ -464,12 +464,28 @@ public class FilePanel extends VBox {
     }
 
     /**
+     * Gets the file path to display as a title on the opened file window
+     * @param lineEntry the line entry being opened
+     * @return the file path
+     */
+    private String getFilePath(final LineEntry lineEntry) {
+        CommonFile file = lineEntry.getFile();
+        String filePath = file.getFilePath();
+
+        if (file instanceof RemoteFile) {
+            filePath = "ftp://" + filePath;
+        }
+
+        return filePath;
+    }
+
+    /**
      * Handles double clicks of the specified file entry
      * @param lineEntry the file entry to double click
      */
     private void doubleClickFileEntry(final FileLineEntry lineEntry) {
         Stage newStage = new Stage();
-        newStage.setTitle(lineEntry.file.getFilePath());
+        newStage.setTitle(getFilePath(lineEntry));
 
         ScrollPane scrollPane = new ScrollPane();
         newStage.setOnCloseRequest(e -> {
@@ -545,8 +561,10 @@ public class FilePanel extends VBox {
         CommonFile file = lineEntry.getFile();
         if (file instanceof LocalFile) {
             if (((LocalFile) file).delete()) {
-                getChildren().remove(lineEntry);
+                entriesBox.getChildren().remove(lineEntry);
                 lineEntries.remove(lineEntry);
+
+                refresh();
 
                 return true;
             }
@@ -556,8 +574,10 @@ public class FilePanel extends VBox {
             if (connection != null) {
                 try {
                     if (connection.removeFile(file.getFilePath())) {
-                        getChildren().remove(lineEntry);
+                        entriesBox.getChildren().remove(lineEntry);
                         lineEntries.remove(lineEntry);
+
+                        refresh();
 
                         return true;
                     }

@@ -66,6 +66,7 @@ public class FilePanelContainer extends VBox {
      * @param filePanel the filePanel this container holds
      */
     public FilePanelContainer(FilePanel filePanel) {
+        setStyle(UI.WHITE_BACKGROUND);
         toolBar = new HBox();
         toolBar.setSpacing(5);
         delete = new Button("Delete");
@@ -75,8 +76,8 @@ public class FilePanelContainer extends VBox {
         comboBox = new ComboBox<>();
         entryMappings = new HashMap<>();
         toolBar.getChildren().addAll(new Label("Files: "), comboBox, delete, open);
-        setFilePanel(filePanel);
         getChildren().add(toolBar);
+        setFilePanel(filePanel);
     }
 
     /**
@@ -84,6 +85,7 @@ public class FilePanelContainer extends VBox {
      */
     private void refreshComboBox() {
         entryMappings.clear();
+        comboBox.getItems().clear();
         ArrayList<LineEntry> filesDisplayed = filePanel.filesDisplayed();
         filesDisplayed.forEach(e -> {
             String fileName = e.getFile().getName();
@@ -114,11 +116,13 @@ public class FilePanelContainer extends VBox {
         LineEntry lineEntry = getLineEntryFromComboBox();
 
         if (lineEntry != null) {
-            if (filePanel.deleteEntry(lineEntry)) {
-                UI.doInfo("File deleted successfully", "File " + lineEntry.getFile().getName() + " deleted");
-                comboBox.getItems().remove(lineEntry.getFile().getName());
-            } else {
-                UI.doError("File not deleted", "File " + lineEntry.getFile().getName() + " wasn't deleted");
+            if (UI.doConfirmation("Confirm file deletion", "Confirm deletion of " + lineEntry.getFile().getName())) {
+                if (filePanel.deleteEntry(lineEntry)) {
+                    UI.doInfo("File deleted successfully", "File " + lineEntry.getFile().getName() + " deleted");
+                    comboBox.getItems().remove(lineEntry.getFile().getName());
+                } else {
+                    UI.doError("File not deleted", "File " + lineEntry.getFile().getName() + " wasn't deleted");
+                }
             }
         }
     }

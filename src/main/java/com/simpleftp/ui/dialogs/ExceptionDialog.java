@@ -44,6 +44,8 @@ public class ExceptionDialog extends Alert {
         setContentText(ex.getMessage());
         this.ex = ex;
         createExpandableArea();
+        getDialogPane().getStylesheets().add(ClassLoader.getSystemResource("dialogs.css").toExternalForm());
+        getDialogPane().getStyleClass().add("exceptionDialog");
     }
 
     private void createExpandableArea() {
@@ -80,8 +82,6 @@ public class ExceptionDialog extends Alert {
             String icon = iconUrl.toString();
             setGraphic(new ImageView(icon));
         }
-        getDialogPane().getStylesheets().add(ClassLoader.getSystemResource("dialogs.css").toExternalForm());
-        getDialogPane().getStyleClass().add("exceptionDialog");
     }
 
     /**

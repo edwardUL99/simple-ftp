@@ -17,18 +17,36 @@
 
 package com.simpleftp.ui.dialogs;
 
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 import javafx.scene.layout.Region;
 
+import java.util.Optional;
+
 /**
- * Wraps a JavaFX Dialog to abstract some of the components
+ * Represents a confirmation dialog
  */
-public class ErrorDialog extends javafx.scene.control.Alert {
-    public ErrorDialog(String header, String message) {
-        super(AlertType.ERROR);
+public class ConfirmationDialog extends Alert {
+    /**
+     * Creates a confirmation dialog with the specified header and message
+     * @param header text to display on dialog header
+     * @param message text to display on dialog content
+     */
+    public ConfirmationDialog(String header, String message) {
+        super(AlertType.CONFIRMATION);
+        setTitle("Confirmation Dialog");
         setHeaderText(header);
-        setTitle("Error Dialog");
         setContentText(message);
-        setWidth(getWidth() + 20);
         getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
+    }
+
+    /**
+     * Gets the chosen option and if ok, return true
+     * @return true if ok is chosen, false otherwise
+     */
+    public boolean showAndGetChoice() {
+        Optional<ButtonType> result = showAndWait();
+
+        return result.get() == ButtonType.OK;
     }
 }

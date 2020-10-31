@@ -18,6 +18,7 @@
 package com.simpleftp.ui.dialogs;
 
 import javafx.scene.control.Alert;
+import javafx.scene.layout.Region;
 
 /**
  * Wraps a JavaFX info dialog
@@ -28,5 +29,6 @@ public class InfoDialog extends Alert {
         setHeaderText(header);
         setTitle("Info Dialog");
         setContentText(message);
+        getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
     }
 }

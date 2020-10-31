@@ -71,7 +71,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         setSpacing(30);
         //setBorder(new Border(new BorderStroke(Paint.valueOf("BLACK"), BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));
         //setMaxHeight(5);
-        setStyle("-fx-background-color: white;");
+        setStyle(UI.WHITE_BACKGROUND);
 
         imageNamePanel.setSpacing(30);
 
@@ -105,8 +105,8 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         getChildren().add(image);
         getChildren().add(text);
 
-        setOnMouseEntered(e -> setStyle("-fx-background-color: lightgrey;"));
-        setOnMouseExited(e -> setStyle("-fx-background-color: white;"));
+        setOnMouseEntered(e -> setStyle(UI.GREY_BACKGROUND));
+        setOnMouseExited(e -> setStyle(UI.WHITE_BACKGROUND));
         setOnMouseClicked(e -> {
             if (!e.isConsumed()) {
                 if (e.getClickCount() == 1) {
@@ -117,13 +117,6 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
             }
         });
         setPickOnBounds(true);
-        //addClickIgnoreToAllChildren();
-    }
-
-    private void addClickIgnoreToAllChildren() {
-        for (Node n : getChildren()) {
-            n.addEventFilter(MouseEvent.MOUSE_CLICKED, MouseEvent::consume);
-        }
     }
 
     private String parseTime(Calendar calendar) {
@@ -297,7 +290,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
             }
         }
 
-        return permissions;//StringUtils.leftPad(permissions, 20);
+        return permissions;
     }
 
     /**
@@ -307,16 +300,6 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
      */
     public void refresh() throws FTPRemotePathNotFoundException, LocalPathNotFoundException {
         init();
-    }
-
-    protected String getFilePath() {
-        String filePath = file.getFilePath();
-
-        if (file instanceof RemoteFile) {
-            filePath = "ftp://" + filePath;
-        }
-
-        return filePath;
     }
 
     @Override

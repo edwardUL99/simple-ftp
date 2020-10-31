@@ -19,18 +19,29 @@ package com.simpleftp.ui;
 
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
+import com.simpleftp.ui.dialogs.ConfirmationDialog;
 import com.simpleftp.ui.dialogs.ErrorDialog;
 import com.simpleftp.ui.dialogs.ExceptionDialog;
 import com.simpleftp.ui.dialogs.InfoDialog;
 
 /**
- * This class provides static util methods for UI actions
+ * This class provides static util methods and constants for UI
  */
 public final class UI {
     /**
      * The size for file and directory icons
      */
     public static final double FILE_ICON_SIZE = 30;
+
+    /**
+     * White CSS background colour
+     */
+    public static final String WHITE_BACKGROUND = "-fx-background-color: white;";
+
+    /**
+     * LightGrey background CSS colour
+     */
+    public static final String GREY_BACKGROUND = "-fx-background-color: lightgrey;";
 
     /**
      * You need to have a flag to enable/disable double click action on file entries inside in entriesBox
@@ -114,5 +125,16 @@ public final class UI {
     public static void doInfo(String headerText, String messageText) {
         InfoDialog infoDialog = new InfoDialog(headerText, messageText);
         infoDialog.showAndWait();
+    }
+
+    /**
+     * Opens a confirmation dialog
+     * @param headerText the text to display in the header
+     * @param messageText the message to display
+     * @return true if confirmed, false otherwise
+     */
+    public static boolean doConfirmation(String headerText, String messageText) {
+        ConfirmationDialog confirmationDialog = new ConfirmationDialog(headerText, messageText);
+        return confirmationDialog.showAndGetChoice();
     }
 }
