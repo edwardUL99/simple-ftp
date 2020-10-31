@@ -26,17 +26,16 @@ import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.UI;
-import javafx.event.EventType;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
+import javafx.scene.input.MouseEvent;
 
 import javafx.scene.image.ImageView;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
-import lombok.Cleanup;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
@@ -72,6 +71,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         setSpacing(30);
         //setBorder(new Border(new BorderStroke(Paint.valueOf("BLACK"), BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));
         //setMaxHeight(5);
+        setStyle("-fx-background-color: white;");
 
         imageNamePanel.setSpacing(30);
 
@@ -116,6 +116,14 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
                 }
             }
         });
+        setPickOnBounds(true);
+        //addClickIgnoreToAllChildren();
+    }
+
+    private void addClickIgnoreToAllChildren() {
+        for (Node n : getChildren()) {
+            n.addEventFilter(MouseEvent.MOUSE_CLICKED, MouseEvent::consume);
+        }
     }
 
     private String parseTime(Calendar calendar) {

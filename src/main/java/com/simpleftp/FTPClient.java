@@ -120,12 +120,7 @@ public class FTPClient extends Application {
             e.printStackTrace();
         }*/
 
-        ScrollPane scrollPane = new ScrollPane();
-        scrollPane.setStyle("-fx-background : white");
-        scrollPane.setContent(panel);
-        scrollPane.setFitToWidth(true);
-
-        Scene scene = new Scene(scrollPane, 510, 300);
+        Scene scene = new Scene(panel, 510, 300);
         primaryStage.setScene(scene);
         primaryStage.setTitle("Test");
         primaryStage.setResizable(false);

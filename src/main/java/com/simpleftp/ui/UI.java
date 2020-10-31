@@ -33,6 +33,15 @@ public final class UI {
     public static final double FILE_ICON_SIZE = 30;
 
     /**
+     * You need to have a flag to enable/disable double click action on file entries inside in entriesBox
+     * Therefore, if the statusPanel is clicked (panel or buttons), doubleClickEnabled is set to false, so double clicks here don't propagate to line entries
+     * On click event into entriesBox, this should be reset to true
+     *
+     * This resolves GitHub issue #42
+     */
+    private static boolean MOUSE_EVENTS_ENABLED = true;
+
+    /**
      * An enum to determine which type of dialog to show for a given exception
      */
     public enum ExceptionType {

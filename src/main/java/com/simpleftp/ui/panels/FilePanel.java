@@ -28,6 +28,7 @@ import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.containers.FilePanelContainer;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -55,25 +56,46 @@ The conditions for determining if an exception or error dialog show up may have 
  * Represents a panel of files. Can be used for local or remote directories
  */
 public class FilePanel extends VBox {
+    /**
+     * The status panel which contains all the buttons and current directory label
+     */
     private HBox statusPanel;
+    /**
+     * The label showing the path to the current directory
+     */
     private Label currentDirectory;
+    /**
+     * A tool tip for displaying the current directory when mouse is hovered over currentDirectory in case it is abbreviated
+     */
     private Tooltip currentDirectoryTooltip;
+    /**
+     * Button for refreshing the FilePanel and its entries
+     */
     private Button refresh;
+    /**
+     * Button for moving up to the parent directory
+     */
     private Button up;
     /**
-     * You need to have a flag to enable/disable double click action on file entries inside in entriesBox
-     * Therefore, if the statusPanel is clicked (panel or buttons), doubleClickEnabled is set to false, so double clicks here don't propagate to line entries
-     * On click event into entriesBox, this should be reset to true
-     *
-     * This resolves GitHub issue #42
-      */
-    private boolean doubleClickEnabled;
+     * The list of line entries inside in entries box
+     */
     private ArrayList<LineEntry> lineEntries;
-    private CommonFile directory; // the directory this FilePanel is viewing
+    /**
+     * The directory that this FilePanel is currently listing
+     */
+    private CommonFile directory;
+    /**
+     * The FilePanelContainer that is holding this FilePanel
+     */
     @Getter
     private FilePanelContainer parentContainer;
-    // you need a separate VBox for line entries otherwise if in the same VBox as the status panel, any double click on either button seems to get translated to the last file in the panel
-    // a separate box keeps these events separate to their own VBoxs
+    /**
+     * The ScrollPane that will provide scrolling functionality for the entriesBox
+     */
+    private ScrollPane entriesScrollPane;
+    /**
+     * The VBox which will hold all the LineEntries
+     */
     private VBox entriesBox;
 
     /**
@@ -83,16 +105,20 @@ public class FilePanel extends VBox {
      */
     public FilePanel(CommonFile directory) throws FileSystemException {
         setStyle("-fx-background-color: white");
+        lineEntries = new ArrayList<>();
 
-        doubleClickEnabled = true;
+        initButtons();
+        initStatusPanel();
+        initEntriesBox();
+        initDirectory(directory);
+    }
 
-        statusPanel = new HBox();
-        statusPanel.setSpacing(10);
-
-        refresh = new Button("Refresh");
-        up = new Button("Up");
-
-        Label currentDirectoryLabel = new Label("Current Directory: ");
+    /**
+     * Initialises the CurrentDirectory labels of the FilePanel and returns the header label
+     * @return header label with value "Current Directory:"
+     */
+    private Label initCurrentDirectoryLabel() {
+        Label currentDirectoryLabel = new Label("Current Directory:");
         currentDirectoryLabel.setPadding(new Insets(5, 0, 0, 0));
         currentDirectoryLabel.setAlignment(Pos.CENTER_LEFT);
         currentDirectoryLabel.setFont(Font.font("Monospaced", FontWeight.BOLD, currentDirectoryLabel.getFont().getSize()));
@@ -102,33 +128,63 @@ public class FilePanel extends VBox {
         currentDirectory.setAlignment(Pos.CENTER_LEFT);
         currentDirectory.setFont(Font.font("Monospaced"));
 
-        lineEntries = new ArrayList<>();
+        return currentDirectoryLabel;
+    }
 
-        // Set doubleClickEnabled to false on interaction with the buttons to ensure that double clicks don't propagate to the last line entry
-
+    /**
+     * Initialises the buttons and sets their respective actions
+     */
+    private void initButtons() {
+        refresh = new Button("Refresh");
+        up = new Button("Up");
         refresh.setOnAction(e -> {
-            doubleClickEnabled = false;
             refresh();
         });
 
         up.setOnAction(e -> {
-            doubleClickEnabled = false;
             up();
         });
 
-        statusPanel.getChildren().addAll(refresh, up, currentDirectoryLabel, currentDirectory);
+        up.setPickOnBounds(true);
+        refresh.setPickOnBounds(true);
+    }
+
+    /**
+     * Intialises the status panel which contains the buttons and current directory
+     */
+    private void initStatusPanel() {
+        statusPanel = new HBox();
+        statusPanel.setSpacing(10);
+        statusPanel.getChildren().addAll(refresh, up, initCurrentDirectoryLabel(), currentDirectory);
         statusPanel.setBorder(new Border(new BorderStroke(Paint.valueOf("BLACK"), BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));
         statusPanel.setStyle("-fx-background-color: lightgrey;");
-        statusPanel.setOnMouseClicked(e -> doubleClickEnabled = false);
+    }
 
+    /**
+     * Initialises the VBox containing file entries
+     */
+    private void initEntriesBox() {
         entriesBox = new VBox();
-        entriesBox.setOnMouseClicked(e -> doubleClickEnabled = true);
+        entriesScrollPane = new ScrollPane();
+        entriesScrollPane.setFitToWidth(true);
+        entriesScrollPane.setFitToHeight(true);
+        entriesScrollPane.setContent(entriesBox);
+        entriesScrollPane.setStyle("-fx-background-color: white;");
+    }
 
+    /**
+     * Initialises the directory that this FilePanel is set up to view
+     * @param directory the directory to set as initial directory
+     * @throws FileSystemException if the directory is not in fact a directory
+     */
+    private void initDirectory(CommonFile directory) throws FileSystemException {
         if (!directory.isADirectory()) {
             throw new FileSystemException("The directory provided is not a directory");
         }
+
         setDirectory(directory);
         refresh();
+
         try {
             FTPConnection connection = FTPSystem.getConnection();
             if (connection != null && !(directory instanceof LocalFile)) {
@@ -153,6 +209,10 @@ public class FilePanel extends VBox {
             this.parentContainer.setFilePanel(this);
     }
 
+    /**
+     * Sets the text of the current directory text in the status panel and abbreviates it if it is too long
+     * @param currentDirectory the directory to change the text to
+     */
     private void setCurrDirText(String currentDirectory) {
         if (currentDirectory.length() >= 25) {
             String currentDirectoryShortened = currentDirectory.substring(0, 12) + "...";
@@ -203,6 +263,7 @@ public class FilePanel extends VBox {
                     }
                 }
             }
+
         } catch (FileSystemException ex) {
             UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
         }
@@ -238,6 +299,11 @@ public class FilePanel extends VBox {
         }
     }
 
+    /**
+     * Constructs the list of line entries from the files listed by the local file
+     * @param lineEntries the list of line entries to populate
+     * @param localFile the file to list
+     */
     private void constructListOfLocalFiles(ArrayList<LineEntry> lineEntries, LocalFile localFile) {
         for (File file : localFile.listFiles()) {
             LocalFile file1 = new LocalFile(file.getAbsolutePath());
@@ -254,6 +320,11 @@ public class FilePanel extends VBox {
         }
     }
 
+    /**
+     * Constructs the list of line entries from the files listed by the remote file
+     * @param lineEntries the list of line entries to populate
+     * @param remoteFile the file to list
+     */
     private void constructListOfRemoteFiles(ArrayList<LineEntry> lineEntries, RemoteFile remoteFile) {
         FTPConnection connection = FTPSystem.getConnection();
 
@@ -274,12 +345,16 @@ public class FilePanel extends VBox {
                     }
                 }
             } catch (FTPException | FileSystemException ex) {
-                UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
+                UI.doException(ex, UI.ExceptionType.ERROR, true);
                 lineEntries.clear();
             }
         }
     }
 
+    /**
+     * Constructs the list of line entries to display
+     * @return the list of constructed line entries
+     */
     private ArrayList<LineEntry> constructListOfFiles() {
         ArrayList<LineEntry> lineEntries = new ArrayList<>();
 
@@ -297,6 +372,10 @@ public class FilePanel extends VBox {
         }
     }
 
+    /**
+     * Adds the list of line entries to the entriesBox
+     * @param lineEntries the line entries to add
+     */
     private void addLineEntriesFromList(ArrayList<LineEntry> lineEntries) {
         lineEntries.forEach(entriesBox.getChildren()::add);
     }
@@ -310,16 +389,27 @@ public class FilePanel extends VBox {
             this.lineEntries.clear();
             getChildren().clear();
             getChildren().add(statusPanel);
+            up.setOnMouseClicked(e -> e.consume());
             entriesBox.getChildren().clear();
-            getChildren().add(entriesBox);
+            getChildren().add(entriesScrollPane);
             addLineEntriesFromList(lineEntries);
             this.lineEntries = lineEntries;
         }
 
         if (parentContainer != null)
             parentContainer.refresh();
+
+        entriesScrollPane.setHvalue(0); // reset scroll position
+        entriesScrollPane.setVvalue(0);
     }
 
+    /**
+     * Opens the specified file and returns it as a string
+     * @param file the file to open
+     * @return the file contents as a String
+     * @throws IOException if the reader fails to read the file
+     * @throws FTPException if the file is a remote file and an error occurs
+     */
     private String fileToString(CommonFile file) throws IOException, FTPException {
         String str = "";
 
@@ -333,7 +423,7 @@ public class FilePanel extends VBox {
             }
         } else {
             RemoteFile remoteFile = (RemoteFile)file;
-                File downloaded = FTPSystem.getConnection().downloadFile(remoteFile.getFilePath(), System.getProperty("java.io.tmpdir"));
+            File downloaded = FTPSystem.getConnection().downloadFile(remoteFile.getFilePath(), System.getProperty("java.io.tmpdir"));
             LocalFile localFile = new LocalFile(downloaded.getAbsolutePath());
             String ret = fileToString(localFile);
             downloaded.delete();
@@ -344,6 +434,12 @@ public class FilePanel extends VBox {
         return str;
     }
 
+    /**
+     * Checks if the line entry is still valid, i.e. the file specified by it is still on the file system (local or remote)
+     * @param lineEntry the line entry to check
+     * @return true if it still exists
+     * @throws FileSystemException
+     */
     private boolean entryStillExists(final LineEntry lineEntry) throws FileSystemException {
         CommonFile file = lineEntry.getFile();
 
@@ -354,6 +450,10 @@ public class FilePanel extends VBox {
         }
     }
 
+    /**
+     * Handles double click of the specified directory entry
+     * @param lineEntry the directory entry to double click
+     */
     private void doubleClickDirectoryEntry(final DirectoryLineEntry lineEntry) {
         try {
             setDirectory(lineEntry.getFile());
@@ -363,6 +463,10 @@ public class FilePanel extends VBox {
         }
     }
 
+    /**
+     * Handles double clicks of the specified file entry
+     * @param lineEntry the file entry to double click
+     */
     private void doubleClickFileEntry(final FileLineEntry lineEntry) {
         Stage newStage = new Stage();
         newStage.setTitle(lineEntry.file.getFilePath());
@@ -394,21 +498,23 @@ public class FilePanel extends VBox {
         }
     }
 
+    /**
+     * Handles the double click of the specified line entry
+     * @param lineEntry the line entry to double click
+     */
     private void doubleClick(final LineEntry lineEntry) {
-        if (doubleClickEnabled) {
-            try {
-                if (entryStillExists(lineEntry)) {
-                    if (lineEntry instanceof FileLineEntry) {
-                        doubleClickFileEntry((FileLineEntry) lineEntry);
-                    } else {
-                        doubleClickDirectoryEntry((DirectoryLineEntry) lineEntry);
-                    }
+        try {
+            if (entryStillExists(lineEntry)) {
+                if (lineEntry instanceof FileLineEntry) {
+                    doubleClickFileEntry((FileLineEntry) lineEntry);
                 } else {
-                    UI.doError("File not found", "The file " + lineEntry.getFile().getFilePath() + " does not exist...");
+                    doubleClickDirectoryEntry((DirectoryLineEntry) lineEntry);
                 }
-            } catch (FileSystemException ex) {
-                UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
+            } else {
+                UI.doError("File not found", "The file " + lineEntry.getFile().getFilePath() + " does not exist...");
             }
+        } catch (FileSystemException ex) {
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
         }
     }
 
@@ -464,18 +570,13 @@ public class FilePanel extends VBox {
         return false;
     }
 
+    /**
+     * Adds the specified line entry to the entries box and specified list
+     * @param lineEntry the line entry to add
+     * @param lineEntries the list to also add the entry to
+     */
     private void addLineEntry(final LineEntry lineEntry, ArrayList<LineEntry> lineEntries) {
-        /*lineEntry.setOnMouseClicked(e -> {
-            if (e.getButton().equals(MouseButton.PRIMARY)) {
-                if (e.getClickCount() == 1) {
-                    click(lineEntry);
-                } else {
-                    doubleClick(lineEntry);
-                }
-            }
-        });*/
-
-        getChildren().add(lineEntry);
+        entriesBox.getChildren().add(lineEntry);
         lineEntries.add(lineEntry);
     }
 
