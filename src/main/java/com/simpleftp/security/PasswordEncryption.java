@@ -19,12 +19,10 @@ package com.simpleftp.security;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.security.spec.KeySpec;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
@@ -62,7 +60,7 @@ public class PasswordEncryption {
             if (inputStream == null) {
                 File encryptFile = new File(encryptionFile);
                 if (encryptFile.exists() && encryptFile.isFile()) {
-                    inputStream = new FileInputStream(property);
+                    inputStream = new FileInputStream(encryptFile);
                 }
             }
 

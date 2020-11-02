@@ -46,7 +46,6 @@ import java.util.Properties;
  */
 @AllArgsConstructor
 public class LocalFileSystem implements FileSystem {
-    @Getter
     private final FTPConnection ftpConnection;
     @Setter
     private FTPConnectionManager ftpConnectionManager;
