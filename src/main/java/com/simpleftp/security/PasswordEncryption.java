@@ -20,13 +20,15 @@ package com.simpleftp.security;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.DESedeKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.spec.KeySpec;
+import java.util.Arrays;
 import java.util.stream.Collectors;
 
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 
 /**
  * This class is used for encrypting and decrypting passwords
@@ -38,13 +40,13 @@ import org.apache.commons.codec.binary.Base64;
  */
 public class PasswordEncryption {
     private static final String UNICODE_FORMAT = "UTF8";
-    private static final String DESEDE_ENCRYPTION_SCHEME = "DESede";
-    private static SecretKey key;
+    private static final String ENCRYPTION_SCHEME = "AES/ECB/PKCS5Padding";
+    private static SecretKeySpec key;
     private static String encryptionKey;
 
     private static String getEncryptionKey() throws IOException {
         if (encryptionKey == null) {
-            InputStream inputStream = null;
+            InputStream inputStream;
             String encryptionFile;
 
             String property = System.getProperty("simpleftp.passwordEncryptFile");
@@ -83,13 +85,14 @@ public class PasswordEncryption {
         return encryptionKey;
     }
 
-    private static SecretKey getSecretKey() throws Exception {
+    private static SecretKeySpec getSecretKey() throws Exception {
         if (key == null) {
             String encryptionKey = getEncryptionKey();
             byte[] arrayBytes = encryptionKey.getBytes(UNICODE_FORMAT);
-            KeySpec keySpec = new DESedeKeySpec(arrayBytes);
-            SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance(DESEDE_ENCRYPTION_SCHEME);
-            key = secretKeyFactory.generateSecret(keySpec);
+            MessageDigest sha = MessageDigest.getInstance("SHA-1");
+            arrayBytes = sha.digest(arrayBytes);
+            arrayBytes = Arrays.copyOf(arrayBytes, 16);
+            key = new SecretKeySpec(arrayBytes, "AES");
         }
 
         return key;
@@ -105,11 +108,11 @@ public class PasswordEncryption {
         String encrypted = null;
         try {
             SecretKey key = getSecretKey();
-            Cipher cipher = Cipher.getInstance(DESEDE_ENCRYPTION_SCHEME);
+            Cipher cipher = Cipher.getInstance(ENCRYPTION_SCHEME);
             cipher.init(Cipher.ENCRYPT_MODE, key);
             byte[] plainText = password.getBytes(UNICODE_FORMAT);
             byte[] encryptedText = cipher.doFinal(plainText);
-            encrypted = new String(Base64.encodeBase64(encryptedText));
+            encrypted = Base64.getEncoder().encodeToString(encryptedText);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -125,9 +128,9 @@ public class PasswordEncryption {
         String decrypted = null;
         try {
             SecretKey key = getSecretKey();
-            Cipher cipher = Cipher.getInstance(DESEDE_ENCRYPTION_SCHEME);
+            Cipher cipher = Cipher.getInstance(ENCRYPTION_SCHEME);
             cipher.init(Cipher.DECRYPT_MODE, key);
-            byte[] encryptedText = Base64.decodeBase64(password);
+            byte[] encryptedText = Base64.getDecoder().decode(password);
             byte[] plainText = cipher.doFinal(encryptedText);
             decrypted = new String(plainText);
         } catch (Exception e) {
