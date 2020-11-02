@@ -20,9 +20,9 @@ package com.simpleftp.filesystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.filesystem.interfaces.FileSystem;
-import com.simpleftp.ftp.connections.FTPConnection;
-import com.simpleftp.ftp.connections.FTPConnectionManager;
-import com.simpleftp.ftp.connections.FTPConnectionManagerBuilder;
+import com.simpleftp.ftp.connection.FTPConnection;
+import com.simpleftp.ftp.connection.FTPConnectionManager;
+import com.simpleftp.ftp.connection.FTPConnectionManagerBuilder;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.security.PasswordEncryption;
 import lombok.AllArgsConstructor;
@@ -45,8 +45,8 @@ import java.util.Properties;
  */
 @AllArgsConstructor
 public class RemoteFileSystem implements FileSystem {
-    private FTPConnection ftpConnection;
-    private FTPConnectionManager ftpConnectionManager;
+    private final FTPConnection ftpConnection;
+    private final FTPConnectionManager ftpConnectionManager;
 
     public RemoteFileSystem() throws FileSystemException {
         this(new FTPConnectionManagerBuilder()
@@ -67,6 +67,18 @@ public class RemoteFileSystem implements FileSystem {
                 Integer.parseInt(properties.getProperty("ftp-port")));
         if (ftpConnection == null) {
             throw new FileSystemException("Could not configure the FTP Connection backing this RemoteFileSystem");
+        }
+    }
+
+    public RemoteFileSystem(FTPConnection connection) throws FileSystemException {
+        ftpConnectionManager = new FTPConnectionManagerBuilder()
+                                    .useSystemConnectionManager(true)
+                                    .setBuiltManagerAsSystemManager(true)
+                                    .build();
+        if (!connection.isConnected() && !connection.isLoggedIn()) {
+            throw new FileSystemException("The provided connection must be connected and logged in");
+        } else {
+            ftpConnection = connection;
         }
     }
 
@@ -115,7 +127,16 @@ public class RemoteFileSystem implements FileSystem {
     @Override
     public boolean removeFile(String fileName) throws FileSystemException {
         try {
-            return ftpConnection.removeFile(fileName);
+            RemoteFile file = (RemoteFile)getFile(fileName);
+            if (file != null) {
+                if (file.isNormalFile()) {
+                    return ftpConnection.removeFile(fileName);
+                } else {
+                    return ftpConnection.removeDirectory(fileName);
+                }
+            }
+
+            return false;
         } catch (FTPException ex) {
             throw new FileSystemException("A FTP Exception occurred when removing the specified file", ex);
         }
@@ -176,13 +197,25 @@ public class RemoteFileSystem implements FileSystem {
 
                 int i = 0;
                 for (FTPFile f : files) {
-                    remoteFiles[i++] = new RemoteFile(dir + "/" + f.getName(), ftpConnectionManager);
+                    String path = dir.equals("/") ? dir + f.getName():dir + "/" + f.getName();
+                    remoteFiles[i++] = new RemoteFile(path, ftpConnectionManager);
                 }
 
                 return remoteFiles;
             }
         } catch (FTPException ex) {
-            throw new FileSystemException("A FTP Exception occurred when listing files");
+            throw new FileSystemException("A FTP Exception occurred when listing files", ex);
         }
+    }
+
+    /**
+     * Returns the FTPConnection the file system is linked to.
+     * A FTP connection is required for both local and remote file systems as local file system needs to be able to download from the ftp server
+     *
+     * @return the connection being used
+     */
+    @Override
+    public FTPConnection getFTPConnection() {
+        return ftpConnection;
     }
 }

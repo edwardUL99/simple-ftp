@@ -19,19 +19,19 @@ package com.simpleftp;
 
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
-import com.simpleftp.ftp.FTPConnectionDetails;
-import com.simpleftp.ftp.FTPServer;
-import com.simpleftp.ftp.connections.FTPConnection;
-import com.simpleftp.ftp.connections.FTPConnectionManager;
-import com.simpleftp.ftp.connections.FTPConnectionManagerBuilder;
+import com.simpleftp.ftp.connection.FTPConnectionDetails;
+import com.simpleftp.ftp.connection.FTPServer;
+import com.simpleftp.ftp.connection.FTPConnection;
+import com.simpleftp.ftp.connection.FTPConnectionManager;
+import com.simpleftp.ftp.connection.FTPConnectionManagerBuilder;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.security.PasswordEncryption;
+import com.simpleftp.ui.UI;
 import com.simpleftp.ui.containers.FilePanelContainer;
 import com.simpleftp.ui.panels.FilePanel;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
-import javafx.scene.control.ScrollPane;
 import javafx.stage.Stage;
 
 
@@ -60,7 +60,7 @@ public class FTPClient extends Application {
         Runtime.getRuntime().addShutdownHook(new ShutDownHandler());
     }
 
-    class ShutDownHandler extends Thread {
+    static class ShutDownHandler extends Thread {
         @Override
         public void run() {
             if (FTPSystem.getConnection() != null) {
@@ -79,6 +79,7 @@ public class FTPClient extends Application {
         FTPSystem.getConnectionManager().addConnection(FTPSystem.getConnection()); // add so all remote files use the same
 
         FilePanel panel = new FilePanel(new RemoteFile("/test"));
+        //FilePanel panel = new FilePanel(new LocalFile("/home/eddy"));
         FilePanelContainer panelContainer = new FilePanelContainer(panel);
 
         /*FileLineEntry lineEntry = new FileLineEntry(new LocalFile("/home/eddy/Coding/C++/StudSysCppCLI/ubuntu.login"));
@@ -120,7 +121,7 @@ public class FTPClient extends Application {
             e.printStackTrace();
         }*/
 
-        Scene scene = new Scene(panelContainer, 510, 300);
+        Scene scene = new Scene(panelContainer, UI.FILE_PANEL_WIDTH, UI.FILE_PANEL_HEIGHT);
         primaryStage.setScene(scene);
         primaryStage.setTitle("Test");
         primaryStage.setResizable(false);

@@ -19,8 +19,8 @@ package com.simpleftp.sessions;
 
 import static com.simpleftp.sessions.XMLConstants.*;
 import com.ctc.wstx.stax.WstxInputFactory;
-import com.simpleftp.ftp.FTPConnectionDetails;
-import com.simpleftp.ftp.FTPServer;
+import com.simpleftp.ftp.connection.FTPConnectionDetails;
+import com.simpleftp.ftp.connection.FTPServer;
 import com.simpleftp.security.PasswordEncryption;
 import com.simpleftp.sessions.exceptions.SessionLoadException;
 import lombok.AllArgsConstructor;
@@ -31,9 +31,6 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.events.XMLEvent;
 import java.io.File;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
 
 /**
  * This class loads in saved sessions from a specified xml file

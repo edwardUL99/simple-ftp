@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ftp.connections;
+package com.simpleftp.ftp.connection;
 
 import com.simpleftp.FTPSystem;
 

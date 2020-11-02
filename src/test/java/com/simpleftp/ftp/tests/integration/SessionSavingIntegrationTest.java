@@ -18,8 +18,8 @@
 package com.simpleftp.ftp.tests.integration;
 
 import com.simpleftp.FTPSystem;
-import com.simpleftp.ftp.FTPConnectionDetails;
-import com.simpleftp.ftp.FTPServer;
+import com.simpleftp.ftp.connection.FTPConnectionDetails;
+import com.simpleftp.ftp.connection.FTPServer;
 import com.simpleftp.sessions.*;
 import com.simpleftp.sessions.exceptions.SessionLoadException;
 import com.simpleftp.sessions.exceptions.SessionSaveException;

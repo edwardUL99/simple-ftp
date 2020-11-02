@@ -31,7 +31,7 @@ import java.util.Optional;
  * This is a dialog for viewing an exception and it's details
  */
 public class ExceptionDialog extends Alert {
-    private Exception ex;
+    private final Exception ex;
 
     /**
      * Creates an Exception dialog with the specified exception

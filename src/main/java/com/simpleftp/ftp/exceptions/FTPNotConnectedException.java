@@ -68,7 +68,7 @@ public class FTPNotConnectedException extends FTPException {
         NAVIGATE
     }
 
-    private static HashMap<ActionType, String> actionTypeMappings = new HashMap<>();
+    private static final HashMap<ActionType, String> actionTypeMappings = new HashMap<>();
 
     static {
         ActionType[] actionTypes = ActionType.values();
@@ -81,7 +81,7 @@ public class FTPNotConnectedException extends FTPException {
     /**
      * The ActionType enum value which caused this exception
      */
-    private ActionType actionType;
+    private final ActionType actionType;
 
     /**
      * Constructs an object of this exception with the specified message and ActionType enum value
@@ -89,7 +89,7 @@ public class FTPNotConnectedException extends FTPException {
      * @param actionType the ActionType representing the action that was done that caused this exception
      */
     public FTPNotConnectedException(String message, ActionType actionType) {
-        super(message);
+        super(message, "");
         this.actionType = actionType;
     }
 
@@ -100,7 +100,7 @@ public class FTPNotConnectedException extends FTPException {
      * @param actionType the ActionType representing the action that was done that caused this exception
      */
     public FTPNotConnectedException(String message, Exception e, ActionType actionType) {
-        super(message, e);
+        super(message, "", e);
         this.actionType = actionType;
     }
 

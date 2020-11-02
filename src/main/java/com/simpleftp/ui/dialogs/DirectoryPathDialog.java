@@ -15,23 +15,18 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ftp;
-
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+package com.simpleftp.ui.dialogs;
 
 /**
- * This class returns a collection of statistics for a specified path in one location
+ * Dialog for specifying a path for a directory to create
  */
-@AllArgsConstructor
-@NoArgsConstructor
-@Getter
-@EqualsAndHashCode
-public class FTPPathStats {
-    private String filePath;
-    private String modificationTime;
-    private String status;
-    private String size;
+public class DirectoryPathDialog extends ChangePathDialog {
+    /**
+     * Constructs the dialog
+     */
+    public DirectoryPathDialog() {
+        setTitle("Create Directory");
+        setHeaderText("Create new directory");
+        setContentText("Enter the path of the new directory: ");
+    }
 }

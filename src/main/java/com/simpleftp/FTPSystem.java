@@ -17,8 +17,8 @@
 
 package com.simpleftp;
 
-import com.simpleftp.ftp.connections.FTPConnection;
-import com.simpleftp.ftp.connections.FTPConnectionManager;
+import com.simpleftp.ftp.connection.FTPConnection;
+import com.simpleftp.ftp.connection.FTPConnectionManager;
 import com.simpleftp.ftp.exceptions.FTPException;
 
 /**

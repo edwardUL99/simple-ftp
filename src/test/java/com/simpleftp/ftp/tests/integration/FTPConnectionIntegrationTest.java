@@ -18,8 +18,8 @@
 package com.simpleftp.ftp.tests.integration;
 
 import com.simpleftp.FTPSystem;
-import com.simpleftp.ftp.FTPPathStats;
-import com.simpleftp.ftp.FTPServer;
+import com.simpleftp.ftp.connection.FTPPathStats;
+import com.simpleftp.ftp.connection.FTPServer;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.ftp.tests.FTPConnectionTestable;
 import org.apache.commons.net.ftp.FTPFile;
@@ -74,9 +74,9 @@ public class FTPConnectionIntegrationTest {
         ftpServer.start();
 
         FTPServer serverDetails = new FTPServer("localhost", TEST_SERVER_USER, TEST_SERVER_PASSWORD, TEST_SERVER_PORT);
+        FTPSystem.setSystemTestingFlag(true);
         ftpConnection = new FTPConnectionTestable();
         ftpConnection.setFtpServer(serverDetails);
-        FTPSystem.setSystemTestingFlag(true);
     }
 
     @AfterEach
@@ -144,6 +144,7 @@ public class FTPConnectionIntegrationTest {
     void shouldGetFTPFileSuccessfully() throws FTPConnectionFailedException, FTPCommandFailedException, FTPNotConnectedException, FTPRemotePathNotFoundException, FTPError {
         assertTrue(ftpConnection.connect());
         assertTrue(ftpConnection.login());
+        assertTrue(ftpServer.getFileSystem().exists(TEST_FTP_FILE));
         assertNotNull(ftpConnection.getFTPFile(TEST_FTP_FILE));
     }
 
@@ -275,8 +276,8 @@ public class FTPConnectionIntegrationTest {
     void shouldCheckIfRemoteFileExistsSuccessfully() throws FTPConnectionFailedException, FTPError, FTPNotConnectedException, FTPCommandFailedException {
         assertTrue(ftpConnection.connect());
         assertTrue(ftpConnection.login());
-        assertTrue(ftpConnection.remotePathExists(TEST_FTP_FILE, false));
         assertTrue(ftpServer.getFileSystem().exists(TEST_FTP_FILE));
+        assertTrue(ftpConnection.remotePathExists(TEST_FTP_FILE, false));
     }
 
     @Test
@@ -344,12 +345,6 @@ public class FTPConnectionIntegrationTest {
 
         FTPPathStats stats = ftpConnection.getPathStats(TEST_FTP_FILE);
         assertNotNull(stats);
-    }
-
-    @Test
-    void shouldGetReplyCodeSuccessfully() throws FTPConnectionFailedException {
-        assertTrue(ftpConnection.connect());
-        assertEquals(220, ftpConnection.getReplyCode());
     }
 
     @Test

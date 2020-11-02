@@ -15,33 +15,28 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.filesystem.exceptions;
+package com.simpleftp.ftp.connection;
+
+import lombok.*;
 
 /**
- * This class represents an exception related to the FileSystem
+ * This class provides details to be used in creating a FTPConnection
+ * Encapsulates all these details into one place
  */
-public class FileSystemException extends Exception {
+@NoArgsConstructor
+@AllArgsConstructor
+@With
+@Data
+@EqualsAndHashCode
+public class FTPConnectionDetails {
     /**
-     * Creates a default exception object
+     * The page size for listing files in the server
      */
-    public FileSystemException() {
-        super();
-    }
-
+    private int pageSize;
     /**
-     * Creates an exception object
-     * @param message the message to display
+     * The number of seconds for the server to time out
+     * This is used for all timeouts such a keep alive etc
      */
-    public FileSystemException(String message) {
-        super(message);
-    }
-
-    /**
-     * Creates an exception object
-     * @param message the message to display
-     * @param ex the causing exception
-     */
-    public FileSystemException(String message, Exception ex) {
-        super(message, ex);
-    }
+    private int timeout = 300;
+    //this will be added to
 }

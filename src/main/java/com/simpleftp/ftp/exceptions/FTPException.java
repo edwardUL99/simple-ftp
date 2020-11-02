@@ -30,15 +30,22 @@ public abstract class FTPException extends Exception {
     /**
      * The time at which this exception occurred;
      */
-    private LocalDateTime exceptionTime;
+    private final LocalDateTime exceptionTime;
+    /**
+     * The reply message from the FTP server at the time this exception was thrown
+     */
+    @Getter
+    private String replyString;
 
-    public FTPException(String message) {
+    public FTPException(String message, String replyString) {
         super(message);
+        this.replyString = replyString;
         exceptionTime = LocalDateTime.now();
     }
 
-    public FTPException(String message, Exception e) {
+    public FTPException(String message, String replyString, Exception e) {
         super(message, e);
+        this.replyString = replyString;
         exceptionTime = LocalDateTime.now();
     }
 

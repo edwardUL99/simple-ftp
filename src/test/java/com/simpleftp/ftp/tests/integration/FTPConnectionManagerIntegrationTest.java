@@ -18,9 +18,9 @@
 package com.simpleftp.ftp.tests.integration;
 
 import com.simpleftp.FTPSystem;
-import com.simpleftp.ftp.connections.FTPConnection;
-import com.simpleftp.ftp.connections.FTPConnectionManager;
-import com.simpleftp.ftp.FTPServer;
+import com.simpleftp.ftp.connection.FTPConnection;
+import com.simpleftp.ftp.connection.FTPConnectionManager;
+import com.simpleftp.ftp.connection.FTPServer;
 import com.simpleftp.ftp.exceptions.FTPCommandFailedException;
 import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
 import com.simpleftp.ftp.exceptions.FTPNotConnectedException;

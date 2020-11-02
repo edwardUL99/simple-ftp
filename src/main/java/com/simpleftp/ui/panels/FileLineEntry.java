@@ -17,25 +17,9 @@
 
 package com.simpleftp.ui.panels;
 
-import com.simpleftp.FTPSystem;
-import com.simpleftp.filesystem.LocalFile;
-import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.interfaces.CommonFile;
-import com.simpleftp.ftp.connections.FTPConnection;
-import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
-import javafx.scene.control.ContextMenu;
-import javafx.scene.control.MenuItem;
-import javafx.scene.input.ContextMenuEvent;
-import lombok.EqualsAndHashCode;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.net.ftp.FTP;
-import org.apache.commons.net.ftp.FTPFile;
-
-import java.io.IOException;
 
 /**
  * A line entry implementation for a File.

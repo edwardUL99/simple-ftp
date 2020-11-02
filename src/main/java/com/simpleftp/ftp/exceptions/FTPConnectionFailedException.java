@@ -17,7 +17,7 @@
 
 package com.simpleftp.ftp.exceptions;
 
-import com.simpleftp.ftp.FTPServer;
+import com.simpleftp.ftp.connection.FTPServer;
 import lombok.Getter;
 
 /**
@@ -33,26 +33,28 @@ public class FTPConnectionFailedException extends FTPException {
     /**
      * The FTPServer object containing the details at which the connection failed
      */
-    private FTPServer ftpServer;
+    private final FTPServer ftpServer;
 
     /**
      * Constructs an object for this exception with the specified message and FTPServer object
      * @param message the message for this exception to display
+     * @param replyString the reply from the server
      * @param ftpServer the FTPServer containing the details that were used to maintain the FTPConnection
      */
-    public FTPConnectionFailedException(String message, FTPServer ftpServer) {
-        super(message);
+    public FTPConnectionFailedException(String message, String replyString, FTPServer ftpServer) {
+        super(message, replyString);
         this.ftpServer = ftpServer;
     }
 
     /**
      * Constructs an object for this exception with the specified message, causing exception and FTPServer object
      * @param message the message for this exception to display
+     * @param replyString the reply from the server
      * @param e the causing exception for this one
      * @param ftpServer the FTPServer object containing connection details
      */
-    public FTPConnectionFailedException(String message, Exception e, FTPServer ftpServer) {
-        super(message, e);
+    public FTPConnectionFailedException(String message, String replyString, Exception e, FTPServer ftpServer) {
+        super(message, replyString, e);
         this.ftpServer = ftpServer;
     }
 

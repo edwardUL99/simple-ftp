@@ -15,28 +15,23 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ftp;
+package com.simpleftp.ftp.connection;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
- * This class provides details to be used in creating a FTPConnection
- * Encapsulates all these details into one place
+ * This class returns a collection of statistics for a specified path in one location
  */
-@NoArgsConstructor
 @AllArgsConstructor
-@With
-@Data
+@NoArgsConstructor
+@Getter
 @EqualsAndHashCode
-public class FTPConnectionDetails {
-    /**
-     * The page size for listing files in the server
-     */
-    private int pageSize;
-    /**
-     * The number of seconds for the server to time out
-     * This is used for all timeouts such a keep alive etc
-     */
-    private int timeout = 300;
-    //this will be added to
+public class FTPPathStats {
+    private String filePath;
+    private String modificationTime;
+    private String status;
+    private String size;
 }

@@ -18,8 +18,8 @@
 package com.simpleftp.ftp.tests.unit;
 
 import com.simpleftp.FTPSystem;
-import com.simpleftp.ftp.FTPLookup;
-import com.simpleftp.ftp.FTPPathStats;
+import com.simpleftp.ftp.connection.FTPLookup;
+import com.simpleftp.ftp.connection.FTPPathStats;
 import com.simpleftp.ftp.exceptions.FTPError;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPConnectionClosedException;

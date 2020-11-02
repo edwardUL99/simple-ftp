@@ -27,7 +27,7 @@ public class FTPConfig {
     /**
      * The config object being wrapped by this class
      */
-    private FTPClientConfig config;
+    private final FTPClientConfig config;
 
     /**
      * Constructs a FTPConfig object using the specified systemType. This can be got from the FTPConnection.getSystemType() call

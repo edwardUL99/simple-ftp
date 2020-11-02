@@ -15,10 +15,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ftp.connections;
+package com.simpleftp.ftp.connection;
 
-import com.simpleftp.ftp.FTPServer;
-import com.simpleftp.ftp.connections.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import lombok.Setter;
 

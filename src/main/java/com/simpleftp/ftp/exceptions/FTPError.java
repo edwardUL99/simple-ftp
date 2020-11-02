@@ -25,17 +25,19 @@ public class FTPError extends FTPException {
     /**
      * Constructs a FTPError object with the specified message
      * @param message the message for this exception to display
+     * @param replyString the reply from the server
      */
-    public FTPError(String message) {
-        super(message);
+    public FTPError(String message, String replyString) {
+        super(message, replyString);
     }
 
     /**
      * Constructs a FTPError object with the specified message and causing exception
      * @param message the message for this exception to display
+     * @param replyString the reply from the server
      * @param ex the causing exception
      */
-    public FTPError(String message, Exception ex) {
-        super(message, ex);
+    public FTPError(String message, String replyString, Exception ex) {
+        super(message, replyString, ex);
     }
 }

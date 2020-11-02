@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ftp;
+package com.simpleftp.ftp.connection;
 
 import com.simpleftp.ftp.exceptions.FTPError;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +39,7 @@ import java.time.format.DateTimeFormatter;
 @RequiredArgsConstructor
 @Log4j2
 public class FTPLookup {
-    private boolean debug = Boolean.parseBoolean(System.getProperty("simpleftp.debug"));
+    private final boolean debug = Boolean.parseBoolean(System.getProperty("simpleftp.debug"));
     /**
      * The client object which will be used by this class
      */
@@ -124,7 +124,7 @@ public class FTPLookup {
 
             if (currentWorkingDirectory == null) {
                 log.error("Cannot determine the current working directory, cannot proceed with checking if directory exists");
-                throw new FTPError("Cannot determine if remotePath exists on this server");
+                throw new FTPError("Cannot determine if remotePath exists on this server", ftpClient.getReplyString());
             }
 
             remotePathExists = ftpClient.changeWorkingDirectory(remotePath); // if you changed to the directory successfully, it exists

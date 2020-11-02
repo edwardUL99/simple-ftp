@@ -20,9 +20,9 @@ package com.simpleftp.filesystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.filesystem.interfaces.FileSystem;
-import com.simpleftp.ftp.connections.FTPConnection;
-import com.simpleftp.ftp.connections.FTPConnectionManager;
-import com.simpleftp.ftp.connections.FTPConnectionManagerBuilder;
+import com.simpleftp.ftp.connection.FTPConnection;
+import com.simpleftp.ftp.connection.FTPConnectionManager;
+import com.simpleftp.ftp.connection.FTPConnectionManagerBuilder;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.security.PasswordEncryption;
 import lombok.AllArgsConstructor;
@@ -47,7 +47,7 @@ import java.util.Properties;
 @AllArgsConstructor
 public class LocalFileSystem implements FileSystem {
     @Getter
-    private FTPConnection ftpConnection;
+    private final FTPConnection ftpConnection;
     @Setter
     private FTPConnectionManager ftpConnectionManager;
 
@@ -71,6 +71,14 @@ public class LocalFileSystem implements FileSystem {
 
         if (ftpConnection == null)
             throw new FileSystemException("Could not configure the FTP Server this File system is supposed to connect to, did you set the System properties ftp-server ftp-user ftp-pass and ftp-port?");
+    }
+
+    public LocalFileSystem(FTPConnection connection) throws FileSystemException {
+        if (!connection.isConnected() && !connection.isLoggedIn()) {
+            throw new FileSystemException("The provided connection must be connected and logged in");
+        } else {
+            ftpConnection = connection;
+        }
     }
 
     /**
@@ -151,5 +159,16 @@ public class LocalFileSystem implements FileSystem {
 
             return localFiles;
         }
+    }
+
+    /**
+     * Returns the FTPConnection the file system is linked to.
+     * A FTP connection is required for both local and remote file systems as local file system needs to be able to download from the ftp server
+     *
+     * @return the connection being used
+     */
+    @Override
+    public FTPConnection getFTPConnection() {
+        return ftpConnection;
     }
 }

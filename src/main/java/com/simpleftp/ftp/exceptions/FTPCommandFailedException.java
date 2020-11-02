@@ -24,17 +24,19 @@ public class FTPCommandFailedException extends FTPException {
     /**
      * Constructs an exception object with the specified message
      * @param message the message for this exception to display
+     * @param replyString the reply string from the FTP server
      */
-    public FTPCommandFailedException(String message) {
-        super(message);
+    public FTPCommandFailedException(String message, String replyString) {
+        super(message, replyString);
     }
 
     /**
      * Constructs an exception object with the specified message and causing exception
      * @param message the message for this exception to display
+     * @param replyString the reply string from the FTP server
      * @param ex the causing exception
      */
-    public FTPCommandFailedException(String message, Exception ex) {
-        super(message, ex);
+    public FTPCommandFailedException(String message, String replyString, Exception ex) {
+        super(message, replyString, ex);
     }
 }

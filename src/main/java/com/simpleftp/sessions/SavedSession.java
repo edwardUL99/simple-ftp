@@ -17,8 +17,8 @@
 
 package com.simpleftp.sessions;
 
-import com.simpleftp.ftp.FTPConnectionDetails;
-import com.simpleftp.ftp.FTPServer;
+import com.simpleftp.ftp.connection.FTPConnectionDetails;
+import com.simpleftp.ftp.connection.FTPServer;
 import lombok.*;
 
 import java.time.LocalDateTime;

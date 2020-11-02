@@ -27,7 +27,7 @@ public class FTPRemotePathNotFoundException extends FTPException {
      * The remote path that could not be found
      */
     @Getter
-    private String remotePath;
+    private final String remotePath;
 
     /**
      * Constructs an exception object with the given message and path to the remote path that does not exist
@@ -35,7 +35,7 @@ public class FTPRemotePathNotFoundException extends FTPException {
      * @param remotePath the remote path that does not exist
      */
     public FTPRemotePathNotFoundException(String message, String remotePath) {
-        super(message);
+        super(message, "");
         this.remotePath = remotePath;
     }
 
@@ -46,7 +46,7 @@ public class FTPRemotePathNotFoundException extends FTPException {
      * @param remotePath the remote path that does not exist
      */
     public FTPRemotePathNotFoundException(String message, Exception ex, String remotePath) {
-        super(message, ex);
+        super(message, "", ex);
         this.remotePath = remotePath;
     }
 }

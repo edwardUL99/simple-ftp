@@ -23,9 +23,9 @@ import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.RemoteFileSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
-import com.simpleftp.ftp.connections.FTPConnection;
-import com.simpleftp.ftp.connections.FTPConnectionManager;
-import com.simpleftp.ftp.FTPServer;
+import com.simpleftp.ftp.connection.FTPConnection;
+import com.simpleftp.ftp.connection.FTPConnectionManager;
+import com.simpleftp.ftp.connection.FTPServer;
 import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.security.PasswordEncryption;
@@ -151,13 +151,14 @@ public class RemoteFileSystemUnitTest {
         mockConnection();
         RemoteFile remoteFile = createRemoteFile();
 
-        given(connection.removeFile(TEST_FILE))
+        given(connection.getFTPFile(TEST_FILE))
+                .willReturn(remoteFile);
+        given(connection.removeDirectory(TEST_FILE))
                 .willReturn(true);
 
         boolean result = remoteFileSystem.removeFile(remoteFile);
 
         assertTrue(result);
-        verify(connection).removeFile(TEST_FILE);
     }
 
     @Test
@@ -169,9 +170,13 @@ public class RemoteFileSystemUnitTest {
 
     @Test
     void shouldThrowIfErrorOccursOnRemoveFile() throws Exception {
-        doThrow(FTPConnectionFailedException.class).when(connection).removeFile(TEST_FILE);
+        setupProperties();
+        mockConnection();
+        RemoteFile remoteFile = createRemoteFile();
+        given(connection.getFTPFile(TEST_FILE))
+                .willReturn(remoteFile);
+        doThrow(FTPConnectionFailedException.class).when(connection).removeDirectory(TEST_FILE);
         assertThrows(FileSystemException.class, () -> remoteFileSystem.removeFile(TEST_FILE));
-        verify(connection).removeFile(TEST_FILE);
     }
 
     @Test

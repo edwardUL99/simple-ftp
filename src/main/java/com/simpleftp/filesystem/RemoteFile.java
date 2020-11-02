@@ -19,9 +19,9 @@ package com.simpleftp.filesystem;
 
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
-import com.simpleftp.ftp.connections.FTPConnection;
-import com.simpleftp.ftp.connections.FTPConnectionManager;
-import com.simpleftp.ftp.connections.FTPConnectionManagerBuilder;
+import com.simpleftp.ftp.connection.FTPConnection;
+import com.simpleftp.ftp.connection.FTPConnectionManager;
+import com.simpleftp.ftp.connection.FTPConnectionManagerBuilder;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.security.PasswordEncryption;
 import lombok.AllArgsConstructor;
@@ -43,8 +43,8 @@ import java.util.Properties;
  */
 @AllArgsConstructor
 public class RemoteFile extends FTPFile implements CommonFile {
-    private FTPConnection connection;
-    private FTPConnectionManager ftpConnectionManager;
+    private final FTPConnection connection;
+    private final FTPConnectionManager ftpConnectionManager;
 
     /**
      * Constructs a remote file name with the specified file name
@@ -85,7 +85,7 @@ public class RemoteFile extends FTPFile implements CommonFile {
             name = name.substring(0, name.length() - 1);
         }
 
-        while (index != -1 && index != name.length() - 1) {
+        while (index != -1) {
             index = name.indexOf("/");
             name = name.substring(index + 1);
         }

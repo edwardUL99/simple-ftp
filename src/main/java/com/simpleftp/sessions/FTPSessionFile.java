@@ -31,7 +31,7 @@ import java.util.List;
 @EqualsAndHashCode
 public class FTPSessionFile {
     @Getter
-    private String fileName;
+    private final String fileName;
     private List<SavedSession> savedSessions;
 
     /**

@@ -17,12 +17,10 @@
 
 package com.simpleftp.ui;
 
+import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
-import com.simpleftp.ui.dialogs.ConfirmationDialog;
-import com.simpleftp.ui.dialogs.ErrorDialog;
-import com.simpleftp.ui.dialogs.ExceptionDialog;
-import com.simpleftp.ui.dialogs.InfoDialog;
+import com.simpleftp.ui.dialogs.*;
 
 /**
  * This class provides static util methods and constants for UI
@@ -44,13 +42,34 @@ public final class UI {
     public static final String GREY_BACKGROUND = "-fx-background-color: lightgrey;";
 
     /**
-     * You need to have a flag to enable/disable double click action on file entries inside in entriesBox
-     * Therefore, if the statusPanel is clicked (panel or buttons), doubleClickEnabled is set to false, so double clicks here don't propagate to line entries
-     * On click event into entriesBox, this should be reset to true
-     *
-     * This resolves GitHub issue #42
+     * A more transparent version of GREY_BACKGROUND
      */
-    private static boolean MOUSE_EVENTS_ENABLED = true;
+    public static final String GREY_BACKGROUND_TRANSPARENT = "-fx-background-color: rgb(211, 211, 211, .4);";
+
+    /**
+     * Name for the hide hidden files button
+     */
+    public static final String HIDE_FILES = "Hide hidden files";
+
+    /**
+     * Name for the show hidden files button
+     */
+    public static final String SHOW_FILES = "Show hidden files";
+
+    /**
+     * Height of the File panel including FilePanelContainer
+     */
+    public static final int FILE_PANEL_HEIGHT = 300;
+
+    /**
+     * Width of the File panel including FilePanelContainer
+     */
+    public static final int FILE_PANEL_WIDTH = 570;
+
+    /**
+     * The padding value for the empty directory logo to display in the file panel
+     */
+    public static final int EMPTY_FOLDER_PANEL_PADDING = 70;
 
     /**
      * An enum to determine which type of dialog to show for a given exception
@@ -58,6 +77,14 @@ public final class UI {
     public enum ExceptionType {
         ERROR, // treat the exception as a normal error
         EXCEPTION // treat the exception as an unexpected error
+    }
+
+    /**
+     * An enum to determine which path dialog to open
+     */
+    public enum DirectoryPathAction {
+        GOTO, // the dialog is for going to the directory
+        CREATE // the dialog is for creating the directory
     }
 
     /**
@@ -91,18 +118,25 @@ public final class UI {
                 errorDialog.showAndWait();
             } else if (ex instanceof FTPException) {
                 ErrorDialog errorDialog;
+                String error = ((FTPException) ex).getReplyString();
+                if (error.equals(""))
+                    error = "N/A";
                 if (ex instanceof FTPConnectionFailedException) {
-                    errorDialog = new ErrorDialog("FTP Connection Error", ex.getMessage());
+                    errorDialog = new ErrorDialog("FTP Connection Error", ex.getMessage() + "\nFTP Error: " + error);
                 } else if (ex instanceof FTPCommandFailedException) {
-                    errorDialog = new ErrorDialog("FTP Operation Error", ex.getMessage());
+                    errorDialog = new ErrorDialog("FTP Operation Error", ex.getMessage() + "\nFTP Error: " + error);
                 } else if (ex instanceof FTPNotConnectedException) {
-                    errorDialog = new ErrorDialog("Not Connected to FTP Server", ex.getMessage());
+                    errorDialog = new ErrorDialog("Not Connected to FTP Server", ex.getMessage() + "\nFTP Error: " + error);
                 } else {
                     // this is a FTPError
-                    errorDialog = new ErrorDialog("General FTP Error", ex.getMessage());
+                    errorDialog = new ErrorDialog("General FTP Error", ex.getMessage() + "\nFTP Error: " + error);
                 }
 
                 errorDialog.showAndWait();
+            } else if (ex instanceof FileSystemException) {
+                Throwable cause = ex.getCause();
+                if (cause instanceof FTPException)
+                    doException((Exception)cause, ExceptionType.ERROR, false);
             }
         }
     }
@@ -136,5 +170,26 @@ public final class UI {
     public static boolean doConfirmation(String headerText, String messageText) {
         ConfirmationDialog confirmationDialog = new ConfirmationDialog(headerText, messageText);
         return confirmationDialog.showAndGetChoice();
+    }
+
+    /**
+     * Opens a path dialog and returns the path
+     * @param action the action to open path dialog as
+     * @return the path entered, can be null
+     */
+    public static String doPathDialog(DirectoryPathAction action) {
+        ChangePathDialog pathDialog;
+        if (action == DirectoryPathAction.GOTO) {
+            pathDialog = new ChangePathDialog();
+        } else {
+            pathDialog = new DirectoryPathDialog();
+        }
+
+        String result = pathDialog.showAndGetPath();
+        if (result != null && !result.equals("")) {
+            return result;
+        } else {
+            return null;
+        }
     }
 }

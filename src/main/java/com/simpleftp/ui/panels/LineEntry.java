@@ -21,17 +21,15 @@ import com.simpleftp.FTPSystem;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.interfaces.CommonFile;
-import com.simpleftp.ftp.connections.FTPConnection;
+import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.UI;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.layout.*;
-import javafx.scene.input.MouseEvent;
 
 import javafx.scene.image.ImageView;
 import javafx.scene.text.Font;
@@ -53,19 +51,19 @@ import java.util.Calendar;
  */
 @Log4j2
 public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
-    private ImageView image;
+    private final ImageView image;
     @Getter
     protected CommonFile file;
 
-    private static int FILE_NAME_LENGTH = 20;
+    private static final int FILE_NAME_LENGTH = 20;
 
-    private HBox imageNamePanel = new HBox();
+    private final HBox imageNamePanel = new HBox();
 
     @Getter
     @Setter
     private FilePanel owningPanel;
 
-    private static String DATETIME_FORMAT = "MMM dd HH:mm";
+    private static final String DATETIME_FORMAT = "MMM dd HH:mm";
 
     protected LineEntry(String imageURL, CommonFile file, FilePanel owningPanel) throws FTPRemotePathNotFoundException, LocalPathNotFoundException{
         setSpacing(30);
@@ -105,7 +103,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         getChildren().add(image);
         getChildren().add(text);
 
-        setOnMouseEntered(e -> setStyle(UI.GREY_BACKGROUND));
+        setOnMouseEntered(e -> setStyle(UI.GREY_BACKGROUND_TRANSPARENT));
         setOnMouseExited(e -> setStyle(UI.WHITE_BACKGROUND));
         setOnMouseClicked(e -> {
             if (!e.isConsumed()) {
@@ -184,7 +182,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
             }
         }
 
-        paddedName += "\t " + getModificationTime() + " " + calculatePermissionsString();
+        paddedName += "\t\t " + getModificationTime() + " " + calculatePermissionsString();
 
         return paddedName.trim();
     }

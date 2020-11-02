@@ -18,7 +18,7 @@
 package com.simpleftp.filesystem.interfaces;
 
 import com.simpleftp.filesystem.exceptions.FileSystemException;
-import com.simpleftp.filesystem.interfaces.CommonFile;
+import com.simpleftp.ftp.connection.FTPConnection;
 
 /**
  * This interface outlines functionality that all file systems can share, e.g. a local and remote file system
@@ -69,4 +69,11 @@ public interface FileSystem {
      * @return an array of files if found, null if not
      */
     CommonFile[] listFiles(String dir) throws FileSystemException;
+
+    /**
+     * Returns the FTPConnection the file system is linked to.
+     * A FTP connection is required for both local and remote file systems as local file system needs to be able to download from the ftp server
+     * @return the connection being used
+     */
+    FTPConnection getFTPConnection();
 }

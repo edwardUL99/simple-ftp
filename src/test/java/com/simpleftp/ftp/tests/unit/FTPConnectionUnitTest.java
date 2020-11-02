@@ -18,9 +18,9 @@
 package com.simpleftp.ftp.tests.unit;
 
 import com.simpleftp.FTPSystem;
-import com.simpleftp.ftp.FTPLookup;
-import com.simpleftp.ftp.FTPPathStats;
-import com.simpleftp.ftp.FTPServer;
+import com.simpleftp.ftp.connection.FTPLookup;
+import com.simpleftp.ftp.connection.FTPPathStats;
+import com.simpleftp.ftp.connection.FTPServer;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.ftp.tests.FTPConnectionTestable;
 import org.apache.commons.net.ftp.FTPClient;
@@ -1719,7 +1719,6 @@ class FTPConnectionUnitTest {
     void shouldThrowIfFTPConnectionDetailsIsNull() {
         ftpConnection.setFtpConnectionDetails(null);
         assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.setTimeoutTime(TEST_TIMEOUT_SECS));
-        verifyNoInteractions(ftpClient);
     }
 
     @Test

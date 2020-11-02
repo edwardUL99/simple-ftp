@@ -28,7 +28,7 @@ public class LocalPathNotFoundException extends FTPException {
      * The path that was not found
      */
     @Getter
-    private String localPath;
+    private final String localPath;
 
     /**
      * Constructs an exception object with the given message and path to the local file that does not exist
@@ -36,7 +36,7 @@ public class LocalPathNotFoundException extends FTPException {
      * @param localPath the local path that does not exist
      */
     public LocalPathNotFoundException(String message, String localPath) {
-        super(message);
+        super(message, "");
         this.localPath = localPath;
     }
 
@@ -47,7 +47,7 @@ public class LocalPathNotFoundException extends FTPException {
      * @param localPath the local path that does not exist
      */
     public LocalPathNotFoundException(String message, Exception ex, String localPath) {
-        super(message, ex);
+        super(message, "", ex);
         this.localPath = localPath;
     }
 }

@@ -19,30 +19,32 @@ package com.simpleftp.ui.panels;
 
 import com.simpleftp.FTPSystem;
 import com.simpleftp.filesystem.LocalFile;
+import com.simpleftp.filesystem.LocalFileSystem;
 import com.simpleftp.filesystem.RemoteFile;
+import com.simpleftp.filesystem.RemoteFileSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
-import com.simpleftp.ftp.connections.FTPConnection;
+import com.simpleftp.filesystem.interfaces.FileSystem;
+import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.containers.FilePanelContainer;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 import lombok.Getter;
-import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -83,6 +85,7 @@ public class FilePanel extends VBox {
     /**
      * The directory that this FilePanel is currently listing
      */
+    @Getter
     private CommonFile directory;
     /**
      * The FilePanelContainer that is holding this FilePanel
@@ -97,6 +100,24 @@ public class FilePanel extends VBox {
      * The VBox which will hold all the LineEntries
      */
     private VBox entriesBox;
+    /**
+     * The file system this FilePanel is connected to
+     */
+    @Getter
+    private FileSystem fileSystem;
+    /**
+     * The max length for file path before it is shortened and ... added to the end of it
+     */
+    private static final int MAX_FILE_PATH_LENGTH = 25;
+    /**
+     * Flag for showing hidden files
+     * By default, it is false
+     */
+    private boolean showHiddenFiles;
+    /**
+     * A pane to display an empty folder if there are no files
+     */
+    private BorderPane emptyFolderPane;
 
     /**
      * Constructs a FilePanel object with the specified directory
@@ -111,6 +132,22 @@ public class FilePanel extends VBox {
         initStatusPanel();
         initEntriesBox();
         initDirectory(directory);
+        initEmptyFolderPane();
+    }
+
+    /**
+     * Initialises the pane used to display an empty folder
+     */
+    private void initEmptyFolderPane() {
+        emptyFolderPane = new BorderPane();
+        ImageView openDirImage = new ImageView(new Image("opened_folder.png"));
+        Label emptyFolder = new Label("Directory is empty");
+        VBox dirBox = new VBox();
+        dirBox.setSpacing(5);
+        dirBox.getChildren().addAll(openDirImage, emptyFolder);
+        dirBox.setAlignment(Pos.CENTER);
+        emptyFolderPane.setCenter(dirBox);
+        emptyFolderPane.setPadding(new Insets(UI.EMPTY_FOLDER_PANEL_PADDING));
     }
 
     /**
@@ -137,13 +174,9 @@ public class FilePanel extends VBox {
     private void initButtons() {
         refresh = new Button("Refresh");
         up = new Button("Up");
-        refresh.setOnAction(e -> {
-            refresh();
-        });
+        refresh.setOnAction(e -> refresh());
 
-        up.setOnAction(e -> {
-            up();
-        });
+        up.setOnAction(e -> up());
 
         up.setPickOnBounds(true);
         refresh.setPickOnBounds(true);
@@ -183,11 +216,18 @@ public class FilePanel extends VBox {
             throw new FileSystemException("The directory provided is not a directory");
         }
 
+        if (directory instanceof RemoteFile) {
+            fileSystem = new RemoteFileSystem(FTPSystem.getConnection()); // it is expected that when you have a FilePanel created, at this stage you already have a connection established and logged in
+            // the login process should call FTPSystem.setConnection
+        } else {
+            fileSystem = new LocalFileSystem(FTPSystem.getConnection());
+        }
+
         setDirectory(directory);
         refresh();
 
         try {
-            FTPConnection connection = FTPSystem.getConnection();
+            FTPConnection connection = fileSystem.getFTPConnection();
             if (connection != null && !(directory instanceof LocalFile)) {
                 connection.changeWorkingDirectory(directory.getFilePath());
             }
@@ -215,8 +255,8 @@ public class FilePanel extends VBox {
      * @param currentDirectory the directory to change the text to
      */
     private void setCurrDirText(String currentDirectory) {
-        if (currentDirectory.length() >= 25) {
-            String currentDirectoryShortened = currentDirectory.substring(0, 12) + "...";
+        if (currentDirectory.length() >= MAX_FILE_PATH_LENGTH) {
+            String currentDirectoryShortened = currentDirectory.substring(0, MAX_FILE_PATH_LENGTH - 3) + "...";
             if (currentDirectoryTooltip == null) {
                 currentDirectoryTooltip = new Tooltip(currentDirectory);
                 Tooltip.install(this.currentDirectory, currentDirectoryTooltip);
@@ -242,14 +282,17 @@ public class FilePanel extends VBox {
         try {
             if (directory instanceof LocalFile) {
                 LocalFile localFile = (LocalFile) directory;
-                LocalFile parentFile = new LocalFile(localFile.getParent());
-                if (parentFile.exists() && parentFile.canRead()) {
-                    setDirectory(parentFile);
-                    refresh();
+                String parent = localFile.getParent();
+                if (parent != null) {
+                    LocalFile parentFile = new LocalFile(parent);
+                    if (parentFile.exists() && parentFile.canRead()) {
+                        setDirectory(parentFile);
+                        refresh();
+                    }
                 }
             } else {
                 RemoteFile remoteFile;
-                FTPConnection connection = FTPSystem.getConnection();
+                FTPConnection connection = fileSystem.getFTPConnection();
                 if (connection != null) {
                     try {
                         boolean changed = connection.changeToParentDirectory();
@@ -280,13 +323,13 @@ public class FilePanel extends VBox {
             this.directory = directory;
 
             if (directory instanceof RemoteFile) {
-                FTPConnection connection = FTPSystem.getConnection();
+                FTPConnection connection = fileSystem.getFTPConnection();
                 if (connection != null) {
                     try {
                         boolean changed = connection.changeWorkingDirectory(directory.getFilePath());
 
                         if (!changed) {
-                            UI.doError("Error changing directory", "Current directory may not have been changed successfully");
+                            UI.doError("Error changing directory", "Current directory may not have been changed successfully. FTP Reply: " + connection.getReplyString());
                         }
                     } catch (FTPException ex) {
                         UI.doException(ex, UI.ExceptionType.ERROR, true);
@@ -306,18 +349,32 @@ public class FilePanel extends VBox {
      * @param localFile the file to list
      */
     private void constructListOfLocalFiles(ArrayList<LineEntry> lineEntries, LocalFile localFile) {
-        for (File file : localFile.listFiles()) {
-            LocalFile file1 = new LocalFile(file.getAbsolutePath());
-            try {
-                if (file1.isNormalFile()) {
-                    addLineEntry(new FileLineEntry(file1, this), lineEntries);
-                } else {
-                    addLineEntry(new DirectoryLineEntry(file1, this), lineEntries);
-                }
-            } catch (FTPRemotePathNotFoundException | LocalPathNotFoundException ex) {
-                UI.doException(ex, UI.ExceptionType.ERROR, true);
+        try {
+            CommonFile[] files = fileSystem.listFiles(localFile.getFilePath());
+            if (files == null || files.length == 0) {
                 lineEntries.clear();
+            } else {
+                for (CommonFile file : fileSystem.listFiles(localFile.getFilePath())) {
+                    LocalFile file1 = (LocalFile) file;
+                    try {
+                        boolean showFile = showHiddenFiles || !file1.isHidden();
+
+                        if (showFile) {
+                            if (file1.isNormalFile()) {
+                                addLineEntry(new FileLineEntry(file1, this), lineEntries);
+                            } else {
+                                addLineEntry(new DirectoryLineEntry(file1, this), lineEntries);
+                            }
+                        }
+                    } catch (FTPRemotePathNotFoundException | LocalPathNotFoundException ex) {
+                        UI.doException(ex, UI.ExceptionType.ERROR, true);
+                        lineEntries.clear();
+                    }
+                }
             }
+        } catch (FileSystemException ex) {
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
+            lineEntries.clear();
         }
     }
 
@@ -327,28 +384,24 @@ public class FilePanel extends VBox {
      * @param remoteFile the file to list
      */
     private void constructListOfRemoteFiles(ArrayList<LineEntry> lineEntries, RemoteFile remoteFile) {
-        FTPConnection connection = FTPSystem.getConnection();
+        try {
+            String path = remoteFile.getFilePath();
+            for (CommonFile f : fileSystem.listFiles(path)) {
+                RemoteFile remFile = (RemoteFile)f;
+                String name = f.getName();
+                boolean showFile = (showHiddenFiles && !name.equals(".") && !name.startsWith("..")) || !name.startsWith(".");
 
-        if (connection != null) {
-            try {
-                String path = remoteFile.getFilePath();
-                FTPFile[] files = connection.listFiles(path);
-                if (files != null) {
-                    for (FTPFile f : files) {
-                        String name = f.getName();
-                        String filePath = !path.equals("/") ? path + "/" + name:path + name;
-                        RemoteFile remFile = new RemoteFile(filePath);
-                        if (remFile.isNormalFile()) {
-                            addLineEntry(new FileLineEntry(remFile, this), lineEntries);
-                        } else {
-                            addLineEntry(new DirectoryLineEntry(remFile, this), lineEntries);
-                        }
+                if (showFile) {
+                    if (remFile.isNormalFile()) {
+                        addLineEntry(new FileLineEntry(remFile, this), lineEntries);
+                    } else {
+                        addLineEntry(new DirectoryLineEntry(remFile, this), lineEntries);
                     }
                 }
-            } catch (FTPException | FileSystemException ex) {
-                UI.doException(ex, UI.ExceptionType.ERROR, true);
-                lineEntries.clear();
             }
+        } catch (FTPException | FileSystemException ex) {
+            UI.doException(ex, UI.ExceptionType.ERROR, true);
+            lineEntries.clear();
         }
     }
 
@@ -365,12 +418,11 @@ public class FilePanel extends VBox {
             constructListOfRemoteFiles(lineEntries, (RemoteFile)directory);
         }
 
-        if (lineEntries.size() == 0) {
-            return null;
-        } else {
+        if (lineEntries.size() > 0) {
             Collections.sort(lineEntries);
-            return lineEntries;
         }
+
+        return lineEntries;
     }
 
     /**
@@ -391,8 +443,12 @@ public class FilePanel extends VBox {
             getChildren().clear();
             getChildren().add(statusPanel);
             entriesBox.getChildren().clear();
-            getChildren().add(entriesScrollPane);
-            addLineEntriesFromList(lineEntries);
+            if (lineEntries.size() > 0) {
+                addLineEntriesFromList(lineEntries);
+                getChildren().add(entriesScrollPane);
+            } else {
+                getChildren().add(emptyFolderPane);
+            }
             this.lineEntries = lineEntries;
         }
 
@@ -408,9 +464,8 @@ public class FilePanel extends VBox {
      * @param file the file to open
      * @return the file contents as a String
      * @throws IOException if the reader fails to read the file
-     * @throws FTPException if the file is a remote file and an error occurs
      */
-    private String fileToString(CommonFile file) throws IOException, FTPException {
+    private String fileToString(CommonFile file) throws IOException {
         String str = "";
 
         if (file instanceof LocalFile) {
@@ -422,13 +477,17 @@ public class FilePanel extends VBox {
                 str += line + "\n";
             }
         } else {
-            RemoteFile remoteFile = (RemoteFile)file;
-            File downloaded = FTPSystem.getConnection().downloadFile(remoteFile.getFilePath(), System.getProperty("java.io.tmpdir"));
-            LocalFile localFile = new LocalFile(downloaded.getAbsolutePath());
-            String ret = fileToString(localFile);
-            downloaded.delete();
+            try {
+                RemoteFile remoteFile = (RemoteFile) file;
+                LocalFile downloaded = new LocalFile(System.getProperty("java.io.tmpdir") + System.getProperty("file.separator") + remoteFile.getName());
+                new LocalFileSystem(fileSystem.getFTPConnection()).addFile(remoteFile, downloaded.getParentFile().getAbsolutePath());
+                String ret = fileToString(downloaded);
+                downloaded.delete();
 
-            return ret;
+                return ret;
+            } catch (FileSystemException ex) {
+                UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
+            }
         }
 
         return str;
@@ -509,8 +568,6 @@ public class FilePanel extends VBox {
             newStage.show();
         } catch (IOException ex) {
             UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
-        } catch (FTPException ex) {
-            UI.doException(ex, UI.ExceptionType.ERROR, true);
         }
     }
 
@@ -560,30 +617,30 @@ public class FilePanel extends VBox {
     public boolean deleteEntry(final LineEntry lineEntry) {
         CommonFile file = lineEntry.getFile();
         if (file instanceof LocalFile) {
-            if (((LocalFile) file).delete()) {
-                entriesBox.getChildren().remove(lineEntry);
-                lineEntries.remove(lineEntry);
+            try {
+                if (fileSystem.removeFile(file)) {
+                    entriesBox.getChildren().remove(lineEntry);
+                    lineEntries.remove(lineEntry);
 
-                refresh();
+                    refresh();
 
-                return true;
+                    return true;
+                }
+            } catch (FileSystemException ex) {
+                UI.doException(ex, UI.ExceptionType.ERROR, true);
             }
         } else {
-            FTPConnection connection = FTPSystem.getConnection();
+            try {
+                if (fileSystem.removeFile(lineEntry.getFile())) {
+                    entriesBox.getChildren().remove(lineEntry);
+                    lineEntries.remove(lineEntry);
 
-            if (connection != null) {
-                try {
-                    if (connection.removeFile(file.getFilePath())) {
-                        entriesBox.getChildren().remove(lineEntry);
-                        lineEntries.remove(lineEntry);
+                    refresh();
 
-                        refresh();
-
-                        return true;
-                    }
-                } catch (FTPException ex) {
-                    UI.doException(ex, UI.ExceptionType.ERROR, true);
+                    return true;
                 }
+            } catch (FileSystemException ex) {
+                UI.doException(ex, UI.ExceptionType.ERROR, true);
             }
         }
 
@@ -614,5 +671,29 @@ public class FilePanel extends VBox {
      */
     public ArrayList<LineEntry> filesDisplayed() {
         return lineEntries;
+    }
+
+    /**
+     * Gets the value for showing hidden files
+     * @return true if hidden files are being shown
+     */
+    public boolean hiddenFilesShown() {
+        return showHiddenFiles;
+    }
+
+    /**
+     * Enables the file panel to show hidden files on the NEXT refresh.
+     * This just sets the flag. Refresh needs to be called to show the effects
+     */
+    public void showHiddenFiles() {
+        showHiddenFiles = true;
+    }
+
+    /**
+     * Disables the file panel to show hidden files on the NEXT refresh.
+     * This just sets the flag. Refresh needs to be called to show the effects
+     */
+    public void hideHiddenFiles() {
+        showHiddenFiles = false;
     }
 }
