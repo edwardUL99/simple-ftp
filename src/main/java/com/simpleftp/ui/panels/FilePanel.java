@@ -422,7 +422,11 @@ public class FilePanel extends VBox {
 
                 if (localFile.renameTo(new File(newPath))) {
                     UI.doInfo("File Renamed", "File has been renamed successfully");
+                    double vPosition = entriesScrollPane.getVvalue();
+                    double hPosition = entriesScrollPane.getHvalue();
                     refresh();
+                    entriesScrollPane.setVvalue(vPosition);
+                    entriesScrollPane.setHvalue(hPosition); // resets the position of the scrollbars to where they were before the refresh
                 } else {
                     UI.doError("Rename Failed", "Failed to rename file");
                 }
@@ -449,7 +453,11 @@ public class FilePanel extends VBox {
                     FTPConnection connection = fileSystem.getFTPConnection();
                     if (connection.renameFile(filePath, newPath)) {
                         UI.doInfo("File Renamed", "File has been renamed successfully");
+                        double vPosition = entriesScrollPane.getVvalue();
+                        double hPosition = entriesScrollPane.getHvalue();
                         refresh();
+                        entriesScrollPane.setVvalue(vPosition);
+                        entriesScrollPane.setHvalue(hPosition); // resets the position of the scrollbars to where they were before the refresh
                     } else {
                         String replyString = connection.getReplyString();
                         UI.doError("Rename Failed", "Failed to rename file with error code: " + replyString);
