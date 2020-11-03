@@ -51,30 +51,46 @@ import java.util.Calendar;
  */
 @Log4j2
 public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
+    /**
+     * The image icon for the line entry
+     */
     private final ImageView image;
+    /**
+     * The file this line entry represents
+     */
     @Getter
     protected CommonFile file;
-
+    /**
+     * The max width for a file name before it is shortened and ... is added to the end of it
+     */
     private static final int FILE_NAME_LENGTH = 20;
-
+    /**
+     * The pane containing the image and name
+     */
     private final HBox imageNamePanel = new HBox();
-
+    /**
+     * The filePanel this LineEntry is a part of
+     */
     @Getter
     @Setter
     private FilePanel owningPanel;
+    /**
+     * The format for the date time string
+     */
+    public static final String DATETIME_FORMAT = "MMM dd HH:mm";
 
-    private static final String DATETIME_FORMAT = "MMM dd HH:mm";
-
+    /**
+     * Creates a base LineEntry with the specified image URL (which is assumed to be in the jar), file and panel
+     * @param imageURL the URL to the image (assumed to be in the JAR)
+     * @param file the file this LineEntry represents
+     * @param owningPanel the FilePanel this LineEntry is a part of
+     * @throws FTPRemotePathNotFoundException if it is a remote file and cant be found
+     * @throws LocalPathNotFoundException if it is a local file and cant be found
+     */
     protected LineEntry(String imageURL, CommonFile file, FilePanel owningPanel) throws FTPRemotePathNotFoundException, LocalPathNotFoundException{
         setSpacing(30);
-        //setBorder(new Border(new BorderStroke(Paint.valueOf("BLACK"), BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));
-        //setMaxHeight(5);
         setStyle(UI.WHITE_BACKGROUND);
-
         imageNamePanel.setSpacing(30);
-
-        //HBox.setHgrow(this, Priority.ALWAYS);
-
         image = new ImageView();
         image.setFitWidth(UI.FILE_ICON_SIZE);
         image.setFitHeight(UI.FILE_ICON_SIZE);
@@ -87,6 +103,11 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         init();
     }
 
+    /**
+     * Initialises the line entry
+     * @throws FTPRemotePathNotFoundException if the file is remote and cant be found
+     * @throws LocalPathNotFoundException if the file is local and cant be found
+     */
     protected void init() throws FTPRemotePathNotFoundException, LocalPathNotFoundException{
         if (getChildren().size() > 1) {
             getChildren().clear();
@@ -117,6 +138,11 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         setPickOnBounds(true);
     }
 
+    /**
+     * Parses the provided Calendar object into the format specified by DATETIME_FORMAT
+     * @param calendar the calendar object to parse
+     * @return a parsed String in the format DATETIME_FORMAT
+     */
     private String parseTime(Calendar calendar) {
         int hour = calendar.get(Calendar.HOUR_OF_DAY);
         int minute = calendar.get(Calendar.MINUTE);
@@ -128,12 +154,18 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         return localDateTime.format(DateTimeFormatter.ofPattern(DATETIME_FORMAT));
     }
 
-    private String getModificationTime() throws FTPRemotePathNotFoundException, LocalPathNotFoundException {
+    /**
+     * Retrieves the modification time and size of the file. Note that if ftpConnection.getModificationTime fails, the file.getTimestamp is used even if it is not very accurate
+     * @return modification time or Cannot be determined
+     * @throws FTPRemotePathNotFoundException if file is remote and cant be found
+     * @throws LocalPathNotFoundException if file is local and cant be found
+     */
+    private String getModificationTimeAndSize() throws FTPRemotePathNotFoundException, LocalPathNotFoundException {
         String modificationTime = "";
         if (file instanceof LocalFile) {
             LocalFile localFile = (LocalFile)file;
             if (localFile.exists()) {
-                modificationTime = new SimpleDateFormat(DATETIME_FORMAT).format(localFile.lastModified());
+                modificationTime = localFile.length() + " " + new SimpleDateFormat(DATETIME_FORMAT).format(localFile.lastModified());
             } else if (!Files.isSymbolicLink(localFile.toPath())){
                 throw new LocalPathNotFoundException("The file no longer exists", file.getFilePath());
             }
@@ -146,11 +178,12 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
                     if (fileModTime != null) {
                         LocalDateTime dateTime = LocalDateTime.parse(fileModTime, DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy"));
                         modificationTime = dateTime.format(DateTimeFormatter.ofPattern(DATETIME_FORMAT));
+                        modificationTime = connection.getFileSize(filePath) + " " + modificationTime;
                     } else {
                         FTPFile[] files = connection.listFiles(connection.getWorkingDirectory());
                         for (FTPFile f : files) {
                             if (f.getName().equals(file.getName())) {
-                                return parseTime(f.getTimestamp());
+                                return f.getSize() + " " + parseTime(f.getTimestamp());
                             }
                         }
 
@@ -169,6 +202,12 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         return modificationTime;
     }
 
+    /**
+     * Gets the file name with modification time size and permissions
+     * @return String of file name, size, modification time, permissions
+     * @throws FTPRemotePathNotFoundException if a remote file and not found
+     * @throws LocalPathNotFoundException if a local file and not found
+     */
     private String getFileNameString() throws FTPRemotePathNotFoundException, LocalPathNotFoundException {
         String fileName = file.getName();
         String paddedName = ""; // the name that will be displayed on the UI.
@@ -182,11 +221,17 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
             }
         }
 
-        paddedName += "\t\t " + getModificationTime() + " " + calculatePermissionsString();
+        paddedName += "\t\t " + getModificationTimeAndSize() + " " + calculatePermissionsString();
 
         return paddedName.trim();
     }
 
+    /**
+     * Calculates the permissions for the file
+     * @return permissions string for the file
+     * @throws FTPRemotePathNotFoundException if a remote file and not found
+     * @throws LocalPathNotFoundException if a local file and not found
+     */
     protected String calculatePermissionsString() throws FTPRemotePathNotFoundException, LocalPathNotFoundException {
         String permissions = "";
 

@@ -17,6 +17,8 @@
 
 package com.simpleftp.ui.dialogs;
 
+import com.simpleftp.ui.UI;
+import javafx.application.Platform;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.GridPane;
@@ -26,6 +28,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URL;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * This is a dialog for viewing an exception and it's details
@@ -36,8 +39,9 @@ public class ExceptionDialog extends Alert {
     /**
      * Creates an Exception dialog with the specified exception
      * @param ex the exception for this exception dialog
+     * @param showIgnoreButton true to show ignore button, false to not show it. If false, clicking the x button also aborts execution
      */
-    public ExceptionDialog(Exception ex) {
+    public ExceptionDialog(Exception ex, boolean showIgnoreButton) {
         super(AlertType.ERROR);
         setTitle("Exception Dialog");
         setHeaderText("An exception has occurred");
@@ -46,6 +50,25 @@ public class ExceptionDialog extends Alert {
         createExpandableArea();
         getDialogPane().getStylesheets().add(ClassLoader.getSystemResource("dialogs.css").toExternalForm());
         getDialogPane().getStyleClass().add("exceptionDialog");
+        getButtonTypes().clear();
+        ButtonType ignore = new ButtonType("Ignore", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType abort = new ButtonType("Abort", ButtonBar.ButtonData.FINISH);
+
+        if (showIgnoreButton) {
+            getButtonTypes().setAll(ignore, abort);
+        } else {
+            getButtonTypes().setAll(abort);
+            setOnCloseRequest(e -> {
+                Platform.exit();
+                System.exit(UI.EXCEPTION_DIALOG_ABORTED_EXIT_CODE);
+            });
+        }
+
+        URL iconUrl = ClassLoader.getSystemResource("exception_icon.png");
+        if (iconUrl != null) {
+            String icon = iconUrl.toString();
+            setGraphic(new ImageView(icon));
+        }
     }
 
     private void createExpandableArea() {
@@ -72,16 +95,6 @@ public class ExceptionDialog extends Alert {
         Tooltip.install(expandable, new Tooltip("Silently ignore the exception, or abort and end the program?"));
 
         getDialogPane().setExpandableContent(expandable);
-        getButtonTypes().clear();
-        ButtonType ignore = new ButtonType("Ignore", ButtonBar.ButtonData.CANCEL_CLOSE);
-        ButtonType abort = new ButtonType("Abort", ButtonBar.ButtonData.FINISH);
-        getButtonTypes().setAll(ignore, abort);
-
-        URL iconUrl = ClassLoader.getSystemResource("exception_icon.png");
-        if (iconUrl != null) {
-            String icon = iconUrl.toString();
-            setGraphic(new ImageView(icon));
-        }
     }
 
     /**
@@ -89,12 +102,18 @@ public class ExceptionDialog extends Alert {
      */
     public void showAndDoAction() {
         Optional<ButtonType> result = showAndWait();
+        AtomicBoolean exit = new AtomicBoolean(false);
         result.map(buttonType -> {
             if (buttonType.getText().equals("Abort")) {
-                System.exit(0);
+                exit.set(true);
             }
 
             return null;
         });
+
+        if (exit.get()) {
+            Platform.exit();
+            System.exit(UI.EXCEPTION_DIALOG_ABORTED_EXIT_CODE);
+        }
     }
 }

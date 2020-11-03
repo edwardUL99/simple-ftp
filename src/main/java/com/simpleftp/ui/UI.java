@@ -49,12 +49,12 @@ public final class UI {
     /**
      * Name for the hide hidden files button
      */
-    public static final String HIDE_FILES = "Hide hidden files";
+    public static final String HIDE_FILES = "_Hide hidden files";
 
     /**
      * Name for the show hidden files button
      */
-    public static final String SHOW_FILES = "Show hidden files";
+    public static final String SHOW_FILES = "_Show hidden files";
 
     /**
      * Height of the File panel including FilePanelContainer
@@ -67,9 +67,19 @@ public final class UI {
     public static final int FILE_PANEL_WIDTH = 570;
 
     /**
+     * The width for the FilePanelContainer ComboBox
+     */
+    public static final int PANEL_CONTAINER_COMBO_WIDTH = 170;
+
+    /**
      * The padding value for the empty directory logo to display in the file panel
      */
     public static final int EMPTY_FOLDER_PANEL_PADDING = 70;
+
+    /**
+     * Exit code for if Abort is pressed on an exception dialog
+     */
+    public static final int EXCEPTION_DIALOG_ABORTED_EXIT_CODE = 1;
 
     /**
      * An enum to determine which type of dialog to show for a given exception
@@ -82,25 +92,37 @@ public final class UI {
     /**
      * An enum to determine which path dialog to open
      */
-    public enum DirectoryPathAction {
-        GOTO, // the dialog is for going to the directory
-        CREATE // the dialog is for creating the directory
+    public enum PathAction {
+        GOTO, // the dialog is for going to the directory/file
+        CREATE // the dialog is for creating the directory/file
     }
 
     /**
-     * This method handles the specified exception graphically.
+     * This method handles the specified exception graphically, showing the ignore button
      * If the exception is expected and not undefined, you should pass in ExceptionType.ERROR. If it is a serious problem, ExceptionType.EXCEPTION
      * @param ex the exception to handle
      * @param exceptionType the type of this exception
      * @param printStackTrace true if the stacktrace should be printed to console
      */
     public static void doException(Exception ex, ExceptionType exceptionType, boolean printStackTrace) {
+        doException(ex, exceptionType, printStackTrace, true);
+    }
+
+    /**
+     * This method handles the specified exception graphically, giving the option to show/hide the ignore button. If you want to force the application to terminate after exception, hide ignore
+     * If the exception is expected and not undefined, you should pass in ExceptionType.ERROR. If it is a serious problem, ExceptionType.EXCEPTION
+     * @param ex the exception to handle
+     * @param exceptionType the type of this exception
+     * @param printStackTrace true if the stacktrace should be printed to console
+     * @param showIgnoreButton true to show ignore button, false to hide it and closing the dialog terminates the application
+     */
+    public static void doException(Exception ex, ExceptionType exceptionType, boolean printStackTrace, boolean showIgnoreButton) {
         if (printStackTrace) {
             ex.printStackTrace();
         }
 
         if (exceptionType == ExceptionType.EXCEPTION) {
-            ExceptionDialog exceptionDialog = new ExceptionDialog(ex);
+            ExceptionDialog exceptionDialog = new ExceptionDialog(ex, showIgnoreButton);
             exceptionDialog.showAndDoAction();
         } else {
             // more exception types can be handled here
@@ -177,15 +199,31 @@ public final class UI {
      * @param action the action to open path dialog as
      * @return the path entered, can be null
      */
-    public static String doPathDialog(DirectoryPathAction action) {
+    public static String doPathDialog(PathAction action) {
         ChangePathDialog pathDialog;
-        if (action == DirectoryPathAction.GOTO) {
+        if (action == PathAction.GOTO) {
             pathDialog = new ChangePathDialog();
         } else {
             pathDialog = new DirectoryPathDialog();
         }
 
         String result = pathDialog.showAndGetPath();
+        if (result != null && !result.equals("")) {
+            return result;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Shows a rename dialog
+     * @param currentFileName the name of the file being renamed
+     * @return the entered string
+     */
+    public static String doRenameDialog(String currentFileName) {
+        RenameFileDialog renameFileDialog = new RenameFileDialog(currentFileName);
+        String result = renameFileDialog.showAndGetName();
+
         if (result != null && !result.equals("")) {
             return result;
         } else {

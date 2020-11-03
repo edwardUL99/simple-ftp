@@ -45,6 +45,7 @@ import javafx.stage.Stage;
 import lombok.Getter;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -172,8 +173,12 @@ public class FilePanel extends VBox {
      * Initialises the buttons and sets their respective actions
      */
     private void initButtons() {
-        refresh = new Button("Refresh");
-        up = new Button("Up");
+        refresh = new Button();
+        refresh.setMnemonicParsing(true);
+        refresh.setText("_Refresh");
+        up = new Button();
+        up.setMnemonicParsing(true);
+        up.setText("_Up");
         refresh.setOnAction(e -> refresh());
 
         up.setOnAction(e -> up());
@@ -278,7 +283,7 @@ public class FilePanel extends VBox {
     /**
      * Controls going up to parent directory
      */
-    private void up() {
+    public void up() {
         try {
             if (directory instanceof LocalFile) {
                 LocalFile localFile = (LocalFile) directory;
@@ -295,12 +300,14 @@ public class FilePanel extends VBox {
                 FTPConnection connection = fileSystem.getFTPConnection();
                 if (connection != null) {
                     try {
-                        boolean changed = connection.changeToParentDirectory();
-                        if (changed) {
-                            String currentWorkingDirectory = connection.getWorkingDirectory();
-                            remoteFile = new RemoteFile(currentWorkingDirectory);
-                            setDirectory(remoteFile);
-                            refresh();
+                        if (!connection.getWorkingDirectory().equals("/")) { // you are not at root, so go up
+                            boolean changed = connection.changeToParentDirectory();
+                            if (changed) {
+                                String currentWorkingDirectory = connection.getWorkingDirectory();
+                                remoteFile = new RemoteFile(currentWorkingDirectory);
+                                setDirectory(remoteFile);
+                                refresh();
+                            }
                         }
                     } catch (FTPException ex) {
                         UI.doException(ex, UI.ExceptionType.ERROR, true);
@@ -360,15 +367,13 @@ public class FilePanel extends VBox {
                         boolean showFile = showHiddenFiles || !file1.isHidden();
 
                         if (showFile) {
-                            if (file1.isNormalFile()) {
-                                addLineEntry(new FileLineEntry(file1, this), lineEntries);
-                            } else {
-                                addLineEntry(new DirectoryLineEntry(file1, this), lineEntries);
-                            }
+                            addLineEntry(createLineEntry(file), lineEntries);
                         }
                     } catch (FTPRemotePathNotFoundException | LocalPathNotFoundException ex) {
                         UI.doException(ex, UI.ExceptionType.ERROR, true);
                         lineEntries.clear();
+                    } catch (FTPException ex) {
+                        UI.doException(ex, UI.ExceptionType.EXCEPTION, true); // this exception shouldn't happen so indicate it as a major problem
                     }
                 }
             }
@@ -387,22 +392,116 @@ public class FilePanel extends VBox {
         try {
             String path = remoteFile.getFilePath();
             for (CommonFile f : fileSystem.listFiles(path)) {
-                RemoteFile remFile = (RemoteFile)f;
                 String name = f.getName();
                 boolean showFile = (showHiddenFiles && !name.equals(".") && !name.startsWith("..")) || !name.startsWith(".");
 
                 if (showFile) {
-                    if (remFile.isNormalFile()) {
-                        addLineEntry(new FileLineEntry(remFile, this), lineEntries);
-                    } else {
-                        addLineEntry(new DirectoryLineEntry(remFile, this), lineEntries);
-                    }
+                    addLineEntry(createLineEntry(f), lineEntries);
                 }
             }
         } catch (FTPException | FileSystemException ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, true);
             lineEntries.clear();
         }
+    }
+
+    /**
+     * Renames the specified local file
+     * @param localFile the file to rename
+     */
+    private void renameLocalFile(final LocalFile localFile) {
+        String filePath = localFile.getFilePath();
+        String parentPath = new File(filePath).getParent();
+        String fileName = localFile.getName();
+        String newPath = UI.doRenameDialog(fileName);
+
+        if (newPath != null) {
+            newPath = new File(newPath).getName(); // ensure it is just the base name
+            if (!newPath.equals(fileName)) {
+                newPath = parentPath + System.getProperty("file.separator") + newPath;
+
+                if (localFile.renameTo(new File(newPath))) {
+                    UI.doInfo("File Renamed", "File has been renamed successfully");
+                    refresh();
+                } else {
+                    UI.doError("Rename Failed", "Failed to rename file");
+                }
+            }
+        }
+    }
+
+    /**
+     * Renames the specified remote file
+     * @param remoteFile the file to rename
+     */
+    private void renameRemoteFile(final RemoteFile remoteFile) {
+        String filePath = remoteFile.getFilePath();
+        String parentPath = new File(filePath).getParent();
+        String fileName = remoteFile.getName();
+        String newPath = UI.doRenameDialog(fileName);
+
+        if (newPath != null) {
+            newPath = new File(newPath).getName(); // ensure it is just the base name
+            if (!newPath.equals(fileName)) {
+                newPath = parentPath + "/" + newPath;
+
+                try {
+                    FTPConnection connection = fileSystem.getFTPConnection();
+                    if (connection.renameFile(filePath, newPath)) {
+                        UI.doInfo("File Renamed", "File has been renamed successfully");
+                        refresh();
+                    } else {
+                        String replyString = connection.getReplyString();
+                        UI.doError("Rename Failed", "Failed to rename file with error code: " + replyString);
+                    }
+                } catch (FTPException ex) {
+                    UI.doException(ex, UI.ExceptionType.ERROR, true);
+                }
+            }
+        }
+    }
+
+    /**
+     * Handles when rename is called on the context menu with the specified line entry
+     * @param lineEntry
+     */
+    private void renameLineEntry(final LineEntry lineEntry) {
+        CommonFile file = lineEntry.getFile();
+        if (file instanceof LocalFile) {
+            renameLocalFile((LocalFile)file);
+        } else {
+            renameRemoteFile((RemoteFile)file);
+        }
+    }
+
+    /**
+     * Creates a line entry, adding a context menu to it and returns it
+     * @param file the file the create the line entry from
+     * @return the line entry created
+     * @throws FileSystemException if an error occurs
+     */
+    private LineEntry createLineEntry(CommonFile file) throws FileSystemException, FTPException {
+        LineEntry lineEntry;
+        if (file.isNormalFile()) {
+            lineEntry = new FileLineEntry(file, this);
+        } else {
+            lineEntry = new DirectoryLineEntry(file, this);
+        }
+
+        ContextMenu contextMenu = new ContextMenu();
+        MenuItem menuItem1 = new MenuItem("Open");
+        menuItem1.setOnAction(e -> openLineEntry(lineEntry));
+        MenuItem menuItem2 = new MenuItem("Rename");
+        menuItem2.setOnAction(e -> renameLineEntry(lineEntry));
+        MenuItem menuItem3 = new MenuItem("Delete");
+        menuItem3.setOnAction(e -> parentContainer.delete()); // right clicking this would have selected it in the container's combo box. So use containers delete method to display confirmation dialog
+        contextMenu.getItems().addAll(menuItem1, menuItem2, menuItem3);
+
+        lineEntry.setOnContextMenuRequested(e -> {
+            contextMenu.show(lineEntry, e.getScreenX(), e.getScreenY());
+        });
+
+        return lineEntry;
     }
 
     /**

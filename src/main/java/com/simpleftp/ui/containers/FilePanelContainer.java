@@ -28,6 +28,8 @@ import com.simpleftp.ui.UI;
 import com.simpleftp.ui.panels.FileLineEntry;
 import com.simpleftp.ui.panels.FilePanel;
 import com.simpleftp.ui.panels.LineEntry;
+import javafx.application.Platform;
+import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -97,9 +99,14 @@ public class FilePanelContainer extends VBox {
         toolBar = new FlowPane();
         toolBar.setHgap(5);
         toolBar.setVgap(5);
-        delete = new Button("Delete");
+        toolBar.setPadding(new Insets(2, 0, 2, 0));
+        delete = new Button();
+        delete.setMnemonicParsing(true);
+        delete.setText("_Delete");
         delete.setOnAction(e -> delete());
-        open = new Button("Open");
+        open = new Button();
+        open.setMnemonicParsing(true);
+        open.setText("_Open");
         open.setOnAction(e -> open());
         comboBox = new ComboBox<>();
         comboBox.setOnKeyPressed(e -> {
@@ -107,17 +114,22 @@ public class FilePanelContainer extends VBox {
                 open();
             }
         });
-        comboBox.setPrefWidth(200);
-        gotoButton = new Button("Go To");
-        gotoButton.setOnAction(e -> gotoDirectory());
+        comboBox.setPrefWidth(UI.PANEL_CONTAINER_COMBO_WIDTH);
+        gotoButton = new Button();
+        gotoButton.setMnemonicParsing(true);
+        gotoButton.setText("_Go To");
+        gotoButton.setOnAction(e -> gotoPath());
         hideHiddenFiles = new Button();
+        hideHiddenFiles.setMnemonicParsing(true);
         entryMappings = new HashMap<>();
         createButton = new MenuButton();
+        createButton.setMnemonicParsing(true);
         toolBar.getChildren().addAll(new Label("Files: "), comboBox, delete, open, gotoButton, hideHiddenFiles, createButton);
         getChildren().add(toolBar);
         setFilePanel(filePanel);
         initHideButton();
         initCreateButton();
+        setKeyBindings();
     }
 
     /**
@@ -150,8 +162,10 @@ public class FilePanelContainer extends VBox {
      * Initialises the button to create new objects
      */
     private void initCreateButton() {
-        createButton.setText("New");
-        MenuItem menuItem = new MenuItem("Directory");
+        createButton.setText("_New");
+        MenuItem menuItem = new MenuItem();
+        menuItem.setMnemonicParsing(true);
+        menuItem.setText("Di_rectory");
         ImageView imageView = new ImageView(new Image("dir_icon.png"));
         imageView.setFitHeight(20);
         imageView.setFitWidth(20);
@@ -161,15 +175,57 @@ public class FilePanelContainer extends VBox {
     }
 
     /**
+     * Sets key shortcut bindings which works on the selection in the combo box
+     * D - Delete
+     * R - Refresh
+     * U - Up
+     * G - Go To
+     * H - Hide hidden files
+     * S - Show hidden files
+     * Q - Quit
+     */
+    private void setKeyBindings() {
+        setOnKeyPressed(e -> {
+            if (!e.isAltDown()) {
+                // if alt is down, a mnenomic is needed
+                KeyCode keyCode = e.getCode();
+
+                if (keyCode == KeyCode.D) {
+                    delete();
+                } else if (keyCode == KeyCode.O) {
+                    open();
+                } else if (keyCode == KeyCode.R) {
+                    filePanel.refresh();
+                } else if (keyCode == KeyCode.U) {
+                    filePanel.up();
+                } else if (keyCode == KeyCode.G) {
+                    gotoPath();
+                } else if (keyCode == KeyCode.H && filePanel.hiddenFilesShown()) {
+                    hideHiddenFiles.fire();
+                } else if (keyCode == KeyCode.S && !filePanel.hiddenFilesShown()) {
+                    hideHiddenFiles.fire();
+                } else if (keyCode == KeyCode.Q) {
+                    Platform.exit(); // maybe implement a "Are you sure you want to exit?" confirmation dialog
+                    System.exit(0);
+                }
+            }
+        });
+    }
+
+    /**
      * Handler for creating a local directory
      * @param path the path for the directory
      */
     private void createLocalDirectory(String path) {
+        boolean absolute = false;
         try {
-            path = pathToAbsolute(path, true);
+            Object[] resolvedPath = pathToAbsolute(path, true);
+            path = (String)resolvedPath[0];
+            absolute = (boolean)resolvedPath[1];
         } catch (FTPException ex) {
             // shouldn't happen but log in case
             log.warn("Unexpected exception occurred", ex);
+            absolute = new File(path).isAbsolute();
         }
 
         String parentPath = new File(path).getParent();
@@ -185,6 +241,13 @@ public class FilePanelContainer extends VBox {
             LocalFile file = new LocalFile(path);
             if (file.mkdir()) {
                 UI.doInfo("Directory Created", "The directory: " + path + " has been created successfully");
+
+                boolean parentPathMatchesPanelsPath = filePanel.getDirectory().getFilePath().equals(parentPath);
+                if (!absolute && parentPathMatchesPanelsPath) {
+                    filePanel.refresh(); // only need to refresh if the path was relative (as the directory would be created in the current folder) or if absolute and the prent path doesnt match current path. The path identified by the absolute will be refreshed when its navigated to
+                } else if (parentPathMatchesPanelsPath) {
+                    filePanel.refresh();
+                }
             } else {
                 UI.doError("Directory Not Created", "Failed to make directory with path: " + path);
             }
@@ -197,7 +260,9 @@ public class FilePanelContainer extends VBox {
      */
     private void createRemoteDirectory(String path) {
         try {
-            path = pathToAbsolute(path, true);
+            Object[] resolvedPath = pathToAbsolute(path, true);
+            path = (String)resolvedPath[0];
+            boolean absolute = (boolean)resolvedPath[1];
 
             FTPConnection connection = filePanel.getFileSystem().getFTPConnection();
             String parentPath = new File(path).getParent(); // even though this isn't a local file we can still use getParent to get the parent i.e. the path without the last /....
@@ -211,8 +276,19 @@ public class FilePanelContainer extends VBox {
             } else {
                 if (connection.makeDirectory(path)) {
                     UI.doInfo("Directory Created", "The directory: " + path + " has been created successfully");
+
+                    boolean parentPathMatchesPanelsPath = filePanel.getDirectory().getFilePath().equals(parentPath);
+                    if (!absolute && parentPathMatchesPanelsPath) {
+                        filePanel.refresh(); // only need to refresh if the path was relative (as the directory would be created in the current folder) or if absolute and the prent path doesnt match current path. The path identified by the absolute will be refreshed when its navigated to
+                    } else if (parentPathMatchesPanelsPath) {
+                        filePanel.refresh();
+                    }
                 } else {
-                    UI.doError("Directory Not Created", "Failed to make directory with path: " + path + " with error: " + connection.getReplyString());
+                    String reply = connection.getReplyString();
+                    if (reply.trim().startsWith("2")) {
+                        reply = "Path is either a file or already a directory"; // this was a successful reply, so that call must have been checking remotePathExists in FTPConnection.makeDirectory
+                    }
+                    UI.doError("Directory Not Created", "Failed to make directory with path: " + path + " with error: " + reply);
                 }
             }
 
@@ -225,7 +301,7 @@ public class FilePanelContainer extends VBox {
      * The handler for creating a new directory
      */
     private void createNewDirectory() {
-        String path = UI.doPathDialog(UI.DirectoryPathAction.CREATE);
+        String path = UI.doPathDialog(UI.PathAction.CREATE);
 
         if (path != null) {
             if (filePanel.getDirectory() instanceof LocalFile) {
@@ -233,8 +309,6 @@ public class FilePanelContainer extends VBox {
             } else {
                 createRemoteDirectory(path);
             }
-
-            filePanel.refresh();
         }
     }
 
@@ -242,10 +316,11 @@ public class FilePanelContainer extends VBox {
      * Converts a path to an absolute one. If already absolute, it is returned as is
      * @param path the path to make absolute
      * @param local true if a local path, false if remote
-     * @return the absolute path
+     * @return an array where position 0 = path, position 1 = boolean (true if absolute, false if relative)
      * @throws FTPException if local is false and a FTP exception occurs
      */
-    private String pathToAbsolute(String path, boolean local) throws FTPException {
+    private Object[] pathToAbsolute(String path, boolean local) throws FTPException {
+        Object[] retArr = new Object[2];
         if (local) {
             LocalFile file = new LocalFile(path);
             if (!file.isAbsolute()) {
@@ -256,6 +331,9 @@ public class FilePanelContainer extends VBox {
                 } else {
                     path = pwd + path;
                 }
+                retArr[1] = false;
+            } else {
+                retArr[1] = true;
             }
         } else {
             if (!path.startsWith("/")) {
@@ -267,10 +345,16 @@ public class FilePanelContainer extends VBox {
                 } else {
                     path = pwd + path;
                 }
+
+                retArr[1] = false;
+            } else {
+                retArr[1] = true;
             }
         }
 
-        return path;
+        retArr[0] = path;
+
+        return retArr;
     }
 
     /**
@@ -278,7 +362,9 @@ public class FilePanelContainer extends VBox {
      * @param path the path to go to
      */
     private void goToLocalPath(String path) throws FileSystemException, FTPException {
-        LocalFile file = new LocalFile(new File(pathToAbsolute(path, true)).getAbsoluteFile().getPath());
+        path = (String)pathToAbsolute(path, true)[0];
+
+        LocalFile file = new LocalFile(new File(path).getAbsoluteFile().getPath());
 
         if (file.exists() && file.isDirectory()) {
             filePanel.setDirectory(file);
@@ -299,7 +385,7 @@ public class FilePanelContainer extends VBox {
         FTPConnection connection = fileSystem.getFTPConnection();
 
         try {
-            path = pathToAbsolute(path, false);
+            path = (String)pathToAbsolute(path, false)[0];
 
             if (connection.remotePathExists(path, true)) {
                 CommonFile file = fileSystem.getFile(path);
@@ -318,8 +404,8 @@ public class FilePanelContainer extends VBox {
     /**
      * The handler for the goto button
      */
-    private void gotoDirectory() {
-        String path = UI.doPathDialog(UI.DirectoryPathAction.GOTO);
+    private void gotoPath() {
+        String path = UI.doPathDialog(UI.PathAction.GOTO);
 
         if (path != null) {
             try {
@@ -353,11 +439,11 @@ public class FilePanelContainer extends VBox {
 
     /**
      * Gets the specified LineEntry matching the value chosen in the combo box
-     * @return LineEnrty matching file name chosen, can be null
+     * @return LineEntry matching file name chosen, can be null
      */
     private LineEntry getLineEntryFromComboBox() {
         String file = comboBox.getValue();
-        if (!file.equals("")) {
+        if (file != null && !file.equals("")) {
             return entryMappings.get(file);
         } else {
             return null;
@@ -367,7 +453,7 @@ public class FilePanelContainer extends VBox {
     /**
      * Deletes the chosen line entry from the combobox
      */
-    private void delete() {
+    public void delete() {
         LineEntry lineEntry = getLineEntryFromComboBox();
 
         if (lineEntry != null) {

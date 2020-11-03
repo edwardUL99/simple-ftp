@@ -17,6 +17,8 @@
 
 package com.simpleftp.security;
 
+import com.simpleftp.security.exceptions.PasswordEncryptionException;
+
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -70,7 +72,7 @@ public class PasswordEncryption {
                 if (encryptFile.exists() && encryptFile.isFile()) {
                     inputStream = new FileInputStream(encryptFile);
                 } else {
-                    throw new RuntimeException("Could not find a file called " + encryptionFile + " on the CLASSPATH or file specified by -Dsimpleftp.passwordEncryptFile does not exist");
+                    throw new PasswordEncryptionException("Could not find a file called " + encryptionFile + " on the CLASSPATH or file specified by -Dsimpleftp.passwordEncryptFile does not exist");
                 }
             }
 
@@ -103,7 +105,7 @@ public class PasswordEncryption {
      * @return encrypted password
      */
     public static String encrypt(String password) {
-        String encrypted = null;
+        String encrypted;
         try {
             SecretKey key = getSecretKey();
             Cipher cipher = Cipher.getInstance(ENCRYPTION_SCHEME);
@@ -111,8 +113,10 @@ public class PasswordEncryption {
             byte[] plainText = password.getBytes(UNICODE_FORMAT);
             byte[] encryptedText = cipher.doFinal(plainText);
             encrypted = Base64.getEncoder().encodeToString(encryptedText);
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (PasswordEncryptionException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new PasswordEncryptionException(ex.getMessage(), ex);
         }
         return encrypted;
     }
@@ -123,7 +127,7 @@ public class PasswordEncryption {
      * @return decrypted password
      */
     public static String decrypt(String password) {
-        String decrypted = null;
+        String decrypted;
         try {
             SecretKey key = getSecretKey();
             Cipher cipher = Cipher.getInstance(ENCRYPTION_SCHEME);
@@ -131,8 +135,10 @@ public class PasswordEncryption {
             byte[] encryptedText = Base64.getDecoder().decode(password);
             byte[] plainText = cipher.doFinal(encryptedText);
             decrypted = new String(plainText);
+        } catch (PasswordEncryptionException ex) {
+            throw ex;
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new PasswordEncryptionException(e.getMessage(), e);
         }
         return decrypted;
     }

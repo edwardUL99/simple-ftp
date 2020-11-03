@@ -26,6 +26,7 @@ import com.simpleftp.ftp.connection.FTPConnectionManager;
 import com.simpleftp.ftp.connection.FTPConnectionManagerBuilder;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.security.PasswordEncryption;
+import com.simpleftp.security.exceptions.PasswordEncryptionException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.containers.FilePanelContainer;
 import com.simpleftp.ui.panels.FilePanel;
@@ -43,21 +44,25 @@ public class FTPClient extends Application {
     }
 
     private void initialiseConnection() throws FTPException {
-        String password = PasswordEncryption.encrypt("ruggerBugger2015");
-        System.setProperty("ftp-server", "pi");
-        System.setProperty("ftp-user", "pi");
-        System.setProperty("ftp-pass", password);
-        System.setProperty("ftp-port", "" + FTPServer.DEFAULT_PORT);
-        FTPConnectionManagerBuilder builder = new FTPConnectionManagerBuilder();
-        connectionManager = builder.setBuiltManagerAsSystemManager(true).build();
-        FTPConnection connection = connectionManager.createIdleConnection("pi", "pi", PasswordEncryption.decrypt(password), FTPServer.DEFAULT_PORT);
-        connection.setFtpConnectionDetails(new FTPConnectionDetails(100, 300));
-        connection.setTimeoutTime(300);
-        connection.connect();
-        connection.login();
-        FTPSystem.setConnection(connection);
+        try {
+            String password = PasswordEncryption.encrypt("ruggerBugger2015");
+            System.setProperty("ftp-server", "pi");
+            System.setProperty("ftp-user", "pi");
+            System.setProperty("ftp-pass", password);
+            System.setProperty("ftp-port", "" + FTPServer.DEFAULT_PORT);
+            FTPConnectionManagerBuilder builder = new FTPConnectionManagerBuilder();
+            connectionManager = builder.setBuiltManagerAsSystemManager(true).build();
+            FTPConnection connection = connectionManager.createIdleConnection("pi", "pi", PasswordEncryption.decrypt(password), FTPServer.DEFAULT_PORT);
+            connection.setFtpConnectionDetails(new FTPConnectionDetails(100, 300));
+            connection.setTimeoutTime(300);
+            connection.connect();
+            connection.login();
+            FTPSystem.setConnection(connection);
 
-        Runtime.getRuntime().addShutdownHook(new ShutDownHandler());
+            Runtime.getRuntime().addShutdownHook(new ShutDownHandler());
+        } catch (PasswordEncryptionException ex) {
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, true, false); // set false as this is a fatal exception and application cant run after it
+        }
     }
 
     static class ShutDownHandler extends Thread {
