@@ -33,7 +33,7 @@ import java.util.Base64;
 /**
  * This class is used for encrypting and decrypting passwords
  *
- * Default one in the jar can be overriden to provide a configurable encryption string
+ * Default one in the jar can be overridden to provide a configurable encryption string
  *
  * Attempts to find on the classpath a file with extension password.encrypt which contains the encryption key or -Dsimpleftp.passwordEncryptFile=<file>
  * If not found, it's searched for in the property identified by user.dir

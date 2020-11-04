@@ -17,6 +17,7 @@
 
 package com.simpleftp;
 
+import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.ftp.connection.FTPConnectionDetails;

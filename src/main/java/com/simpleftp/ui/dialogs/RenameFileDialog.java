@@ -45,6 +45,6 @@ public class RenameFileDialog extends TextInputDialog {
     public String showAndGetName() {
         Optional<String> result = showAndWait();
 
-        return result.orElse(null);
+        return result.filter(e -> !e.equals("")).orElse(null);
     }
 }

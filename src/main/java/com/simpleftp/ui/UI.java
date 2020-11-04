@@ -207,12 +207,7 @@ public final class UI {
             pathDialog = new DirectoryPathDialog();
         }
 
-        String result = pathDialog.showAndGetPath();
-        if (result != null && !result.equals("")) {
-            return result;
-        } else {
-            return null;
-        }
+        return pathDialog.showAndGetPath();
     }
 
     /**
@@ -222,12 +217,21 @@ public final class UI {
      */
     public static String doRenameDialog(String currentFileName) {
         RenameFileDialog renameFileDialog = new RenameFileDialog(currentFileName);
-        String result = renameFileDialog.showAndGetName();
 
-        if (result != null && !result.equals("")) {
-            return result;
-        } else {
-            return null;
-        }
+        return renameFileDialog.showAndGetName();
+    }
+
+    /**
+     * Shows a text input dialog
+     * @param headerText the header text to show
+     * @param contentText the text for the content
+     * @param currentText the value to initially show, can be null
+     * @param subText an optional string that will be shown as a tooltip
+     * @return the entered string or null
+     */
+    public static String doInputDialog(String headerText, String contentText, String currentText, String subText) {
+        TextDialog textDialog = new TextDialog(headerText, contentText, currentText, subText);
+
+        return textDialog.showAndGet();
     }
 }

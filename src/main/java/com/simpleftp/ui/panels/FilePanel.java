@@ -50,6 +50,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.function.Predicate;
 
 /*
 The conditions for determining if an exception or error dialog show up may have to be reconsidered
@@ -63,6 +64,10 @@ public class FilePanel extends VBox {
      * The status panel which contains all the buttons and current directory label
      */
     private HBox statusPanel;
+    /**
+     * The label outlining current directory
+     */
+    private Label currentDirectoryLabel;
     /**
      * The label showing the path to the current directory
      */
@@ -119,6 +124,11 @@ public class FilePanel extends VBox {
      * A pane to display an empty folder if there are no files
      */
     private BorderPane emptyFolderPane;
+    /**
+     * A mask used to match files against. If null, it has no effect
+     */
+    @Getter
+    private String fileMask;
 
     /**
      * Constructs a FilePanel object with the specified directory
@@ -156,7 +166,7 @@ public class FilePanel extends VBox {
      * @return header label with value "Current Directory:"
      */
     private Label initCurrentDirectoryLabel() {
-        Label currentDirectoryLabel = new Label("Current Directory:");
+        currentDirectoryLabel = new Label("Current Directory:");
         currentDirectoryLabel.setPadding(new Insets(5, 0, 0, 0));
         currentDirectoryLabel.setAlignment(Pos.CENTER_LEFT);
         currentDirectoryLabel.setFont(Font.font("Monospaced", FontWeight.BOLD, currentDirectoryLabel.getFont().getSize()));
@@ -351,6 +361,56 @@ public class FilePanel extends VBox {
     }
 
     /**
+     * Checks the given filename against the file mask. It is assumed the mask is not null when calling this method
+     * @param fileName the name to check
+     * @return if the filename matches the mask
+     */
+    private boolean checkNameAgainstMask(String fileName) {
+        String mask = createRegexFromGlob(fileMask);
+        return fileName.matches(mask);
+    }
+
+    /**
+     * Converts any wildcards in the provided glob like linux matching i.e. file*
+     * @param glob the glob to convert
+     * @return the matching regex
+     */
+    private String createRegexFromGlob(String glob) {
+        StringBuilder out = new StringBuilder("^");
+        for(int i = 0; i < glob.length(); ++i) {
+            final char c = glob.charAt(i);
+            switch(c) {
+                case '*': out.append(".*"); break;
+                case '?': out.append('.'); break;
+                case '.': out.append("\\."); break;
+                case '\\': out.append("\\\\"); break;
+                default: out.append(c);
+            }
+        }
+        out.append('$');
+        return out.toString();
+    }
+
+    /**
+     * Returns whether the local file should be shown
+     * @param file the file being queried
+     * @param hiddenChecker the predicate to determine if the file is hidden or not. This is required because at the moment there is no platform independent way of determining if it is hidden
+     * @return true if the file is to be shown
+     */
+    private boolean showFile(CommonFile file, Predicate<CommonFile> hiddenChecker) {
+        boolean showFile = hiddenChecker.test(file);
+
+        if (!showFile) // if it is hidden, it will never be shown regardless of matching mask or not
+            return false;
+
+        if (fileMask != null) {
+            showFile = checkNameAgainstMask(file.getName());
+        }
+
+        return showFile;
+    }
+
+    /**
      * Constructs the list of line entries from the files listed by the local file
      * @param lineEntries the list of line entries to populate
      * @param localFile the file to list
@@ -364,7 +424,7 @@ public class FilePanel extends VBox {
                 for (CommonFile file : fileSystem.listFiles(localFile.getFilePath())) {
                     LocalFile file1 = (LocalFile) file;
                     try {
-                        boolean showFile = showHiddenFiles || !file1.isHidden();
+                        boolean showFile = showFile(file, e -> showHiddenFiles || !file1.isHidden());
 
                         if (showFile) {
                             addLineEntry(createLineEntry(file), lineEntries);
@@ -392,8 +452,10 @@ public class FilePanel extends VBox {
         try {
             String path = remoteFile.getFilePath();
             for (CommonFile f : fileSystem.listFiles(path)) {
-                String name = f.getName();
-                boolean showFile = (showHiddenFiles && !name.equals(".") && !name.startsWith("..")) || !name.startsWith(".");
+                boolean showFile = showFile(f, e -> {
+                    String fileName = f.getName();
+                    return (showHiddenFiles && !fileName.equals(".") && !fileName.startsWith("..")) || !fileName.startsWith(".");
+                });
 
                 if (showFile) {
                     addLineEntry(createLineEntry(f), lineEntries);
@@ -505,9 +567,7 @@ public class FilePanel extends VBox {
         menuItem3.setOnAction(e -> parentContainer.delete()); // right clicking this would have selected it in the container's combo box. So use containers delete method to display confirmation dialog
         contextMenu.getItems().addAll(menuItem1, menuItem2, menuItem3);
 
-        lineEntry.setOnContextMenuRequested(e -> {
-            contextMenu.show(lineEntry, e.getScreenX(), e.getScreenY());
-        });
+        lineEntry.setOnContextMenuRequested(e -> contextMenu.show(lineEntry, e.getScreenX(), e.getScreenY()));
 
         return lineEntry;
     }
@@ -802,5 +862,19 @@ public class FilePanel extends VBox {
      */
     public void hideHiddenFiles() {
         showHiddenFiles = false;
+    }
+
+    /**
+     * Sets the mask used for displaying files. Refresh should be called afterwards
+     * @param fileMask the file mask to show
+     */
+    public void setFileMask(String fileMask) {
+        this.fileMask = fileMask;
+
+        if (fileMask == null) {
+            currentDirectoryLabel.setText("Current Directory:");
+        } else {
+            currentDirectoryLabel.setText("CurrentDirectory (masked): ");
+        }
     }
 }

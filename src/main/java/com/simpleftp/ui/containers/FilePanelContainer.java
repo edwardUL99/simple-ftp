@@ -82,6 +82,10 @@ public class FilePanelContainer extends VBox {
      */
     private final MenuButton createButton;
     /**
+     * The button used to bring up the mask button
+     */
+    private final Button maskButton;
+    /**
      * The combobox displaying the base names of files displayed in the FilePanel
      */
     private final ComboBox<String> comboBox;
@@ -124,12 +128,16 @@ public class FilePanelContainer extends VBox {
         entryMappings = new HashMap<>();
         createButton = new MenuButton();
         createButton.setMnemonicParsing(true);
-        toolBar.getChildren().addAll(new Label("Files: "), comboBox, delete, open, gotoButton, hideHiddenFiles, createButton);
+        maskButton = new Button();
+        maskButton.setMnemonicParsing(true);
+        maskButton.setText("File _Mask");
+        toolBar.getChildren().addAll(new Label("Files: "), comboBox, delete, open, gotoButton, hideHiddenFiles, createButton, maskButton);
         getChildren().add(toolBar);
         setFilePanel(filePanel);
         initHideButton();
         initCreateButton();
         setKeyBindings();
+        initMaskButton();
     }
 
     /**
@@ -172,6 +180,18 @@ public class FilePanelContainer extends VBox {
         menuItem.setGraphic(imageView);
         menuItem.setOnAction(e -> createNewDirectory());
         createButton.getItems().add(menuItem);
+    }
+
+    /**
+     * Initialises the file mask button
+     */
+    private void initMaskButton() {
+        maskButton.setOnAction(e -> {
+            String currentMask = filePanel.getFileMask();
+            String fileMask = UI.doInputDialog("File Mask", "Enter a mask to filter files: ", currentMask, "Enter wildcards (*) to check if filename contains, i.e *ile*.txt or no wildcards for exact match");
+            filePanel.setFileMask(fileMask);
+            filePanel.refresh(); // refresh to put the mask in effect
+        });
     }
 
     /**

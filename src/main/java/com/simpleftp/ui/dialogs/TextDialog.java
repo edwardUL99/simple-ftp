@@ -23,26 +23,36 @@ import javafx.scene.layout.Region;
 
 import java.util.Optional;
 
+
 /**
- * A dialog pane for entering a path to change directory to or file to open
+ * A general TextDialog that's configurable to have any text for header, or content
  */
-public class ChangePathDialog extends TextInputDialog {
+public class TextDialog extends TextInputDialog {
     /**
-     * Constructs a dialog
+     * Creates a TextDialog
+     * @param headerText the text for the header
+     * @param contentText the text for the content
+     * @param currentText current text to show, can also be null
+     * @param subText optional text to show beneath the text field. Can be null. If not null, it will be displayed as an italic
      */
-    public ChangePathDialog() {
-        setTitle("Go to path");
-        setHeaderText("Go to directory/file");
-        setContentText("Enter path to the directory/file: ");
+    public TextDialog(String headerText, String contentText, String currentText, String subText) {
+        setTitle("Text Dialog");
+        setHeaderText(headerText);
+        setContentText(contentText);
+        getEditor().setText(currentText);
+        getEditor().selectAll();
+        if (subText != null) {
+            Tooltip.install(this.getDialogPane(), new Tooltip(subText));
+        }
+
         getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
-        getEditor().setTooltip(new Tooltip("Path can be absolute or relative"));
     }
 
     /**
-     * Shows the dialog and returns the entered path
-     * @return the entered path, can be null
+     * Shows the dialog
+     * @return the entered string. Null if blank or not entered
      */
-    public String showAndGetPath() {
+    public String showAndGet() {
         Optional<String> result = showAndWait();
 
         return result.filter(e -> !e.equals("")).orElse(null);

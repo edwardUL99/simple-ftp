@@ -77,14 +77,19 @@ public class SessionLoader {
             } else if (event == XMLEvent.CHARACTERS) {
                 String text = reader.getText();
                 if (isText(text)) {
-                    if (tag.equals(FTP_SERVER_HOST)) {
-                        server.setServer(text);
-                    } else if (tag.equals(FTP_SERVER_USER)) {
-                        server.setUser(text);
-                    } else if (tag.equals(FTP_SERVER_PASSWORD)) {
-                        server.setPassword(PasswordEncryption.decrypt(text));
-                    } else if (tag.equals(FTP_SERVER_PORT)) {
-                        server.setPort(Integer.parseInt(text));
+                    switch (tag) {
+                        case FTP_SERVER_HOST:
+                            server.setServer(text);
+                            break;
+                        case FTP_SERVER_USER:
+                            server.setUser(text);
+                            break;
+                        case FTP_SERVER_PASSWORD:
+                            server.setPassword(PasswordEncryption.decrypt(text));
+                            break;
+                        case FTP_SERVER_PORT:
+                            server.setPort(Integer.parseInt(text));
+                            break;
                     }
                 }
             } else if (event == XMLEvent.END_ELEMENT) {
@@ -137,12 +142,16 @@ public class SessionLoader {
             } else if (event == XMLEvent.CHARACTERS) {
                 String text = reader.getText();
                 if (isText(text)) {
-                    if (tag.equals(LAST_REMOTE_WD)) {
-                        lastSession.setLastRemoteWD(text);
-                    } else if (tag.equals(LAST_LOCAL_WD)) {
-                        lastSession.setLastLocalWD(text);
-                    } else if (tag.equals(SAVED_TIME)) {
-                        lastSession.setSavedTime(LocalDateTime.parse(text));
+                    switch (tag) {
+                        case LAST_REMOTE_WD:
+                            lastSession.setLastRemoteWD(text);
+                            break;
+                        case LAST_LOCAL_WD:
+                            lastSession.setLastLocalWD(text);
+                            break;
+                        case SAVED_TIME:
+                            lastSession.setSavedTime(LocalDateTime.parse(text));
+                            break;
                     }
                 }
             } else if (event == XMLEvent.END_ELEMENT) {
@@ -165,16 +174,22 @@ public class SessionLoader {
             if (event == XMLEvent.START_ELEMENT) {
                 String elementName = reader.getLocalName();
 
-                if (elementName.equals(SESSION)) {
-                    savedSession = new SavedSession();
-                } else if (elementName.equals(SESSION_ID)) {
-                    setId = true;
-                } else if (elementName.equals(FTP_SERVER)) {
-                    savedSession.setFtpServerDetails(readFTPServer());
-                } else if (elementName.equals(CONNECTION_DETAILS)) {
-                    savedSession.setFtpConnectionDetails(readConnectionDetails());
-                } else if (elementName.equals(LAST_SESSION)) {
-                    savedSession.setLastSession(readLastSession());
+                switch (elementName) {
+                    case SESSION:
+                        savedSession = new SavedSession();
+                        break;
+                    case SESSION_ID:
+                        setId = true;
+                        break;
+                    case FTP_SERVER:
+                        savedSession.setFtpServerDetails(readFTPServer());
+                        break;
+                    case CONNECTION_DETAILS:
+                        savedSession.setFtpConnectionDetails(readConnectionDetails());
+                        break;
+                    case LAST_SESSION:
+                        savedSession.setLastSession(readLastSession());
+                        break;
                 }
             } else if (event == XMLEvent.CHARACTERS) {
                 if (setId) {

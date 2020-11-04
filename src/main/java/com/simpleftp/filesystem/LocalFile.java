@@ -35,11 +35,6 @@ public class LocalFile extends File implements CommonFile {
         super(pathname);
     }
 
-    @Override
-    public String getName() {
-        return super.getName();
-    }
-
     /**
      * Returns absolute path to the file
      * @return absolute path
@@ -47,11 +42,6 @@ public class LocalFile extends File implements CommonFile {
     @Override
     public String getFilePath() {
         return super.getAbsolutePath();
-    }
-
-    @Override
-    public boolean exists() {
-        return super.exists();
     }
 
     @Override
