@@ -380,11 +380,11 @@ public class FilePanel extends VBox {
         for(int i = 0; i < glob.length(); ++i) {
             final char c = glob.charAt(i);
             switch(c) {
-                case '*': out.append(".*"); break;
-                case '?': out.append('.'); break;
-                case '.': out.append("\\."); break;
-                case '\\': out.append("\\\\"); break;
-                default: out.append(c);
+                case '*': out.append(".*"); break; // zero or more characters of any value
+                case '?': out.append('.'); break; // one and only one character. Can be any character
+                case '.': out.append("\\."); break; // if it is a dot, escape the dot as it is a literal
+                case '\\': out.append("\\\\"); break; // escape a slash
+                default: out.append(c); // just a normal character, add it to the regex
             }
         }
         out.append('$');
