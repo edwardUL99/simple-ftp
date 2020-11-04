@@ -20,6 +20,8 @@ package com.simpleftp.ui.dialogs;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.Region;
 
 import java.util.Optional;
@@ -36,6 +38,7 @@ public class QuitDialog extends Alert {
         setTitle("Quit Dialog");
         setHeaderText("Quit");
         setContentText("Are you sure you want to quit?");
+        setGraphic(new ImageView(new Image(ClassLoader.getSystemResource("poweroff_button.png").toString())));
         getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
         getButtonTypes().clear();
         getButtonTypes().addAll(new ButtonType("No", ButtonBar.ButtonData.CANCEL_CLOSE), new ButtonType("Yes", ButtonBar.ButtonData.FINISH));
