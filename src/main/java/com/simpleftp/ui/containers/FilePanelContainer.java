@@ -225,8 +225,7 @@ public class FilePanelContainer extends VBox {
                 } else if (keyCode == KeyCode.S && !filePanel.hiddenFilesShown()) {
                     hideHiddenFiles.fire();
                 } else if (keyCode == KeyCode.Q) {
-                    Platform.exit(); // maybe implement a "Are you sure you want to exit?" confirmation dialog
-                    System.exit(0);
+                    UI.doQuit();
                 }
             }
         });

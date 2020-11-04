@@ -21,6 +21,7 @@ import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.dialogs.*;
+import javafx.application.Platform;
 
 /**
  * This class provides static util methods and constants for UI
@@ -233,5 +234,17 @@ public final class UI {
         TextDialog textDialog = new TextDialog(headerText, contentText, currentText, subText);
 
         return textDialog.showAndGet();
+    }
+
+    /**
+     * Opens the confirm quit dialog and if true, quits
+     */
+    public static void doQuit() {
+        QuitDialog quitDialog = new QuitDialog();
+
+        if (quitDialog.showAndGetConfirmation()) {
+            Platform.exit();
+            System.exit(0);
+        }
     }
 }

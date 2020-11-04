@@ -133,8 +133,8 @@ public class FTPClient extends Application {
         primaryStage.setResizable(false);
         primaryStage.show();
         primaryStage.setOnCloseRequest(e -> {
-            Platform.exit();
-            System.exit(0);
+            UI.doQuit();
+            e.consume(); // consume so you don't close
         });
     }
 }
