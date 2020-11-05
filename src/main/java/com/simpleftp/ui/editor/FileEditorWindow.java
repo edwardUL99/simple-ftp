@@ -126,9 +126,29 @@ public class FileEditorWindow extends VBox {
      */
     private void reset() {
         editor.setText(originalText);
-        stage.setTitle(stage.getTitle().replaceAll("\\*", ""));
+        removeStarFromStageTitle();
         saved = true;
         editor.requestFocus();
+    }
+
+    /**
+     * Adds the star to the file name section of the editor stage title
+     */
+    private void addStarToStageTitle() {
+        String filePath = stage.getTitle().split("-")[1];
+        filePath = "*" + filePath.trim();
+
+        stage.setTitle("File Editor - " + filePath);
+    }
+
+    /**
+     * Removes the star from the file name section of the editor stage title
+     */
+    private void removeStarFromStageTitle() {
+        String filePath = stage.getTitle().split("-")[1];
+        filePath = filePath.trim().replaceAll("\\*", "");
+
+        stage.setTitle("File Editor - " + filePath);
     }
 
     /**
@@ -141,7 +161,7 @@ public class FileEditorWindow extends VBox {
                 FileSaver saver = new FileSaver(creatingPanel.getFileSystem());
                 saver.saveFile(file.getFilePath(), text);
                 creatingPanel.refresh();
-                stage.setTitle(stage.getTitle().replaceAll("\\*", ""));
+                removeStarFromStageTitle();
                 saved = true;
                 editor.requestFocus();
                 originalText = text;
@@ -200,7 +220,7 @@ public class FileEditorWindow extends VBox {
             if (!e.isControlDown()) {
                 if (saved) {
                     saved = false;
-                    stage.setTitle("*" + stage.getTitle());
+                    addStarToStageTitle();
                 }
             }
         });
@@ -227,7 +247,7 @@ public class FileEditorWindow extends VBox {
         try {
             initWindow();
             stage = new Stage();
-            stage.setTitle(getFilePath());
+            stage.setTitle("File Editor - " + getFilePath());
             stage.setScene(new Scene(this, UI.FILE_EDITOR_WIDTH, UI.FILE_EDITOR_HEIGHT));
             stage.show();
             editor.requestFocus();
