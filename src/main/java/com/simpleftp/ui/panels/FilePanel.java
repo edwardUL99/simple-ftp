@@ -129,6 +129,10 @@ public class FilePanel extends VBox {
      */
     @Getter
     private String fileMask;
+    /**
+     * The regex fileMask is converted to
+     */
+    private String fileMaskRegex;
 
     /**
      * Constructs a FilePanel object with the specified directory
@@ -366,8 +370,7 @@ public class FilePanel extends VBox {
      * @return if the filename matches the mask
      */
     private boolean checkNameAgainstMask(String fileName) {
-        String mask = createRegexFromGlob(fileMask);
-        return fileName.matches(mask);
+        return fileName.matches(fileMaskRegex);
     }
 
     /**
@@ -376,7 +379,7 @@ public class FilePanel extends VBox {
      * @return the matching regex
      */
     private String createRegexFromGlob(String glob) {
-        StringBuilder out = new StringBuilder("^");
+        StringBuilder out = new StringBuilder();
         for(int i = 0; i < glob.length(); ++i) {
             final char c = glob.charAt(i);
             switch(c) {
@@ -387,7 +390,7 @@ public class FilePanel extends VBox {
                 default: out.append(c); // just a normal character, add it to the regex
             }
         }
-        out.append('$');
+
         return out.toString();
     }
 
@@ -872,8 +875,10 @@ public class FilePanel extends VBox {
         this.fileMask = fileMask;
 
         if (fileMask == null) {
+            fileMaskRegex = null;
             currentDirectoryLabel.setText("Current Directory:");
         } else {
+            fileMaskRegex = createRegexFromGlob(fileMask);
             currentDirectoryLabel.setText("CurrentDirectory (masked): ");
         }
     }
