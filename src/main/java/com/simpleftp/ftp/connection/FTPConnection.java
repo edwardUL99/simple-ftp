@@ -676,7 +676,6 @@ public class FTPConnection {
         }
 
         try {
-
             if (loggedIn) {
                 if (ftpLookup.remotePathExists(path, true) || ftpLookup.remotePathExists(path, false)) {
                     logDebug("Path {} exists as a directory already or a file", path);

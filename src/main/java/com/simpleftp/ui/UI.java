@@ -18,9 +18,12 @@
 package com.simpleftp.ui;
 
 import com.simpleftp.filesystem.exceptions.FileSystemException;
+import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.dialogs.*;
+import com.simpleftp.ui.editor.FileEditorWindow;
+import com.simpleftp.ui.panels.FilePanel;
 import javafx.application.Platform;
 
 /**
@@ -66,6 +69,16 @@ public final class UI {
      * Width of the File panel including FilePanelContainer
      */
     public static final int FILE_PANEL_WIDTH = 570;
+
+    /**
+     * The height for file editors
+     */
+    public static final int FILE_EDITOR_HEIGHT = 700;
+
+    /**
+     * The width for file editors
+     */
+    public static final int FILE_EDITOR_WIDTH = 700;
 
     /**
      * The width for the FilePanelContainer ComboBox
@@ -246,5 +259,23 @@ public final class UI {
             Platform.exit();
             System.exit(0);
         }
+    }
+
+    /**
+     * Opens the unsaved changes dialog and returns true if wants to save
+     */
+    public static boolean doUnsavedChanges() {
+        UnsavedChangesDialog unsavedChangesDialog = new UnsavedChangesDialog();
+        return unsavedChangesDialog.showAndGetConfirmation();
+    }
+
+    /**
+     * Shows a file editor
+     * @param panel the panel opening the editor
+     * @param file the file to edit
+     */
+    public static void showFileEditor(FilePanel panel, CommonFile file) {
+        FileEditorWindow editorWindow = new FileEditorWindow(panel, file);
+        editorWindow.show();
     }
 }

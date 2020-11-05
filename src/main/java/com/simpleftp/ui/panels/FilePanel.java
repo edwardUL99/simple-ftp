@@ -33,7 +33,6 @@ import com.simpleftp.ui.UI;
 import com.simpleftp.ui.containers.FilePanelContainer;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -41,7 +40,6 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-import javafx.stage.Stage;
 import lombok.Getter;
 
 import java.io.BufferedReader;
@@ -630,40 +628,6 @@ public class FilePanel extends VBox {
     }
 
     /**
-     * Opens the specified file and returns it as a string
-     * @param file the file to open
-     * @return the file contents as a String
-     * @throws IOException if the reader fails to read the file
-     */
-    private String fileToString(CommonFile file) throws IOException {
-        String str = "";
-
-        if (file instanceof LocalFile) {
-            LocalFile localFile = (LocalFile)file;
-            BufferedReader reader = new BufferedReader(new FileReader(localFile));
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-                str += line + "\n";
-            }
-        } else {
-            try {
-                RemoteFile remoteFile = (RemoteFile) file;
-                LocalFile downloaded = new LocalFile(System.getProperty("java.io.tmpdir") + System.getProperty("file.separator") + remoteFile.getName());
-                new LocalFileSystem(fileSystem.getFTPConnection()).addFile(remoteFile, downloaded.getParentFile().getAbsolutePath());
-                String ret = fileToString(downloaded);
-                downloaded.delete();
-
-                return ret;
-            } catch (FileSystemException ex) {
-                UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
-            }
-        }
-
-        return str;
-    }
-
-    /**
      * Checks if the line entry is still valid, i.e. the file specified by it is still on the file system (local or remote)
      * @param lineEntry the line entry to check
      * @return true if it still exists
@@ -693,52 +657,11 @@ public class FilePanel extends VBox {
     }
 
     /**
-     * Gets the file path to display as a title on the opened file window
-     * @param lineEntry the line entry being opened
-     * @return the file path
-     */
-    private String getFilePath(final LineEntry lineEntry) {
-        CommonFile file = lineEntry.getFile();
-        String filePath = file.getFilePath();
-
-        if (file instanceof RemoteFile) {
-            filePath = "ftp://" + filePath;
-        }
-
-        return filePath;
-    }
-
-    /**
      * Handles double clicks of the specified file entry
      * @param lineEntry the file entry to double click
      */
     private void doubleClickFileEntry(final FileLineEntry lineEntry) {
-        Stage newStage = new Stage();
-        newStage.setTitle(getFilePath(lineEntry));
-
-        ScrollPane scrollPane = new ScrollPane();
-        newStage.setOnCloseRequest(e -> {
-            try {
-                lineEntry.refresh();
-            } catch (FTPRemotePathNotFoundException | LocalPathNotFoundException ex) {
-                deleteEntry(lineEntry);
-            }
-        });
-
-        try {
-            StackPane stackPane = new StackPane();
-            TextArea textArea = new TextArea();
-            textArea.setEditable(false);
-            textArea.setText(fileToString(lineEntry.getFile()));
-            stackPane.getChildren().add(textArea);
-            scrollPane.setContent(stackPane);
-            scrollPane.setFitToWidth(true);
-            scrollPane.setFitToHeight(true);
-            newStage.setScene(new Scene(scrollPane, 700, 700));
-            newStage.show();
-        } catch (IOException ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
-        }
+        UI.showFileEditor(this, lineEntry.getFile());
     }
 
     /**
