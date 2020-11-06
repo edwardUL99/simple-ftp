@@ -166,10 +166,10 @@ public final class UI {
             } else if (ex instanceof FTPException) {
                 ErrorDialog errorDialog;
                 String error = ((FTPException) ex).getReplyString();
-                if (error.equals(""))
+                if (error != null && error.equals(""))
                     error = "N/A";
                 if (ex instanceof FTPConnectionFailedException) {
-                    errorDialog = new ErrorDialog("FTP Connection Error", ex.getMessage() + "\nFTP Error: " + error);
+                    errorDialog = new ErrorDialog("FTP Connection Error", ex.getMessage() + "\nFTP Error: " + (error == null ? "FTP Connection failed":error));
                 } else if (ex instanceof FTPCommandFailedException) {
                     errorDialog = new ErrorDialog("FTP Operation Error", ex.getMessage() + "\nFTP Error: " + error);
                 } else if (ex instanceof FTPNotConnectedException) {

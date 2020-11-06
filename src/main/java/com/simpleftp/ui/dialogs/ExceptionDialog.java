@@ -39,9 +39,9 @@ public class ExceptionDialog extends Alert {
     /**
      * Creates an Exception dialog with the specified exception
      * @param ex the exception for this exception dialog
-     * @param showIgnoreButton true to show ignore button, false to not show it. If false, clicking the x button also aborts execution
+     * @param nonFatal true to show ignore button or to not terminate after ok is pressed, false to hide ignore button and/or not proceed. If false, clicking the x button also aborts execution
      */
-    public ExceptionDialog(Exception ex, boolean showIgnoreButton) {
+    public ExceptionDialog(Exception ex, boolean nonFatal) {
         super(AlertType.ERROR);
         setTitle("Exception Dialog");
         setHeaderText("An exception has occurred");
@@ -54,7 +54,7 @@ public class ExceptionDialog extends Alert {
         ButtonType ignore = new ButtonType("Ignore", ButtonBar.ButtonData.CANCEL_CLOSE);
         ButtonType abort = new ButtonType("Abort", ButtonBar.ButtonData.FINISH);
 
-        if (showIgnoreButton) {
+        if (nonFatal) {
             getButtonTypes().setAll(ignore, abort);
         } else {
             getButtonTypes().setAll(abort);

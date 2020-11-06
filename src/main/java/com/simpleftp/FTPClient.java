@@ -46,14 +46,14 @@ public class FTPClient extends Application {
 
     private void initialiseConnection() throws FTPException {
         try {
-            String password = PasswordEncryption.encrypt("ruggerBugger2015");
-            System.setProperty("ftp-server", "pi");
-            System.setProperty("ftp-user", "pi");
+            String password = PasswordEncryption.encrypt("ftppass");
+            System.setProperty("ftp-server", "localhost");
+            System.setProperty("ftp-user", "ftpuser");
             System.setProperty("ftp-pass", password);
             System.setProperty("ftp-port", "" + FTPServer.DEFAULT_PORT);
             FTPConnectionManagerBuilder builder = new FTPConnectionManagerBuilder();
             connectionManager = builder.setBuiltManagerAsSystemManager(true).build();
-            FTPConnection connection = connectionManager.createIdleConnection("pi", "pi", PasswordEncryption.decrypt(password), FTPServer.DEFAULT_PORT);
+            FTPConnection connection = connectionManager.createIdleConnection("localhost", "ftpuser", PasswordEncryption.decrypt(password), FTPServer.DEFAULT_PORT);
             connection.setFtpConnectionDetails(new FTPConnectionDetails(100, 300));
             connection.setTimeoutTime(300);
             connection.connect();
@@ -80,8 +80,13 @@ public class FTPClient extends Application {
     }
 
     @Override
-    public void start(Stage primaryStage) throws FileSystemException, FTPException {
-        initialiseConnection();
+    public void start(Stage primaryStage) throws FileSystemException {
+        try {
+            initialiseConnection();
+        } catch (FTPException ex) {
+            UI.doException(ex, UI.ExceptionType.ERROR, true, false);
+            System.exit(1);
+        }
         FTPSystem.getConnectionManager().addConnection(FTPSystem.getConnection()); // add so all remote files use the same
 
         FilePanel panel = new FilePanel(new RemoteFile("/test"));

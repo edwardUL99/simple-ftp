@@ -56,6 +56,10 @@ public class FileEditorWindow extends VBox {
      */
     private final TextArea editor;
     /**
+     * The ScrollPane for the editor
+     */
+    private final ScrollPane editorScrollPane;
+    /**
      * The stage that will show this window
      */
     private Stage stage;
@@ -89,7 +93,7 @@ public class FileEditorWindow extends VBox {
         this.creatingPanel = creatingPanel;
         this.file = file;
         editor = new TextArea();
-        ScrollPane editorScrollPane = new ScrollPane();
+        editorScrollPane = new ScrollPane();
         editorScrollPane.setContent(editor);
         editorScrollPane.setFitToHeight(true);
         editorScrollPane.setFitToWidth(true);
@@ -127,10 +131,14 @@ public class FileEditorWindow extends VBox {
      */
     private void reset() {
         if (!saved) {
+            double hPos = editorScrollPane.getHvalue();
+            double vPos = editorScrollPane.getVvalue();
             editor.setText(originalText);
             removeStarFromStageTitle();
             saved = true;
             editor.requestFocus();
+            editorScrollPane.setHvalue(hPos);
+            editorScrollPane.setVvalue(vPos);
         }
     }
 
