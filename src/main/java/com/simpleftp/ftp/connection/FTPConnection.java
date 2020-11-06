@@ -487,7 +487,12 @@ public class FTPConnection {
 
     private FTPFile writeLocalFileToRemote(File file, String path) throws IOException {
         String name = file.getName();
-        String remoteFileName = path + "/" + name;
+        String remoteFileName;
+        if (path.equals("/")) {
+            remoteFileName = path + name;
+        } else {
+            remoteFileName = path + "/" + name;
+        }
 
         FileInputStream fileInputStream = new FileInputStream(file);
         boolean stored = ftpClient.storeFile(remoteFileName, fileInputStream);
@@ -835,7 +840,7 @@ public class FTPConnection {
             throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while checking if path exists", ftpClient.getReplyString(), cl, ftpServer);
         } catch (IOException ex) {
             log.error("An error occurred when checking if path {} exists", remotePath);
-            throw new FTPCommandFailedException("An error occurred when checking if path {} exists", ftpClient.getReplyString(), ex);
+            throw new FTPCommandFailedException("An error occurred when checking if path exists", ftpClient.getReplyString(), ex);
         }
     }
 

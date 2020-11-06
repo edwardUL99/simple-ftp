@@ -40,6 +40,7 @@ import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -179,7 +180,16 @@ public class FilePanelContainer extends VBox {
         imageView.setFitWidth(20);
         menuItem.setGraphic(imageView);
         menuItem.setOnAction(e -> createNewDirectory());
-        createButton.getItems().add(menuItem);
+
+        MenuItem menuItem1 = new MenuItem();
+        menuItem.setMnemonicParsing(true);
+        menuItem1.setText("_File");
+        ImageView imageView1 = new ImageView(new Image("file_icon.png"));
+        imageView1.setFitWidth(20);
+        imageView1.setFitHeight(20);
+        menuItem1.setGraphic(imageView1);
+        menuItem1.setOnAction(e -> createNewFile());
+        createButton.getItems().addAll(menuItem, menuItem1);
     }
 
     /**
@@ -234,8 +244,9 @@ public class FilePanelContainer extends VBox {
     /**
      * Handler for creating a local directory
      * @param path the path for the directory
+     * @param directory true if to create a directory, false if file
      */
-    private void createLocalDirectory(String path) {
+    private void createLocalFile(String path, boolean directory) {
         boolean absolute = false;
         try {
             Object[] resolvedPath = pathToAbsolute(path, true);
@@ -258,17 +269,29 @@ public class FilePanelContainer extends VBox {
             UI.doError("Directory does not exist", "Cannot create directory as path: " + parentPath + " does not exist");
         } else {
             LocalFile file = new LocalFile(path);
-            if (file.mkdir()) {
-                UI.doInfo("Directory Created", "The directory: " + path + " has been created successfully");
-
-                boolean parentPathMatchesPanelsPath = filePanel.getDirectory().getFilePath().equals(parentPath);
-                if (!absolute && parentPathMatchesPanelsPath) {
-                    filePanel.refresh(); // only need to refresh if the path was relative (as the directory would be created in the current folder) or if absolute and the prent path doesnt match current path. The path identified by the absolute will be refreshed when its navigated to
-                } else if (parentPathMatchesPanelsPath) {
-                    filePanel.refresh();
+            if (directory) {
+                if (file.mkdir()) {
+                    UI.doInfo("Directory Created", "The directory: " + path + " has been created successfully");
+                } else {
+                    UI.doError("Directory Not Created", "Failed to make directory with path: " + path);
                 }
             } else {
-                UI.doError("Directory Not Created", "Failed to make directory with path: " + path);
+                try {
+                    if (file.createNewFile()) {
+                        UI.doInfo("File Created", "The file: " + path + " has been created successfully");
+                    } else {
+                        UI.doError("File Not Created", "Failed to make file with path: " + path);
+                    }
+                } catch (IOException ex) {
+                    UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
+                }
+            }
+
+            boolean parentPathMatchesPanelsPath = filePanel.getDirectory().getFilePath().equals(parentPath);
+            if (!absolute && parentPathMatchesPanelsPath) {
+                filePanel.refresh(); // only need to refresh if the path was relative (as the directory would be created in the current folder) or if absolute and the prent path doesnt match current path. The path identified by the absolute will be refreshed when its navigated to
+            } else if (parentPathMatchesPanelsPath) {
+                filePanel.refresh();
             }
         }
     }
@@ -276,8 +299,9 @@ public class FilePanelContainer extends VBox {
     /**
      * Handler for creating a remote directory
      * @param path the path for the directory
+     * @param directory true if directory, false if file
      */
-    private void createRemoteDirectory(String path) {
+    private void createRemoteFile(String path, boolean directory) {
         try {
             Object[] resolvedPath = pathToAbsolute(path, true);
             path = (String)resolvedPath[0];
@@ -288,31 +312,57 @@ public class FilePanelContainer extends VBox {
             boolean existsAsDir = true;
             if (parentPath != null) {
                 existsAsDir = connection.remotePathExists(parentPath, true);
+            } else {
+                parentPath = "/";
             }
 
             if (!existsAsDir) {
                 UI.doError("Directory does not exist", "Cannot create directory as path: " + parentPath + " does not exist");
             } else {
-                if (connection.makeDirectory(path)) {
-                    UI.doInfo("Directory Created", "The directory: " + path + " has been created successfully");
-
-                    boolean parentPathMatchesPanelsPath = filePanel.getDirectory().getFilePath().equals(parentPath);
-                    if (!absolute && parentPathMatchesPanelsPath) {
-                        filePanel.refresh(); // only need to refresh if the path was relative (as the directory would be created in the current folder) or if absolute and the prent path doesnt match current path. The path identified by the absolute will be refreshed when its navigated to
-                    } else if (parentPathMatchesPanelsPath) {
-                        filePanel.refresh();
+                if (directory) {
+                    if (connection.makeDirectory(path)) {
+                        UI.doInfo("Directory Created", "The directory: " + path + " has been created successfully");
+                    } else {
+                        String reply = connection.getReplyString();
+                        if (reply.trim().startsWith("2")) {
+                            reply = "Path is either a file or already a directory"; // this was a successful reply, so that call must have been checking remotePathExists in FTPConnection.makeDirectory
+                        }
+                        UI.doError("Directory Not Created", "Failed to make directory with path: " + path + " with error: " + reply);
                     }
                 } else {
-                    String reply = connection.getReplyString();
-                    if (reply.trim().startsWith("2")) {
-                        reply = "Path is either a file or already a directory"; // this was a successful reply, so that call must have been checking remotePathExists in FTPConnection.makeDirectory
+                    // need to make a local file first and then upload
+                    if (!connection.remotePathExists(path, false)) {
+                        String fileName = new File(path).getName();
+                        LocalFile localFile = new LocalFile(UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + fileName);
+                        localFile.createNewFile();
+
+                        if (connection.uploadFile(localFile, parentPath) != null) {
+                            UI.doInfo("File Created", "The file: " + path + " has been created successfully");
+                        } else {
+                            String reply = connection.getReplyString();
+                            if (reply.trim().startsWith("2")) {
+                                reply = "Path is either a directory or already a file"; // this was a successful reply, so that call must have been checking remotePathExists in FTPConnection.makeDirectory
+                            }
+                            UI.doError("File Not Created", "Failed to make file with path: " + path + " with reply: " + reply);
+                        }
+
+                        localFile.delete();
+                    } else {
+                        UI.doError("File Already Exists", "File with path: " + path + " already exists");
                     }
-                    UI.doError("Directory Not Created", "Failed to make directory with path: " + path + " with error: " + reply);
+                }
+
+                boolean parentPathMatchesPanelsPath = filePanel.getDirectory().getFilePath().equals(parentPath);
+                if (!absolute && parentPathMatchesPanelsPath) {
+                    filePanel.refresh(); // only need to refresh if the path was relative (as the directory would be created in the current folder) or if absolute and the prent path doesnt match current path. The path identified by the absolute will be refreshed when its navigated to
+                } else if (parentPathMatchesPanelsPath) {
+                    filePanel.refresh();
                 }
             }
-
         } catch (FTPException ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, true);
+        } catch (IOException ex) {
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
         }
     }
 
@@ -324,9 +374,24 @@ public class FilePanelContainer extends VBox {
 
         if (path != null) {
             if (filePanel.getDirectory() instanceof LocalFile) {
-                createLocalDirectory(path);
+                createLocalFile(path, true);
             } else {
-                createRemoteDirectory(path);
+                createRemoteFile(path, true);
+            }
+        }
+    }
+
+    /**
+     * The handler to create a new empty file
+     */
+    private void createNewFile() {
+        String path = UI.doPathDialog(UI.PathAction.CREATE);
+
+        if (path != null) {
+            if (filePanel.getDirectory() instanceof LocalFile) {
+                createLocalFile(path, false);
+            } else {
+                createRemoteFile(path, false);
             }
         }
     }

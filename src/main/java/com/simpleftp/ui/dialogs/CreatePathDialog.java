@@ -20,13 +20,13 @@ package com.simpleftp.ui.dialogs;
 /**
  * Dialog for specifying a path for a directory to create
  */
-public class DirectoryPathDialog extends ChangePathDialog {
+public class CreatePathDialog extends ChangePathDialog {
     /**
      * Constructs the dialog
      */
-    public DirectoryPathDialog() {
-        setTitle("Create Directory");
-        setHeaderText("Create new directory");
-        setContentText("Enter the path of the new directory: ");
+    public CreatePathDialog() {
+        setTitle("Create Directory/File");
+        setHeaderText("Create new directory/file");
+        setContentText("Enter the path of the new directory/file: ");
     }
 }

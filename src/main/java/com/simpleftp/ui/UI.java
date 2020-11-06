@@ -104,6 +104,17 @@ public final class UI {
     }
 
     /**
+     * The temp directory
+     */
+    public static final String TEMP_DIRECTORY = System.getProperty("java.io.tmpdir");
+
+    /**
+     *
+     * The separator for file paths
+     */
+    public static final String PATH_SEPARATOR = System.getProperty("file.separator");
+
+    /**
      * An enum to determine which path dialog to open
      */
     public enum PathAction {
@@ -218,7 +229,7 @@ public final class UI {
         if (action == PathAction.GOTO) {
             pathDialog = new ChangePathDialog();
         } else {
-            pathDialog = new DirectoryPathDialog();
+            pathDialog = new CreatePathDialog();
         }
 
         return pathDialog.showAndGetPath();

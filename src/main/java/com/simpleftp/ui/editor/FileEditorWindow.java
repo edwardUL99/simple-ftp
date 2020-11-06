@@ -31,6 +31,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
 
@@ -125,10 +126,12 @@ public class FileEditorWindow extends VBox {
      * Resets the edited text to original
      */
     private void reset() {
-        editor.setText(originalText);
-        removeStarFromStageTitle();
-        saved = true;
-        editor.requestFocus();
+        if (!saved) {
+            editor.setText(originalText);
+            removeStarFromStageTitle();
+            saved = true;
+            editor.requestFocus();
+        }
     }
 
     /**
@@ -195,7 +198,7 @@ public class FileEditorWindow extends VBox {
         } else {
             try {
                 RemoteFile remoteFile = (RemoteFile) file;
-                LocalFile downloaded = new LocalFile(System.getProperty("java.io.tmpdir") + System.getProperty("file.separator") + remoteFile.getName());
+                LocalFile downloaded = new LocalFile(UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + remoteFile.getName());
                 new LocalFileSystem(creatingPanel.getFileSystem().getFTPConnection()).addFile(remoteFile, downloaded.getParentFile().getAbsolutePath()); // download the file
                 String ret = fileToString(downloaded);
                 downloaded.delete();

@@ -20,6 +20,7 @@ package com.simpleftp.ui.editor;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFileSystem;
 import com.simpleftp.filesystem.interfaces.FileSystem;
+import com.simpleftp.ui.UI;
 
 import java.io.*;
 
@@ -66,7 +67,7 @@ public class FileSaver {
         boolean remoteFileSystem = fileSystem instanceof RemoteFileSystem;
 
         if (remoteFileSystem) {
-            saveFilePath = System.getProperty("java.io.tmpdir") + System.getProperty("file.separator") + fileName;
+            saveFilePath = UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + fileName;
             file = new File(saveFilePath);
         } else {
             saveFilePath = filePath;
