@@ -134,6 +134,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
                     owningPanel.openLineEntry(this);
                 }
             }
+            owningPanel.requestFocus();
         });
         setPickOnBounds(true);
     }

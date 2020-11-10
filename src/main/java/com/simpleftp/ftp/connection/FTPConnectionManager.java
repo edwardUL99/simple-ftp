@@ -24,16 +24,24 @@ import java.util.ArrayList;
 
 /**
  * This class is responsible for managing FTP connections.
- * It is a single class, so can only use one instance of it
+ *
+ * It is used internally by FileSystem classes (if a FTPConnection is not specifically provided) and CommonFile implementations.
+ * Those classes call the createReadyConnection method. If you want to use a single connection instance throughout the system, but don't want it initially ready (connected and logged in),
+ * you can call any of the createXXConnection method and change any settings with it. Provided you then connect and log in successfully and call addConnection, this connection is ready.
+ * If you call createReadyConnection then, even though the connection was initially created with createIdleConnection, provided it is using the same details as the call to createIdleConenction,
+ * AND isConnected() and isLoggedIn() still returns true, this connection will be returned.
  */
 public class FTPConnectionManager {
     @Setter
     private ArrayList<FTPConnection> managedConnections; // this list may be used later to monitor each connection
-    private enum ConnectionTypes {
+
+    private enum ConnectionStates {
         IDLE,
         CONNECTED,
         READY
     }
+
+    private FTPException lastException;
 
 
     /**
@@ -48,6 +56,7 @@ public class FTPConnectionManager {
      * @return an empty FTPConnection, Will need to be configured before use
      */
     public FTPConnection createDeadConnection() {
+        lastException = null;
         FTPConnection deadConnection = new FTPConnection();
         managedConnections.add(deadConnection);
         return deadConnection;
@@ -63,7 +72,8 @@ public class FTPConnectionManager {
      * @return an idle FTPConnection
      */
     public FTPConnection createIdleConnection(String server, String user, String password, int port) {
-        FTPConnection existing = checkAlreadyExists(server, user, password, port, ConnectionTypes.IDLE);
+        lastException = null;
+        FTPConnection existing = checkAlreadyExists(server, user, password, port, ConnectionStates.IDLE);
         if (existing == null) {
             FTPServer serverDetails = new FTPServer(server, user, password, port);
             FTPConnection connection = new FTPConnection();
@@ -85,7 +95,8 @@ public class FTPConnectionManager {
      * @return a connected connection, null if an exception occurred
      */
     public FTPConnection createConnectedConnection(String server, String user, String password, int port) {
-        FTPConnection existing = checkAlreadyExists(server, user, password, port, ConnectionTypes.CONNECTED);
+        lastException = null;
+        FTPConnection existing = checkAlreadyExists(server, user, password, port, ConnectionStates.CONNECTED);
         FTPServer serverDetails = new FTPServer(server, user, password, port);
 
         if (existing == null) {
@@ -101,6 +112,7 @@ public class FTPConnectionManager {
                     return null;
                 }
             } catch (FTPException ex) {
+                lastException = ex;
                 return null;
             }
         }
@@ -118,7 +130,8 @@ public class FTPConnectionManager {
      * @return a connected and logged in connection, null if an error occurs
      */
     public FTPConnection createReadyConnection(String server, String user, String password, int port) {
-        FTPConnection existing = checkAlreadyExists(server, user, password, port, ConnectionTypes.READY);
+        lastException = null;
+        FTPConnection existing = checkAlreadyExists(server, user, password, port, ConnectionStates.READY);
 
         if (existing == null) {
             FTPServer serverDetails = new FTPServer(server, user, password, port);
@@ -140,6 +153,7 @@ public class FTPConnectionManager {
                     return null;
                 }
             } catch (FTPException ex) {
+                lastException = ex;
                 return null;
             }
         }
@@ -147,34 +161,63 @@ public class FTPConnectionManager {
         return existing;
     }
 
-    private FTPConnection checkAlreadyExists(String server, String user, String password, int port, ConnectionTypes connectionType) {
+    /**
+     * Checks if a connection matching these connection parameters and state exists and if so returns it, null otherwise
+     * @param server the server name to check for
+     * @param user the username to check for
+     * @param password the password that the user is logged in with
+     * @param port the port the connection is on
+     * @param connectionState the state of the connection. For all states (except DeadConnection (that state isn't mapped), each connection in managedConnections is checked for following:
+     *                        <ul>
+     *                          <li>server equals the connection server</li>
+     *                          <li>user equals the connection user</li>
+     *                          <li>password equals the user password for the connection</li>
+     *                          <li>port matches the connection's port</li>
+     *                        </ul>
+     *
+     *                        If any of these are not equal with the equivalent value in the connection in the list, it is not equals and the next connection is checked.
+     *
+     *                        Every value must be equal and for each connection state:
+     *                        IDLE - isConnected() and isLoggedIn() both return false
+     *                        CONNECTED - isConnected() returns true but isLoggedIn() returns false
+     *                        READY - isConnected() and isLoggedIn() both return true
+     * @return a matching connection, null if none found
+     */
+    private FTPConnection checkAlreadyExists(String server, String user, String password, int port, ConnectionStates connectionState) {
         for (FTPConnection connection : managedConnections) {
-            String cServer = connection.getFtpServer().getServer();
-            String cUser = connection.getFtpServer().getUser();
-            String cPass = connection.getFtpServer().getPassword();
-            int cPort = connection.getFtpServer().getPort();
+            FTPServer ftpServer = connection.getFtpServer();
+            String cServer = ftpServer.getServer();
+            String cUser = ftpServer.getUser();
+            String cPass = ftpServer.getPassword();
+            int cPort = ftpServer.getPort();
 
             if (cServer.equals("") && cUser.equals("") && cPass.equals("") && cPort == 0) {
-                // we have a dead connection, just return null as a dead connection can be edited afterwards and will then be caught by the other methods if it exists for same parameters
-                return null;
+                // we have a dead connection, just continue as a dead connection can be edited afterwards and will then be caught by the other methods if it exists for same parameters
+                continue;
             }
 
             boolean equals = cServer.equals(server) && cUser.equals(user) && cPass.equals(password) && cPort == port;
 
-            switch (connectionType) {
-                case IDLE: if (equals && !connection.isConnected() && !connection.isLoggedIn())
-                                return connection;
-                            else
-                                break;
-                case CONNECTED: if (equals && connection.isConnected() && !connection.isLoggedIn())
-                                    return connection;
-                                else
-                                    break;
-                case READY: if (equals && connection.isConnected() && connection.isLoggedIn())
-                                    return connection;
-                                else
-                                    break;
-                default: break;
+            if (equals) {
+                switch (connectionState) {
+                    case IDLE:
+                        if (!connection.isConnected() && !connection.isLoggedIn())
+                            return connection;
+                        else
+                            break;
+                    case CONNECTED:
+                        if (connection.isConnected() && !connection.isLoggedIn())
+                            return connection;
+                        else
+                            break;
+                    case READY:
+                        if (connection.isConnected() && connection.isLoggedIn())
+                            return connection;
+                        else
+                            break;
+                    default:
+                        break;
+                }
             }
         }
 
@@ -193,5 +236,15 @@ public class FTPConnectionManager {
         if (connection != null) {
             managedConnections.add(connection);
         }
+    }
+
+    /**
+     * If any createXXConnection returned null, you may call this method to retrieve the exception that may have caused the issue.
+     * This method is added as there are too many classes now relying on this class to start throwing the exceptions as they happen.
+     * May be refactored in the future
+     * @return the last FTPException that occurred. Should be called directly after a createXXConnection method is called, as on each call to these methods, this will return null, unless an exception occurred
+     */
+    public FTPException getLastException() {
+        return lastException;
     }
 }

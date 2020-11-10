@@ -63,12 +63,17 @@ public final class UI {
     /**
      * Height of the File panel including FilePanelContainer
      */
-    public static final int FILE_PANEL_HEIGHT = 300;
+    public static final int FILE_PANEL_HEIGHT = 500;
 
     /**
      * Width of the File panel including FilePanelContainer
      */
     public static final int FILE_PANEL_WIDTH = 570;
+
+    /**
+     * The background colour for the file panel container toolbar
+     */
+    public static final String PANEL_CONTAINER_COLOUR = "-fx-background-color: #cff8fa;";
 
     /**
      * The height for file editors
@@ -94,6 +99,11 @@ public final class UI {
      * Exit code for if Abort is pressed on an exception dialog
      */
     public static final int EXCEPTION_DIALOG_ABORTED_EXIT_CODE = 1;
+
+    /**
+     * The general padding value to use throughout the UI
+     */
+    public static final int UNIVERSAL_PADDING = 2;
 
     /**
      * An enum to determine which type of dialog to show for a given exception
@@ -195,7 +205,7 @@ public final class UI {
      */
     public static void doError(String headerText, String messageText) {
         ErrorDialog errorDialog = new ErrorDialog(headerText, messageText);
-        errorDialog.showAndWait();
+        errorDialog.show();
     }
 
     /**
@@ -205,7 +215,7 @@ public final class UI {
      */
     public static void doInfo(String headerText, String messageText) {
         InfoDialog infoDialog = new InfoDialog(headerText, messageText);
-        infoDialog.showAndWait();
+        infoDialog.show();
     }
 
     /**
@@ -222,14 +232,15 @@ public final class UI {
     /**
      * Opens a path dialog and returns the path
      * @param action the action to open path dialog as
+     * @param directory true to create a directory, false to create a file. If action == GOTO, this boolean can be any value
      * @return the path entered, can be null
      */
-    public static String doPathDialog(PathAction action) {
+    public static String doPathDialog(PathAction action, boolean directory) {
         ChangePathDialog pathDialog;
         if (action == PathAction.GOTO) {
             pathDialog = new ChangePathDialog();
         } else {
-            pathDialog = new CreatePathDialog();
+            pathDialog = new CreatePathDialog(directory);
         }
 
         return pathDialog.showAndGetPath();

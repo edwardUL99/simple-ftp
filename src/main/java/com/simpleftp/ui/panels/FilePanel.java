@@ -42,10 +42,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import lombok.Getter;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.function.Predicate;
@@ -204,6 +201,7 @@ public class FilePanel extends VBox {
      */
     private void initStatusPanel() {
         statusPanel = new HBox();
+        statusPanel.setPadding(new Insets(UI.UNIVERSAL_PADDING));
         statusPanel.setSpacing(10);
         statusPanel.getChildren().addAll(refresh, up, initCurrentDirectoryLabel(), currentDirectory);
         statusPanel.setBorder(new Border(new BorderStroke(Paint.valueOf("BLACK"), BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));

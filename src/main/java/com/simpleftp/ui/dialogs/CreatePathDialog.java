@@ -24,9 +24,11 @@ public class CreatePathDialog extends ChangePathDialog {
     /**
      * Constructs the dialog
      */
-    public CreatePathDialog() {
-        setTitle("Create Directory/File");
-        setHeaderText("Create new directory/file");
-        setContentText("Enter the path of the new directory/file: ");
+    public CreatePathDialog(boolean directory) {
+        String fileTypeUpper = directory ? "Directory":"File";
+        String fileTypeLower = directory ? "directory":"file";
+        setTitle("Create " + fileTypeUpper);
+        setHeaderText("Create new " + fileTypeLower);
+        setContentText("Enter the path of the new " + fileTypeLower + ": ");
     }
 }

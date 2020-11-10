@@ -28,7 +28,6 @@ import com.simpleftp.ui.UI;
 import com.simpleftp.ui.panels.FileLineEntry;
 import com.simpleftp.ui.panels.FilePanel;
 import com.simpleftp.ui.panels.LineEntry;
-import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -61,35 +60,35 @@ public class FilePanelContainer extends VBox {
     /**
      * The HBox with combo box and buttons
      */
-    private final FlowPane toolBar;
+    private FlowPane toolBar;
     /**
      * The button for deleting chosen files
      */
-    private final Button delete;
+    private Button delete;
     /**
      * The button for opening chosen files
      */
-    private final Button open;
+    private Button open;
     /**
      * Button for opening the dialog box to change directory
      */
-    private final Button gotoButton;
+    private Button gotoButton;
     /**
      * Button for showing/hiding hidden files
      */
-    private final Button hideHiddenFiles;
+    private Button hideHiddenFiles;
     /**
      * The Button to display options to create different objects
      */
-    private final MenuButton createButton;
+    private MenuButton createButton;
     /**
      * The button used to bring up the mask button
      */
-    private final Button maskButton;
+    private Button maskButton;
     /**
      * The combobox displaying the base names of files displayed in the FilePanel
      */
-    private final ComboBox<String> comboBox;
+    private ComboBox<String> comboBox;
     /**
      * Mapping of file basenames to their respective line entries
      */
@@ -100,19 +99,26 @@ public class FilePanelContainer extends VBox {
      * @param filePanel the filePanel this container holds
      */
     public FilePanelContainer(FilePanel filePanel) {
+        entryMappings = new HashMap<>();
         setStyle(UI.WHITE_BACKGROUND);
+        setPadding(new Insets(UI.UNIVERSAL_PADDING));
+        setSpacing(UI.UNIVERSAL_PADDING);
+
+        initComboBox(); // combo box needs to be initalised before file panel is set
         toolBar = new FlowPane();
-        toolBar.setHgap(5);
-        toolBar.setVgap(5);
-        toolBar.setPadding(new Insets(2, 0, 2, 0));
-        delete = new Button();
-        delete.setMnemonicParsing(true);
-        delete.setText("_Delete");
-        delete.setOnAction(e -> delete());
-        open = new Button();
-        open.setMnemonicParsing(true);
-        open.setText("_Open");
-        open.setOnAction(e -> open());
+        getChildren().add(toolBar);
+        setFilePanel(filePanel);
+        initToolbar();
+        initButtons();
+
+        toolBar.getChildren().addAll(new Label("Files: "), comboBox, delete, open, gotoButton, hideHiddenFiles, createButton, maskButton);
+        setKeyBindings();
+    }
+
+    /**
+     * Initialises the combo box in the toolbar
+     */
+    private void initComboBox() {
         comboBox = new ComboBox<>();
         comboBox.setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.ENTER) {
@@ -120,24 +126,48 @@ public class FilePanelContainer extends VBox {
             }
         });
         comboBox.setPrefWidth(UI.PANEL_CONTAINER_COMBO_WIDTH);
+    }
+
+    /**
+     * Initialises the tool bar which contains combobox and buttons
+     */
+    private void initToolbar() {
+        toolBar.setStyle(UI.PANEL_CONTAINER_COLOUR);
+        toolBar.setHgap(5);
+        toolBar.setVgap(5);
+        toolBar.setPadding(new Insets(2, 0, 2, 0));
+    }
+
+    /**
+     * Initialises all the buttons for the toolbar
+     */
+    private void initButtons() {
+        delete = new Button();
+        delete.setMnemonicParsing(true);
+        delete.setText("_Delete");
+        delete.setOnAction(e -> delete());
+
+        open = new Button();
+        open.setMnemonicParsing(true);
+        open.setText("_Open");
+        open.setOnAction(e -> open());
+
         gotoButton = new Button();
         gotoButton.setMnemonicParsing(true);
         gotoButton.setText("_Go To");
         gotoButton.setOnAction(e -> gotoPath());
+
         hideHiddenFiles = new Button();
         hideHiddenFiles.setMnemonicParsing(true);
-        entryMappings = new HashMap<>();
+        initHideButton();
+
         createButton = new MenuButton();
         createButton.setMnemonicParsing(true);
+        initCreateButton();
+
         maskButton = new Button();
         maskButton.setMnemonicParsing(true);
         maskButton.setText("File _Mask");
-        toolBar.getChildren().addAll(new Label("Files: "), comboBox, delete, open, gotoButton, hideHiddenFiles, createButton, maskButton);
-        getChildren().add(toolBar);
-        setFilePanel(filePanel);
-        initHideButton();
-        initCreateButton();
-        setKeyBindings();
         initMaskButton();
     }
 
@@ -205,13 +235,7 @@ public class FilePanelContainer extends VBox {
     }
 
     /**
-     * Sets key shortcut bindings which works on the selection in the combo box
-     * D - Delete
-     * R - Refresh
-     * U - Up
-     * G - Go To
-     * H - Hide hidden files
-     * S - Show hidden files
+     * Sets key shortcut bindings
      * Q - Quit
      */
     private void setKeyBindings() {
@@ -220,23 +244,9 @@ public class FilePanelContainer extends VBox {
                 // if alt is down, a mnenomic is needed
                 KeyCode keyCode = e.getCode();
 
-                if (keyCode == KeyCode.D) {
-                    delete();
-                } else if (keyCode == KeyCode.O) {
-                    open();
-                } else if (keyCode == KeyCode.R) {
-                    filePanel.refresh();
-                } else if (keyCode == KeyCode.U) {
-                    filePanel.up();
-                } else if (keyCode == KeyCode.G) {
-                    gotoPath();
-                } else if (keyCode == KeyCode.H && filePanel.hiddenFilesShown()) {
-                    hideHiddenFiles.fire();
-                } else if (keyCode == KeyCode.S && !filePanel.hiddenFilesShown()) {
-                    hideHiddenFiles.fire();
-                } else if (keyCode == KeyCode.Q) {
+               if (keyCode == KeyCode.Q) {
                     UI.doQuit();
-                }
+               }
             }
         });
     }
@@ -247,7 +257,7 @@ public class FilePanelContainer extends VBox {
      * @param directory true if to create a directory, false if file
      */
     private void createLocalFile(String path, boolean directory) {
-        boolean absolute = false;
+        boolean absolute;
         try {
             Object[] resolvedPath = pathToAbsolute(path, true);
             path = (String)resolvedPath[0];
@@ -370,7 +380,7 @@ public class FilePanelContainer extends VBox {
      * The handler for creating a new directory
      */
     private void createNewDirectory() {
-        String path = UI.doPathDialog(UI.PathAction.CREATE);
+        String path = UI.doPathDialog(UI.PathAction.CREATE, true);
 
         if (path != null) {
             if (filePanel.getDirectory() instanceof LocalFile) {
@@ -385,7 +395,7 @@ public class FilePanelContainer extends VBox {
      * The handler to create a new empty file
      */
     private void createNewFile() {
-        String path = UI.doPathDialog(UI.PathAction.CREATE);
+        String path = UI.doPathDialog(UI.PathAction.CREATE, false);
 
         if (path != null) {
             if (filePanel.getDirectory() instanceof LocalFile) {
@@ -489,7 +499,7 @@ public class FilePanelContainer extends VBox {
      * The handler for the goto button
      */
     private void gotoPath() {
-        String path = UI.doPathDialog(UI.PathAction.GOTO);
+        String path = UI.doPathDialog(UI.PathAction.GOTO, true); // directory is irrelevant here for GOTO, but pass to compile
 
         if (path != null) {
             try {
