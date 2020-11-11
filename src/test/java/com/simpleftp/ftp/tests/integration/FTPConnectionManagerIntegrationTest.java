@@ -66,12 +66,6 @@ public class FTPConnectionManagerIntegrationTest {
     }
 
     @Test
-    void shouldGetDeadConnectionSuccessfully() {
-        FTPConnection connection = new FTPConnection();
-        assertEquals(connection, manager.createDeadConnection());
-    }
-
-    @Test
     void shouldCreateIdleConnectionSuccessfully() {
         FTPConnection idle = new FTPConnection();
         idle.setFtpServer(SERVER);

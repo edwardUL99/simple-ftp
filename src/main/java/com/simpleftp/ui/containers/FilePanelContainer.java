@@ -34,6 +34,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
@@ -106,9 +107,9 @@ public class FilePanelContainer extends VBox {
 
         initComboBox(); // combo box needs to be initalised before file panel is set
         toolBar = new FlowPane();
+        initToolbar();
         getChildren().add(toolBar);
         setFilePanel(filePanel);
-        initToolbar();
         initButtons();
 
         toolBar.getChildren().addAll(new Label("Files: "), comboBox, delete, open, gotoButton, hideHiddenFiles, createButton, maskButton);

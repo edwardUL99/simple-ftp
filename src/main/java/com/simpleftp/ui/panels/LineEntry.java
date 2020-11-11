@@ -222,7 +222,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
             }
         }
 
-        paddedName += "\t\t " + getModificationTimeAndSize() + " " + calculatePermissionsString();
+        paddedName += "\t\t" + getModificationTimeAndSize() + " " + calculatePermissionsString();
 
         return paddedName.trim();
     }
@@ -268,9 +268,13 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
                 if (file == null) {
                     throw new FTPRemotePathNotFoundException("The file no longer exists", filePath);
                 } else {
-                    String raw = file.getRawListing();
-                    permissions += raw.substring(1, raw.indexOf(" "));
-                    /*if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.READ_PERMISSION)) {
+                    if (file.isDirectory()) {
+                        permissions += "d";
+                    } else {
+                        permissions += "-";
+                    }
+
+                    if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.READ_PERMISSION)) {
                         permissions += "r";
                     } else {
                         permissions += "-";
@@ -287,8 +291,6 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
                     } else {
                         permissions += "-";
                     }
-
-                    permissions += "-";
 
                     if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.READ_PERMISSION)) {
                         permissions += "r";
@@ -308,8 +310,6 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
                         permissions += "-";
                     }
 
-                    permissions += "-";
-
                     if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.READ_PERMISSION)) {
                         permissions += "r";
                     } else {
@@ -318,13 +318,15 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
 
                     if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.WRITE_PERMISSION)) {
                         permissions += "w";
+                    } else {
+                        permissions += "-";
                     }
 
                     if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
                         permissions += "x";
                     } else {
                         permissions += "-";
-                    }*/
+                    }
                 }
             } catch (FTPException ex) {
                 ex.printStackTrace();
@@ -335,15 +337,6 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         }
 
         return permissions;
-    }
-
-    /**
-     * Refreshes the line entry
-     * @throws FTPRemotePathNotFoundException if it is refreshing a remote path and it is not found
-     * @throws LocalPathNotFoundException if it is refreshing a local path and it is not found
-     */
-    public void refresh() throws FTPRemotePathNotFoundException, LocalPathNotFoundException {
-        init();
     }
 
     @Override

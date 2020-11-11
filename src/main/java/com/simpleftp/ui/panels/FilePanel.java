@@ -219,6 +219,7 @@ public class FilePanel extends VBox {
         entriesScrollPane.setContent(entriesBox);
         entriesScrollPane.setStyle(UI.WHITE_BACKGROUND);
         entriesBox.setStyle(UI.WHITE_BACKGROUND);
+        entriesScrollPane.setPrefHeight(UI.FILE_PANEL_HEIGHT);
     }
 
     /**
