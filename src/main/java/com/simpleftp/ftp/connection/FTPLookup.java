@@ -136,7 +136,18 @@ public class FTPLookup {
                 return false;
             }
 
-            remotePathExists = files.length == 1 && (files[0].getName().equals(new File(remotePath).getName()) || files[0].getName().equals(remotePath));
+            FTPFile fileToCheck;
+            if (files.length > 0) {
+                if ((files[0].getName().equals(".") || files[0].getName().equals("..")) && files.length == 2) {
+                    fileToCheck = files[1]; // if the file is the same name as the parent folder or same name as folder in the next level above (i.e. ..), ftpClient.listFiles returns a "." or ".." as files[0] as . is equivalent to the name of the parent folder or .. is equivalent to the parent of the parent folder
+                } else {
+                    fileToCheck = files[0];
+                }
+
+                remotePathExists = (fileToCheck.getName().equals(new File(remotePath).getName()) || fileToCheck.getName().equals(remotePath));
+            } else {
+                remotePathExists = false;
+            }
         }
 
         return remotePathExists;

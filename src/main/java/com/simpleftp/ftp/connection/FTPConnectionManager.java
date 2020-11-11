@@ -266,6 +266,30 @@ public class FTPConnectionManager {
     }
 
     /**
+     * Attempts to find an existing connection matching the parameters provided and returns it
+     * @param server the server hostname
+     * @param user the user logged in
+     * @param pass the password of the user
+     * @param port the port the server is running on
+     * @return connection found if exists, null otherwise
+     */
+    public FTPConnection getExistingConnection(String server, String user, String pass, int port) {
+        return checkAlreadyExists(server, user, pass, port);
+    }
+
+    /**
+     * Checks if this connection manager has a record of a connection matching the specified parameters
+     * @param server the server hostname
+     * @param user the user logged in
+     * @param pass the password of the user
+     * @param port the port the server is running on
+     * @return true if a connection matching the parameters was created by this manager, false otherwise
+     */
+    public boolean doesConnectionExist(String server, String user, String pass, int port) {
+        return checkAlreadyExists(server, user, pass, port) != null;
+    }
+
+    /**
      * If any createXXConnection returned null, you may call this method to retrieve the exception that may have caused the issue.
      * This method is added as there are too many classes now relying on this class to start throwing the exceptions as they happen.
      * May be refactored in the future
