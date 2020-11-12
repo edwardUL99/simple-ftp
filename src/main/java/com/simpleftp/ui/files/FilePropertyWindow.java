@@ -39,11 +39,6 @@ import javafx.stage.Stage;
  */
 public class FilePropertyWindow extends VBox {
     /**
-     * The container that opened this property window
-     */
-    private final FilePanelContainer parentContainer;
-
-    /**
      * The line entry this property window is displaying
      */
     private final LineEntry lineEntry;
@@ -67,11 +62,9 @@ public class FilePropertyWindow extends VBox {
 
     /**
      * Constructs a FilePropertyWindow with the provided container and line entry
-     * @param parentContainer the container that opened this window
      * @param lineEntry the LineEntry to display properties of
      */
-    public FilePropertyWindow(FilePanelContainer parentContainer, LineEntry lineEntry) {
-        this.parentContainer = parentContainer;
+    public FilePropertyWindow(LineEntry lineEntry) {
         this.lineEntry = lineEntry;
         setSpacing(10);
         setStyle(UI.WHITE_BACKGROUND);
@@ -198,7 +191,7 @@ public class FilePropertyWindow extends VBox {
          */
         private void setSizeUnits(SizeUnit sizeUnit) throws Exception {
             initFileSize();
-            String sizeStr = "" + fileSize;
+            String sizeStr;
 
             try {
                 float size = Float.parseFloat("" + fileSize);

@@ -570,7 +570,7 @@ public class FilePanel extends VBox {
         MenuItem menuItem3 = new MenuItem("Delete");
         menuItem3.setOnAction(e -> parentContainer.delete()); // right clicking this would have selected it in the container's combo box. So use containers delete method to display confirmation dialog
         MenuItem menuItem4 = new MenuItem("Properties");
-        menuItem4.setOnAction(e -> new FilePropertyWindow(parentContainer, lineEntry).show());
+        menuItem4.setOnAction(e -> new FilePropertyWindow(lineEntry).show());
         contextMenu.getItems().addAll(menuItem1, menuItem2, menuItem3, menuItem4);
 
         lineEntry.setOnContextMenuRequested(e -> contextMenu.show(lineEntry, e.getScreenX(), e.getScreenY()));
