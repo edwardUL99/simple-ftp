@@ -15,15 +15,26 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ui.panels;
+package com.simpleftp.ui.files;
 
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
+import com.simpleftp.ui.panels.FilePanel;
 
+/**
+ * A line entry implementation for a Directory.
+ */
 public class DirectoryLineEntry extends LineEntry {
 
-    protected DirectoryLineEntry(CommonFile file, FilePanel owningPanel) throws FTPRemotePathNotFoundException, LocalPathNotFoundException {
+    /**
+     * Constructs Directory LineEntry
+     * @param file the file that this entry represents. It is not this class' responsibility to ensure file is a directory
+     * @param owningPanel the panel owning this entry, i.e. the panel it is on
+     * @throws FTPRemotePathNotFoundException
+     * @throws LocalPathNotFoundException
+     */
+    public DirectoryLineEntry(CommonFile file, FilePanel owningPanel) throws FTPRemotePathNotFoundException, LocalPathNotFoundException {
         super("dir_icon.png", file, owningPanel);
     }
 }

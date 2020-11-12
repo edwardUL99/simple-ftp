@@ -25,16 +25,15 @@ import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
-import com.simpleftp.ui.panels.FileLineEntry;
+import com.simpleftp.ui.files.FileLineEntry;
 import com.simpleftp.ui.panels.FilePanel;
-import com.simpleftp.ui.panels.LineEntry;
+import com.simpleftp.ui.files.LineEntry;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
@@ -247,6 +246,8 @@ public class FilePanelContainer extends VBox {
 
                if (keyCode == KeyCode.Q) {
                     UI.doQuit();
+               } else if (keyCode == KeyCode.UP || keyCode == KeyCode.DOWN) {
+                   comboBox.requestFocus();
                }
             }
         });

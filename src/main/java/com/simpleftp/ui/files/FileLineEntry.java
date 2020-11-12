@@ -15,11 +15,12 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ui.panels;
+package com.simpleftp.ui.files;
 
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
+import com.simpleftp.ui.panels.FilePanel;
 
 /**
  * A line entry implementation for a File.

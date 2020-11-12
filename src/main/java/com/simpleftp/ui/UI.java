@@ -25,6 +25,7 @@ import com.simpleftp.ui.dialogs.*;
 import com.simpleftp.ui.editor.FileEditorWindow;
 import com.simpleftp.ui.panels.FilePanel;
 import javafx.application.Platform;
+import javafx.geometry.Insets;
 
 /**
  * This class provides static util methods and constants for UI
@@ -39,6 +40,11 @@ public final class UI {
      * White CSS background colour
      */
     public static final String WHITE_BACKGROUND = "-fx-background-color: white;";
+
+    /**
+     * A slightly darker CSS white background
+     */
+    public static final String SMOKE_WHITE_BACKGROUND = "-fx-background-color: #f5f5f5;";
 
     /**
      * LightGrey background CSS colour
@@ -89,6 +95,21 @@ public final class UI {
      * The width for the FilePanelContainer ComboBox
      */
     public static final int PANEL_CONTAINER_COMBO_WIDTH = 170;
+
+    /**
+     * The width for the properties window
+     */
+    public static final int PROPERTIES_WINDOW_WIDTH = 450;
+
+    /**
+     * The height for the properties window
+     */
+    public static final int PROPERTIES_WINDOW_HEIGHT = 400;
+
+    /**
+     * The most common insets used in the FilePropertyWindow
+     */
+    public static final Insets PROPERTIES_WINDOW_INSETS = new Insets(25, 15, 25, 15);
 
     /**
      * The padding value for the empty directory logo to display in the file panel

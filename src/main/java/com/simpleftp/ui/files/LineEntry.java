@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ui.panels;
+package com.simpleftp.ui.files;
 
 import com.simpleftp.FTPSystem;
 import com.simpleftp.filesystem.LocalFile;
@@ -26,6 +26,7 @@ import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.UI;
+import com.simpleftp.ui.panels.FilePanel;
 import javafx.geometry.Pos;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
@@ -161,7 +162,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
      * @throws FTPRemotePathNotFoundException if file is remote and cant be found
      * @throws LocalPathNotFoundException if file is local and cant be found
      */
-    private String getModificationTimeAndSize() throws FTPRemotePathNotFoundException, LocalPathNotFoundException {
+    public String getModificationTimeAndSize() throws FTPRemotePathNotFoundException, LocalPathNotFoundException {
         String modificationTime = "";
         if (file instanceof LocalFile) {
             LocalFile localFile = (LocalFile)file;

@@ -31,6 +31,10 @@ import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.containers.FilePanelContainer;
+import com.simpleftp.ui.files.DirectoryLineEntry;
+import com.simpleftp.ui.files.FileLineEntry;
+import com.simpleftp.ui.files.FilePropertyWindow;
+import com.simpleftp.ui.files.LineEntry;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -565,7 +569,9 @@ public class FilePanel extends VBox {
         menuItem2.setOnAction(e -> renameLineEntry(lineEntry));
         MenuItem menuItem3 = new MenuItem("Delete");
         menuItem3.setOnAction(e -> parentContainer.delete()); // right clicking this would have selected it in the container's combo box. So use containers delete method to display confirmation dialog
-        contextMenu.getItems().addAll(menuItem1, menuItem2, menuItem3);
+        MenuItem menuItem4 = new MenuItem("Properties");
+        menuItem4.setOnAction(e -> new FilePropertyWindow(parentContainer, lineEntry).show());
+        contextMenu.getItems().addAll(menuItem1, menuItem2, menuItem3, menuItem4);
 
         lineEntry.setOnContextMenuRequested(e -> contextMenu.show(lineEntry, e.getScreenX(), e.getScreenY()));
 
