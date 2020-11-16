@@ -1055,7 +1055,6 @@ public class FTPConnection {
 
             ftpClient.setDefaultTimeout(mSeconds);
             ftpClient.setControlKeepAliveTimeout(seconds);
-            ftpClient.setDataTimeout(mSeconds);
         }
     }
 
@@ -1075,6 +1074,38 @@ public class FTPConnection {
     public String getReplyString() {
         logDebug("Retrieving reply string from the last executed command");
         return ftpClient.getReplyString();
+    }
+
+    /**
+     * This should be used with a true value when editing text files to ensure line endings get transformed for the appropriate system.
+     * @param textTransfer true to set text transfer(Ascii mode on), false if not
+     * @return success of operation
+     */
+    public boolean setTextTransferMode(boolean textTransfer) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
+        if (!connected) {
+            log.error("FTPConnection is not connected, cannot set text mode");
+            loggedIn = false;
+            throw new FTPNotConnectedException("FTPConnection is not connected, cannot retrieve path stats", FTPNotConnectedException.ActionType.STATUS_CHECK);
+        }
+
+        try {
+            if (loggedIn) {
+                int fileType = textTransfer ? FTPClient.ASCII_FILE_TYPE : FTPClient.BINARY_FILE_TYPE;
+                logDebug(textTransfer ? "Setting the connection to transfer files with ASCII file type" : "Setting the connection to transfer files as BINARY type");
+
+                return ftpClient.setFileType(fileType);
+            }
+
+            logDebug("User not logged in, can't set file type");
+            return false;
+        } catch (FTPConnectionClosedException ex) {
+            log.error("FTPConnection unexpectedly closed the connection when setting the text transfer mode");
+            resetConnectionValues();
+            throw new FTPConnectionFailedException("FTPConnection unexpectedly closed the connection when setting the text transfer mode", ftpClient.getReplyString(), ex, ftpServer);
+        } catch (IOException ex) {
+            log.error("An error occurred when setting the text transfer mode");
+            throw new FTPCommandFailedException("An error occurred when setting the text transfer mode", ftpClient.getReplyString(), ex);
+        }
     }
 
     private class NoopDriver {

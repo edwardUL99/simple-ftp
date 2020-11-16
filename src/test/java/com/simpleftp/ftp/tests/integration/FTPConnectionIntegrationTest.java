@@ -353,6 +353,20 @@ public class FTPConnectionIntegrationTest {
         assertTrue(ftpConnection.login());
         assertEquals("230 User logged in, proceed.\r\n", ftpConnection.getReplyString());
     }
+
+    @Test
+    void shouldSetTextTransferModeSuccessfully() throws FTPException {
+        assertTrue(ftpConnection.connect());
+        assertTrue(ftpConnection.login());
+        assertTrue(ftpConnection.setTextTransferMode(true));
+    }
+
+    @Test
+    void shouldSetBinaryTransferModeSuccessfully() throws FTPException {
+        assertTrue(ftpConnection.connect());
+        assertTrue(ftpConnection.login());
+        assertTrue(ftpConnection.setTextTransferMode(false));
+    }
 }
 
 class MDTMHandler extends AbstractCommandHandler {

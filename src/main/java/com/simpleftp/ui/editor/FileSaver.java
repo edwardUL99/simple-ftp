@@ -17,10 +17,16 @@
 
 package com.simpleftp.ui.editor;
 
+import com.simpleftp.FTPSystem;
 import com.simpleftp.filesystem.LocalFile;
+import com.simpleftp.filesystem.LocalFileSystem;
 import com.simpleftp.filesystem.RemoteFileSystem;
 import com.simpleftp.filesystem.interfaces.FileSystem;
+import com.simpleftp.ftp.connection.FTPConnection;
+import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
+import javafx.concurrent.Service;
+import javafx.concurrent.Task;
 
 import java.io.*;
 
@@ -30,59 +36,134 @@ import java.io.*;
  */
 public class FileSaver {
     /**
-     * The file system the file is being saved to
+     * The editor window saving the file
      */
-    private final FileSystem fileSystem;
-
+    private FileEditorWindow editorWindow;
     /**
      * Constructs a file saver object
-     * @param fileSystem the file system files will be saved to
+     * @param editorWindow the editor window saving the file
      */
-    public FileSaver(FileSystem fileSystem) {
-        this.fileSystem = fileSystem;
-    }
-
-    /**
-     * Writes to the specified file the file contents
-     * @param filePath the path to the file
-     * @param fileContents the contents of the file
-     * @throws IOException if an error occurs
-     */
-    private void writeToFile(String filePath, String fileContents) throws IOException {
-        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(filePath));
-        bufferedWriter.write(fileContents);
-        bufferedWriter.close();
+    public FileSaver(FileEditorWindow editorWindow) {
+        this.editorWindow = editorWindow;
     }
 
     /**
      * Saves the specified file contents in a file specified by filePath.
      * @param filePath the path to save the file to. If this is a remote file system, the changes will be saved in a temporary location and then uploaded to the specified path
-     * @param savedFileContents
+     * @param savedFileContents the contents of the file to save
+     */
+    public void saveFile(String filePath, String savedFileContents) {
+        FileUploader uploader = new FileUploader(editorWindow, filePath, savedFileContents);
+        UI.addBackgroundTask(uploader);
+        uploader.start();
+    }
+}
+
+/**
+ * The service for uploading a changed file
+ */
+class FileUploader extends Service<Void> {
+    /**
+     * The editor window saving the file
+     */
+    private FileEditorWindow editorWindow;
+    /**
+     * The path to save the file to
+     */
+    private String filePath;
+    /**
+     * The contents of the file to upload
+     */
+    private String savedFileContents;
+
+    /**
+     * Constructs a file uploader
+     * @param editorWindow the editor window saving the file
+     * @param filePath the path to save the file to
+     * @param savedFileContents the contents of the file to save
+     */
+    public FileUploader(FileEditorWindow editorWindow, String filePath, String savedFileContents) {
+        this.editorWindow = editorWindow;
+        this.filePath = filePath;
+        this.savedFileContents = savedFileContents;
+        setOnSucceeded(e -> {
+            editorWindow.getCreatingPanel().refresh();
+            UI.removeBackgroundTask(this);
+        });
+    }
+
+    /**
+     * Constructs the task to execute
+     * @return task
+     */
+    @Override
+    protected Task<Void> createTask() {
+        return new Task<Void>() {
+            @Override
+            protected Void call() throws Exception {
+                saveFile();
+                return null;
+            }
+        };
+    }
+
+    /**
+     * Writes to the specified file the file contents
+     * @param localFilePath the path of the temp file being edited
+     * @throws IOException if an error occurs
+     */
+    private void writeToFile(String localFilePath) throws IOException {
+        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(localFilePath));
+        bufferedWriter.write(savedFileContents);
+        bufferedWriter.close();
+    }
+
+    /**
+     * Gets a new connection with same details to upload the saved file
+     * @return the connection to upload the file with
+     */
+    private FTPConnection getUploadingConnection() throws FTPException {
+        FileSystem fileSystem = editorWindow.getCreatingPanel().getFileSystem();
+        FTPConnection uploadingConnection = new FTPConnection();
+        uploadingConnection.setFtpServer(fileSystem.getFTPConnection().getFtpServer());
+        uploadingConnection.connect();
+        uploadingConnection.login();
+        uploadingConnection.setTextTransferMode(true);
+        return uploadingConnection;
+    }
+
+    /**
+     * Saves the specified file contents in a file specified by filePath.
      * @throwa Exception if any error occurs
      */
-    public void saveFile(String filePath, String savedFileContents) throws Exception {
+    private void saveFile() throws Exception {
         File file = new File(filePath);
         String fileName = file.getName();
         String saveFilePath;
+        FileSystem fileSystem = editorWindow.getCreatingPanel().getFileSystem();
         boolean remoteFileSystem = fileSystem instanceof RemoteFileSystem;
+        FTPConnection uploadingConnection = getUploadingConnection();
 
         if (remoteFileSystem) {
             saveFilePath = UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + fileName;
             file = new File(saveFilePath);
+            fileSystem = new RemoteFileSystem(uploadingConnection);
         } else {
             saveFilePath = filePath;
+            fileSystem = new LocalFileSystem(uploadingConnection);
         }
 
-        writeToFile(saveFilePath, savedFileContents);
+        writeToFile(saveFilePath);
 
         if (remoteFileSystem) {
             fileSystem.removeFile(filePath); // remove as we are overwriting
             String parent = new File(filePath).getParent();
             parent = parent == null ? "/":parent;
-            fileSystem.addFile(new LocalFile(file.getAbsolutePath()), parent);
+            fileSystem.addFile(new LocalFile(saveFilePath), parent);
             file.delete();
         }
 
+        uploadingConnection.disconnect();
         // don't need to bother add file to local file system, because write to file would have already added it
     }
 }

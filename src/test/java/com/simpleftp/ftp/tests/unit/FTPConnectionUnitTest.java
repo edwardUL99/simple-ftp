@@ -1694,17 +1694,14 @@ class FTPConnectionUnitTest {
 
         doCallRealMethod().when(ftpClient).setDefaultTimeout(expectedMillis);
         doCallRealMethod().when(ftpClient).setControlKeepAliveTimeout(expectedSecs);
-        doCallRealMethod().when(ftpClient).setDataTimeout(expectedMillis);
         doCallRealMethod().when(ftpClient).getDefaultTimeout();
         doCallRealMethod().when(ftpClient).getControlKeepAliveTimeout();
 
         ftpConnection.setTimeoutTime(expectedSecs);
         assertEquals(ftpConnection.getFtpConnectionDetails().getTimeout(), expectedSecs);
-        assertEquals(ftpClient.getDefaultTimeout(), expectedMillis);
         assertEquals(ftpClient.getControlKeepAliveTimeout(), expectedSecs);
         verify(ftpClient).setDefaultTimeout(expectedMillis);
         verify(ftpClient).setControlKeepAliveTimeout(expectedSecs);
-        verify(ftpClient).setDataTimeout(expectedMillis);
     }
 
     @Test
@@ -1799,5 +1796,64 @@ class FTPConnectionUnitTest {
         } catch (Exception ex) {
             fail("An exception occurred where it should not have");
         }
+    }
+
+    @Test
+    void shouldSetTextTransferModeSuccessfully() throws Exception {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        given(ftpClient.setFileType(FTPClient.ASCII_FILE_TYPE))
+                .willReturn(true);
+
+        boolean result = ftpConnection.setTextTransferMode(true);
+
+        assertTrue(result);
+        verify(ftpClient).setFileType(FTPClient.ASCII_FILE_TYPE);
+    }
+
+    @Test
+    void shouldSetBinaryTransferModeSuccessfully() throws Exception {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        given(ftpClient.setFileType(FTPClient.BINARY_FILE_TYPE))
+                .willReturn(true);
+
+        boolean result = ftpConnection.setTextTransferMode(false);
+
+        assertTrue(result);
+        verify(ftpClient).setFileType(FTPClient.BINARY_FILE_TYPE);
+    }
+
+    @Test
+    void shouldReturnFalseIfLoggedOutOnSetTransferMode() throws Exception {
+        ftpConnection.setConnected(true);
+
+        boolean result = ftpConnection.setTextTransferMode(true);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void shouldThrowIfNotConnectedOnSetTextTransferMode() {
+        assertThrows(FTPNotConnectedException.class, () -> ftpConnection.setTextTransferMode(true));
+    }
+
+    @Test
+    void shouldThrowIfConnectionClosesOnSetTextTransferMode() throws Exception {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        doThrow(FTPConnectionClosedException.class).when(ftpClient).setFileType(FTPClient.ASCII_FILE_TYPE);
+        assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.setTextTransferMode(true));
+        assertFalse(ftpConnection.isConnected());
+        assertFalse(ftpConnection.isLoggedIn());
+    }
+
+    @Test
+    void shouldThrowIfIOExceptionOccursOnSetTextTransferMode() throws Exception {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+
+        doThrow(IOException.class).when(ftpClient).setFileType(FTPClient.BINARY_FILE_TYPE);
+        assertThrows(FTPCommandFailedException.class, () -> ftpConnection.setTextTransferMode(false));
     }
 }

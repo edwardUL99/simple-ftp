@@ -23,7 +23,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * This abstract class will provide a base class for all FTP exceptions
+ * This abstract class will provide a base class for all exceptions related to files within the FTP system/context. This includes local paths as ultimately they may end up on the FTP server
  */
 @Getter
 public abstract class FTPException extends Exception {

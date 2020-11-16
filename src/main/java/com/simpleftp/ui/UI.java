@@ -17,6 +17,7 @@
 
 package com.simpleftp.ui;
 
+import com.simpleftp.FTPSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.exceptions.*;
@@ -25,7 +26,11 @@ import com.simpleftp.ui.dialogs.*;
 import com.simpleftp.ui.editor.FileEditorWindow;
 import com.simpleftp.ui.panels.FilePanel;
 import javafx.application.Platform;
+import javafx.concurrent.Service;
 import javafx.geometry.Insets;
+
+import java.io.FileInputStream;
+import java.util.ArrayList;
 
 /**
  * This class provides static util methods and constants for UI
@@ -152,6 +157,11 @@ public final class UI {
         GOTO, // the dialog is for going to the directory/file
         CREATE // the dialog is for creating the directory/file
     }
+
+    /**
+     * List of background UI tasks running
+     */
+    private static ArrayList<Service<?>> backgroundTasks = new ArrayList<>();
 
     /**
      * This method handles the specified exception graphically, showing the ignore button
@@ -299,8 +309,15 @@ public final class UI {
         QuitDialog quitDialog = new QuitDialog();
 
         if (quitDialog.showAndGetConfirmation()) {
-            Platform.exit();
-            System.exit(0);
+            boolean quit = true;
+            if (UI.backgroundTaskInProgress()) {
+                quit = new BackgroundTaskRunningDialog().showAndGetConfirmation();
+            }
+
+            if (quit) {
+                Platform.exit();
+                System.exit(0);
+            }
         }
     }
 
@@ -316,9 +333,40 @@ public final class UI {
      * Shows a file editor
      * @param panel the panel opening the editor
      * @param file the file to edit
+     * @param fileContents the contents of the file
      */
-    public static void showFileEditor(FilePanel panel, CommonFile file) {
-        FileEditorWindow editorWindow = new FileEditorWindow(panel, file);
+    public static void showFileEditor(FilePanel panel, CommonFile file, String fileContents) {
+        FileEditorWindow editorWindow = new FileEditorWindow(panel, fileContents,file);
         editorWindow.show();
+    }
+
+    /**
+     * The service to add to the system
+     * @param service background task to keep track of
+     */
+    public static void addBackgroundTask(Service<?> service) {
+        backgroundTasks.add(service);
+    }
+
+    /**
+     * Removes the specified task from the system
+     * @param service the service to remove
+     */
+    public static void removeBackgroundTask(Service<?> service) {
+        backgroundTasks.remove(service);
+    }
+
+    /**
+     * Returns whether there is at least one background task running
+     * @return true if a background task is running
+     */
+    public static boolean backgroundTaskInProgress() {
+        for (Service<?> service : backgroundTasks) {
+            if (service.isRunning()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

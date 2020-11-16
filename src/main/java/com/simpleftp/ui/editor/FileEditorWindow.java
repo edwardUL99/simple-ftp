@@ -17,27 +17,20 @@
 
 package com.simpleftp.ui.editor;
 
-import com.simpleftp.filesystem.LocalFile;
-import com.simpleftp.filesystem.LocalFileSystem;
 import com.simpleftp.filesystem.RemoteFile;
-import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.panels.FilePanel;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextArea;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
-
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import lombok.Getter;
+import org.fxmisc.flowless.VirtualizedScrollPane;
+import org.fxmisc.richtext.StyleClassedTextArea;
 
 /**
  * This class represents a Window for editing and saving files
@@ -46,19 +39,25 @@ public class FileEditorWindow extends VBox {
     /**
      * The file panel that opened this window
      */
+    @Getter
     private final FilePanel creatingPanel;
     /**
      * The file to display in this editor
      */
     private final CommonFile file;
     /**
+     * The contents of the file
+     */
+    private final String fileContents;
+    /**
      * The editor being used
      */
-    private final TextArea editor;
+    @Getter
+    private final StyleClassedTextArea editor;
     /**
      * The ScrollPane for the editor
      */
-    private final ScrollPane editorScrollPane;
+    private final VirtualizedScrollPane editorScrollPane;
     /**
      * The stage that will show this window
      */
@@ -87,16 +86,24 @@ public class FileEditorWindow extends VBox {
     /**
      * Constructs a FileEditorWindow with the specified panel and file
      * @param creatingPanel the FilePanel opening this window
-     * @param file the file being edited
+     * @param fileContents the contents of the file as this class does not download the contents
+     * @param file the file the contents belongs to
      */
-    public FileEditorWindow(FilePanel creatingPanel, CommonFile file) {
+    public FileEditorWindow(FilePanel creatingPanel, String fileContents, CommonFile file) {
         this.creatingPanel = creatingPanel;
+        this.fileContents = fileContents;
         this.file = file;
-        editor = new TextArea();
-        editorScrollPane = new ScrollPane();
-        editorScrollPane.setContent(editor);
-        editorScrollPane.setFitToHeight(true);
-        editorScrollPane.setFitToWidth(true);
+        editor = new StyleClassedTextArea() {
+            @Override
+            public void paste() {
+                super.paste();
+                if (saved) {
+                    saved = false;
+                    addStarToStageTitle();
+                }
+            }
+        };
+        editorScrollPane = new VirtualizedScrollPane(editor);
         buttonBar = new HBox();
         VBox.setVgrow(editorScrollPane, Priority.ALWAYS);
         getChildren().addAll(buttonBar, editorScrollPane);
@@ -131,14 +138,14 @@ public class FileEditorWindow extends VBox {
      */
     private void reset() {
         if (!saved) {
-            double hPos = editorScrollPane.getHvalue();
-            double vPos = editorScrollPane.getVvalue();
-            editor.setText(originalText);
+            double hPos = (Double)editorScrollPane.estimatedScrollXProperty().getValue();
+            double vPos = (Double)editorScrollPane.estimatedScrollYProperty().getValue();
+            setEditorText(originalText);
             removeStarFromStageTitle();
             saved = true;
             editor.requestFocus();
-            editorScrollPane.setHvalue(hPos);
-            editorScrollPane.setVvalue(vPos);
+            editorScrollPane.estimatedScrollXProperty().setValue(hPos);
+            editorScrollPane.estimatedScrollYProperty().setValue(vPos);
         }
     }
 
@@ -169,13 +176,13 @@ public class FileEditorWindow extends VBox {
         if (!saved) {
             try {
                 String text = editor.getText();
-                FileSaver saver = new FileSaver(creatingPanel.getFileSystem());
+                FileSaver saver = new FileSaver(this);
                 saver.saveFile(file.getFilePath(), text);
-                creatingPanel.refresh();
                 removeStarFromStageTitle();
                 saved = true;
                 editor.requestFocus();
                 originalText = text;
+
                 return true;
             } catch (Exception ex) {
                 ex.printStackTrace();
@@ -187,46 +194,21 @@ public class FileEditorWindow extends VBox {
     }
 
     /**
-     * Opens the file and returns it as a string
-     * @file the file to display
-     * @return the file contents as a String
-     * @throws IOException if the reader fails to read the file
+     * Sets the text of the editor
+     * @param text the text to set
      */
-    private String fileToString(CommonFile file) throws IOException {
-        String str = "";
-
-        if (file instanceof LocalFile) {
-            LocalFile localFile = (LocalFile)file;
-            BufferedReader reader = new BufferedReader(new FileReader(localFile));
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-                str += line + "\n";
-            }
-        } else {
-            try {
-                RemoteFile remoteFile = (RemoteFile) file;
-                LocalFile downloaded = new LocalFile(UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + remoteFile.getName());
-                new LocalFileSystem(creatingPanel.getFileSystem().getFTPConnection()).addFile(remoteFile, downloaded.getParentFile().getAbsolutePath()); // download the file
-                String ret = fileToString(downloaded);
-                downloaded.delete();
-
-                return ret;
-            } catch (FileSystemException ex) {
-                UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
-            }
-        }
-
-        return str;
+    private void setEditorText(String text) {
+        editor.clear();
+        editor.appendText(text);
     }
 
     /**
      * Initialises this window
      */
-    private void initWindow() throws Exception {
-        String text = fileToString(file);
-        editor.setText(text);
-        originalText = text;
+    private void initWindow() {
+        setEditorText(fileContents);
+        editorScrollPane.scrollXToPixel(0);
+        editorScrollPane.scrollYToPixel(0);
         editor.setOnKeyTyped(e -> {
             if (!e.isControlDown()) {
                 if (saved) {
@@ -235,6 +217,8 @@ public class FileEditorWindow extends VBox {
                 }
             }
         });
+
+        originalText = fileContents;
     }
 
     /**
@@ -245,7 +229,7 @@ public class FileEditorWindow extends VBox {
         String filePath = file.getFilePath();
 
         if (file instanceof RemoteFile) {
-            filePath = "ftp://" + filePath;
+            filePath = "ftp:/" + filePath;
         }
 
         return filePath;
@@ -275,5 +259,4 @@ public class FileEditorWindow extends VBox {
             UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
         }
     }
-
 }

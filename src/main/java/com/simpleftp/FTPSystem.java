@@ -20,6 +20,9 @@ package com.simpleftp;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.connection.FTPConnectionManager;
 import com.simpleftp.ftp.exceptions.FTPException;
+import javafx.concurrent.Service;
+
+import java.util.ArrayList;
 
 /**
  * This class is to be used to keep track of many different static variables/objects used throughout the FTP program
@@ -34,6 +37,7 @@ public class FTPSystem {
      * Flag to indicate that the system is being tested. If true, getConnectionManager will always return null and setConnectionManager will be a no-op
      */
     private static boolean systemTesting;
+
 
     /**
      * Allows the connection manager for this FTPSystem to be used throughout different classes.

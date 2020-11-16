@@ -19,15 +19,10 @@ package com.simpleftp.ui.files;
 
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ui.UI;
-import com.simpleftp.ui.containers.FilePanelContainer;
-import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.control.RadioButton;
-import javafx.scene.control.Separator;
-import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -52,6 +47,11 @@ public class FilePropertyWindow extends VBox {
      * The properties panel containing all the properties and toggles (to change size unit)
      */
     private PropertiesPanel propertiesPanel;
+
+    /**
+     * Max length for path before abbreviating
+     */
+    private static final int MAX_PATH_LENGTH = 25;
 
     enum SizeUnit {
         BYTES,
@@ -153,7 +153,22 @@ public class FilePropertyWindow extends VBox {
         private void initPropertiesText() {
             LineEntry lineEntry = propertyWindow.lineEntry;
             CommonFile file = lineEntry.file;
-            Label fullPath = new Label("Full Path:\t\t\t\t\t\t" + file.getFilePath());
+            HBox pathBox = new HBox();
+            Label pathTitle = new Label("Full Path:\t\t\t\t\t\t");
+            String filePath = file.getFilePath();
+
+            Tooltip pathTooltip = null;
+            if (filePath.length() > MAX_PATH_LENGTH) {
+                pathTooltip = new Tooltip(filePath);
+                filePath = filePath.substring(0, MAX_PATH_LENGTH - 3) + "...";
+            }
+
+
+            Label pathLabel = new Label(filePath);
+            if (pathTooltip != null)
+                pathLabel.setTooltip(pathTooltip);
+            pathBox.getChildren().addAll(pathTitle, pathLabel);
+
             Label type = new Label("File Type:\t\t\t\t\t\t" + (lineEntry instanceof FileLineEntry ? "File":"Directory"));
             Label permissions = new Label("Permissions:");
             Label modificationTime = new Label("Modification Time:");
@@ -172,7 +187,7 @@ public class FilePropertyWindow extends VBox {
                 ex.printStackTrace();
             }
 
-            getChildren().addAll(fullPath, type, permissions, modificationTime, sizeLabel);
+            getChildren().addAll(pathBox, type, permissions, modificationTime, sizeLabel);
         }
 
         /**
@@ -200,19 +215,22 @@ public class FilePropertyWindow extends VBox {
                 if (sizeUnit == SizeUnit.BYTES) {
                     unit = "B";
                     // size returned by textSplit is already in bytes
+                    sizeStr = "" + fileSize;
                 } else if (sizeUnit == SizeUnit.KILOBYTES) {
                     unit = "K";
                     size /= 1000;
+                    sizeStr = String.format("%.4f", size);
                 } else if (sizeUnit == SizeUnit.MEGABYTES) {
                     unit = "M";
                     size /= 1000000;
+                    sizeStr = String.format("%.4f", size);
                 } else {
                     unit = "G";
                     size /= 1000000000;
+                    sizeStr = String.format("%.4f", size);
                 }
 
-                sizeStr = "" + size;
-                if (sizeStr.endsWith(".0")) {
+                if (sizeStr.endsWith(".00")) {
                     sizeStr = sizeStr.substring(0, sizeStr.indexOf("."));
                 }
 
@@ -243,7 +261,7 @@ public class FilePropertyWindow extends VBox {
                 }
             });
 
-            RadioButton kilos = new RadioButton("KiloBytes");
+            RadioButton kilos = new RadioButton("Kilobytes");
             kilos.setOnAction(e -> {
                 try {
                     setSizeUnits(SizeUnit.KILOBYTES);
@@ -252,7 +270,7 @@ public class FilePropertyWindow extends VBox {
                 }
             });
 
-            RadioButton mega = new RadioButton("MegaBytes");
+            RadioButton mega = new RadioButton("Megabytes");
             mega.setOnAction(e -> {
                 try {
                     setSizeUnits(SizeUnit.MEGABYTES);
@@ -261,7 +279,7 @@ public class FilePropertyWindow extends VBox {
                 }
             });
 
-            RadioButton giga = new RadioButton("GigaBytes");
+            RadioButton giga = new RadioButton("Gigabytes");
             giga.setOnAction(e -> {
                 try {
                     setSizeUnits(SizeUnit.GIGABYTES);

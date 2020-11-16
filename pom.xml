@@ -86,6 +86,11 @@
             <artifactId>stax2-api</artifactId>
             <version>4.2</version>
         </dependency>
+        <dependency>
+            <groupId>org.fxmisc.richtext</groupId>
+            <artifactId>richtextfx</artifactId>
+            <version>0.10.5</version>
+        </dependency>
     </dependencies>
 
     <build>

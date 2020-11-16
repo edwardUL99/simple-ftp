@@ -31,10 +31,14 @@ import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.containers.FilePanelContainer;
+import com.simpleftp.ui.editor.FileEditorWindow;
 import com.simpleftp.ui.files.DirectoryLineEntry;
 import com.simpleftp.ui.files.FileLineEntry;
 import com.simpleftp.ui.files.FilePropertyWindow;
 import com.simpleftp.ui.files.LineEntry;
+import javafx.application.Platform;
+import javafx.concurrent.Service;
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -46,9 +50,10 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import lombok.Getter;
 
-import java.io.File;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 
 /*
@@ -537,7 +542,7 @@ public class FilePanel extends VBox {
 
     /**
      * Handles when rename is called on the context menu with the specified line entry
-     * @param lineEntry
+     * @param lineEntry the line entry to rename the file of
      */
     private void renameLineEntry(final LineEntry lineEntry) {
         CommonFile file = lineEntry.getFile();
@@ -665,8 +670,9 @@ public class FilePanel extends VBox {
      * Handles double clicks of the specified file entry
      * @param lineEntry the file entry to double click
      */
-    private void doubleClickFileEntry(final FileLineEntry lineEntry) {
-        UI.showFileEditor(this, lineEntry.getFile());
+    private void doubleClickFileEntry(final FileLineEntry lineEntry) throws FTPException{
+        FileStringDownloader fileStringDownloader = new FileStringDownloader(lineEntry.getFile(), fileSystem, this);
+        fileStringDownloader.getFileString();
     }
 
     /**
@@ -677,7 +683,11 @@ public class FilePanel extends VBox {
         try {
             if (entryStillExists(lineEntry)) {
                 if (lineEntry instanceof FileLineEntry) {
-                    doubleClickFileEntry((FileLineEntry) lineEntry);
+                    try {
+                        doubleClickFileEntry((FileLineEntry) lineEntry);
+                    } catch (FTPException ex) {
+                        UI.doException(ex, UI.ExceptionType.ERROR, true);
+                    }
                 } else {
                     doubleClickDirectoryEntry((DirectoryLineEntry) lineEntry);
                 }
@@ -809,5 +819,105 @@ public class FilePanel extends VBox {
             fileMaskRegex = createRegexFromGlob(fileMask);
             currentDirectoryLabel.setText("CurrentDirectory (masked): ");
         }
+    }
+}
+
+/**
+ * A Task for downloading the file in the background
+ */
+class FileStringDownloader extends Service<String> {
+    private CommonFile file;
+    /**
+     * Need a separate connection for downloading files so it doesn't hog the main connection
+     */
+    private FTPConnection readingConnection;
+    private FilePanel creatingPanel;
+
+    /**
+     * Creates a FileStringDownloader object
+     * @param file the file to download contents of. Assumed to be a file, not a directory
+     * @param fileSystem the file system to download the file to
+     * @param creatingPanel the panel that created this downloader
+     */
+    FileStringDownloader(CommonFile file, FileSystem fileSystem, FilePanel creatingPanel) throws FTPException {
+        this.file = file;
+        this.creatingPanel = creatingPanel;
+        this.readingConnection = new FTPConnection();
+        this.readingConnection.setFtpServer(fileSystem.getFTPConnection().getFtpServer());
+        this.readingConnection.setTimeoutTime(200);
+        this.readingConnection.connect();
+        this.readingConnection.login();
+        this.readingConnection.setTextTransferMode(true);
+    }
+
+    /**
+     * Downloads the file in the background and opens the dialog
+     */
+    void getFileString() {
+        setOnSucceeded(e -> {
+            String contents = (String)e.getSource().getValue();
+            UI.showFileEditor(creatingPanel, file, contents);
+            UI.removeBackgroundTask(this);
+        });
+        UI.addBackgroundTask(this);
+        start();
+    }
+
+    /**
+     * Invoked after the Service is started on the JavaFX Application Thread.
+     * Implementations should save off any state into final variables prior to
+     * creating the Task, since accessing properties defined on the Service
+     * within the background thread code of the Task will result in exceptions.
+     *
+     * @return the Task to execute
+     */
+    @Override
+    protected Task<String> createTask() {
+        return new Task<String>() {
+            @Override
+            protected String call() throws Exception {
+                String str = fileToString(file);
+                readingConnection.disconnect();
+                return str;
+            }
+        };
+    }
+
+    /**
+     * Opens the file and returns it as a string
+     * @file the file to display
+     * @return the file contents as a String
+     * @throws IOException if the reader fails to read the file
+     */
+    private String fileToString(CommonFile file) throws IOException {
+        StringBuilder str = new StringBuilder();
+
+        if (file instanceof LocalFile) {
+            LocalFile localFile = (LocalFile)file;
+            BufferedReader reader = new BufferedReader(new FileReader(localFile));
+
+            String line;
+            try {
+                while ((line = reader.readLine()) != null) {
+                    str.append(line).append("\n");
+                }
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        } else {
+            try {
+                RemoteFile remoteFile = (RemoteFile) file;
+                LocalFile downloaded = new LocalFile(UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + remoteFile.getName());
+                new LocalFileSystem(readingConnection).addFile(remoteFile, downloaded.getParentFile().getAbsolutePath()); // download the file
+                String ret = fileToString(downloaded);
+                downloaded.delete();
+
+                return ret;
+            } catch (FileSystemException ex) {
+                UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
+            }
+        }
+
+        return str.toString();
     }
 }
