@@ -20,8 +20,6 @@ package com.simpleftp.ui.dialogs;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.Region;
 
 import java.util.Optional;

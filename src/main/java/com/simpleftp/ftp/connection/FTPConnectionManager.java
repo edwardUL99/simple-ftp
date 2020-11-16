@@ -18,7 +18,6 @@
 package com.simpleftp.ftp.connection;
 
 import com.simpleftp.ftp.exceptions.FTPException;
-import com.simpleftp.security.PasswordEncryption;
 import lombok.Setter;
 
 import java.util.ArrayList;

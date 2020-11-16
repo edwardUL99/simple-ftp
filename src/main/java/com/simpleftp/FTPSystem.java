@@ -20,9 +20,6 @@ package com.simpleftp;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.connection.FTPConnectionManager;
 import com.simpleftp.ftp.exceptions.FTPException;
-import javafx.concurrent.Service;
-
-import java.util.ArrayList;
 
 /**
  * This class is to be used to keep track of many different static variables/objects used throughout the FTP program

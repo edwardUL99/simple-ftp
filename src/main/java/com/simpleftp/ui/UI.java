@@ -17,7 +17,6 @@
 
 package com.simpleftp.ui;
 
-import com.simpleftp.FTPSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.exceptions.*;
@@ -29,7 +28,6 @@ import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.geometry.Insets;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 

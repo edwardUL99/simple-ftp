@@ -48,7 +48,6 @@ import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import lombok.Getter;
-import org.apache.commons.net.ftp.FTP;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -435,7 +434,7 @@ public class FilePanel extends VBox {
                         boolean showFile = showFile(file, e -> showHiddenFiles || !file1.isHidden());
 
                         if (showFile) {
-                            addLineEntry(createLineEntry(file), lineEntries);
+                            lineEntries.add(createLineEntry(file1));
                         }
                     } catch (FTPRemotePathNotFoundException | LocalPathNotFoundException ex) {
                         UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
@@ -466,7 +465,7 @@ public class FilePanel extends VBox {
                 });
 
                 if (showFile) {
-                    addLineEntry(createLineEntry(f), lineEntries);
+                    lineEntries.add(createLineEntry(f));
                 }
             }
         } catch (FTPException | FileSystemException ex) {
@@ -755,24 +754,6 @@ public class FilePanel extends VBox {
     }
 
     /**
-     * Adds the specified line entry to the entries box and specified list
-     * @param lineEntry the line entry to add
-     * @param lineEntries the list to also add the entry to
-     */
-    private void addLineEntry(final LineEntry lineEntry, ArrayList<LineEntry> lineEntries) {
-        entriesBox.getChildren().add(lineEntry);
-        lineEntries.add(lineEntry);
-    }
-
-    /**
-     * Adds the specified line entry to this panel
-     * @param lineEntry the line entry to add
-     */
-    public void addLineEntry(final LineEntry lineEntry) {
-        addLineEntry(lineEntry, lineEntries);
-    }
-
-    /**
      * Returns the files that this FilePanel is displaying
      * @return list of displayed files
      */
@@ -831,7 +812,7 @@ class FileStringDownloader extends Service<String> {
      */
     private FTPConnection readingConnection;
     private FilePanel creatingPanel;
-    private boolean exceptionOcurred;
+    private boolean exceptionOccurred;
 
     /**
      * Creates a FileStringDownloader object
@@ -855,7 +836,7 @@ class FileStringDownloader extends Service<String> {
      */
     void getFileString() {
         setOnSucceeded(e -> {
-            if (!exceptionOcurred) {
+            if (!exceptionOccurred) {
                 String contents = (String) e.getSource().getValue();
                 Platform.runLater(() -> UI.showFileEditor(creatingPanel, file, contents));
                 UI.removeBackgroundTask(this);
@@ -905,7 +886,7 @@ class FileStringDownloader extends Service<String> {
                 }
             } catch (IOException ex) {
                 Platform.runLater(() -> UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled()));
-                exceptionOcurred = true;
+                exceptionOccurred = true;
             }
         } else {
             try {
@@ -918,7 +899,7 @@ class FileStringDownloader extends Service<String> {
                 return ret;
             } catch (FileSystemException ex) {
                 Platform.runLater(() -> UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled()));
-                exceptionOcurred = true;
+                exceptionOccurred = true;
             }
         }
 
