@@ -31,7 +31,6 @@ import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.containers.FilePanelContainer;
-import com.simpleftp.ui.editor.FileEditorWindow;
 import com.simpleftp.ui.files.DirectoryLineEntry;
 import com.simpleftp.ui.files.FileLineEntry;
 import com.simpleftp.ui.files.FilePropertyWindow;
@@ -49,11 +48,11 @@ import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import lombok.Getter;
+import org.apache.commons.net.ftp.FTP;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 
 /*
@@ -257,7 +256,7 @@ public class FilePanel extends VBox {
                 connection.changeWorkingDirectory(directory.getFilePath());
             }
         } catch (FTPException ex) {
-            UI.doException(ex, UI.ExceptionType.ERROR, true);
+            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
 
         setCurrDirText(directory.getFilePath());
@@ -330,13 +329,13 @@ public class FilePanel extends VBox {
                             }
                         }
                     } catch (FTPException ex) {
-                        UI.doException(ex, UI.ExceptionType.ERROR, true);
+                        UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
                     }
                 }
             }
 
         } catch (FileSystemException ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
         }
     }
 
@@ -359,7 +358,7 @@ public class FilePanel extends VBox {
                             UI.doError("Error changing directory", "Current directory may not have been changed successfully. FTP Reply: " + connection.getReplyString());
                         }
                     } catch (FTPException ex) {
-                        UI.doException(ex, UI.ExceptionType.ERROR, true);
+                        UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
                     }
                 }
             }
@@ -439,15 +438,15 @@ public class FilePanel extends VBox {
                             addLineEntry(createLineEntry(file), lineEntries);
                         }
                     } catch (FTPRemotePathNotFoundException | LocalPathNotFoundException ex) {
-                        UI.doException(ex, UI.ExceptionType.ERROR, true);
+                        UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
                         lineEntries.clear();
                     } catch (FTPException ex) {
-                        UI.doException(ex, UI.ExceptionType.EXCEPTION, true); // this exception shouldn't happen so indicate it as a major problem
+                        UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); // this exception shouldn't happen so indicate it as a major problem
                     }
                 }
             }
         } catch (FileSystemException ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
             lineEntries.clear();
         }
     }
@@ -471,7 +470,7 @@ public class FilePanel extends VBox {
                 }
             }
         } catch (FTPException | FileSystemException ex) {
-            UI.doException(ex, UI.ExceptionType.ERROR, true);
+            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
             lineEntries.clear();
         }
     }
@@ -534,7 +533,7 @@ public class FilePanel extends VBox {
                         UI.doError("Rename Failed", "Failed to rename file with error code: " + replyString);
                     }
                 } catch (FTPException ex) {
-                    UI.doException(ex, UI.ExceptionType.ERROR, true);
+                    UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
                 }
             }
         }
@@ -662,7 +661,7 @@ public class FilePanel extends VBox {
             setDirectory(lineEntry.getFile());
             refresh();
         } catch (FileSystemException ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
         }
     }
 
@@ -686,7 +685,7 @@ public class FilePanel extends VBox {
                     try {
                         doubleClickFileEntry((FileLineEntry) lineEntry);
                     } catch (FTPException ex) {
-                        UI.doException(ex, UI.ExceptionType.ERROR, true);
+                        UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
                     }
                 } else {
                     doubleClickDirectoryEntry((DirectoryLineEntry) lineEntry);
@@ -695,7 +694,7 @@ public class FilePanel extends VBox {
                 UI.doError("File not found", "The file " + lineEntry.getFile().getFilePath() + " does not exist...");
             }
         } catch (FileSystemException ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
         }
     }
 
@@ -735,7 +734,7 @@ public class FilePanel extends VBox {
                     return true;
                 }
             } catch (FileSystemException ex) {
-                UI.doException(ex, UI.ExceptionType.ERROR, true);
+                UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
             }
         } else {
             try {
@@ -748,7 +747,7 @@ public class FilePanel extends VBox {
                     return true;
                 }
             } catch (FileSystemException ex) {
-                UI.doException(ex, UI.ExceptionType.ERROR, true);
+                UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
             }
         }
 
@@ -832,6 +831,7 @@ class FileStringDownloader extends Service<String> {
      */
     private FTPConnection readingConnection;
     private FilePanel creatingPanel;
+    private boolean exceptionOcurred;
 
     /**
      * Creates a FileStringDownloader object
@@ -855,9 +855,11 @@ class FileStringDownloader extends Service<String> {
      */
     void getFileString() {
         setOnSucceeded(e -> {
-            String contents = (String)e.getSource().getValue();
-            UI.showFileEditor(creatingPanel, file, contents);
-            UI.removeBackgroundTask(this);
+            if (!exceptionOcurred) {
+                String contents = (String) e.getSource().getValue();
+                Platform.runLater(() -> UI.showFileEditor(creatingPanel, file, contents));
+                UI.removeBackgroundTask(this);
+            }
         });
         UI.addBackgroundTask(this);
         start();
@@ -902,7 +904,8 @@ class FileStringDownloader extends Service<String> {
                     str.append(line).append("\n");
                 }
             } catch (IOException ex) {
-                ex.printStackTrace();
+                Platform.runLater(() -> UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled()));
+                exceptionOcurred = true;
             }
         } else {
             try {
@@ -914,7 +917,8 @@ class FileStringDownloader extends Service<String> {
 
                 return ret;
             } catch (FileSystemException ex) {
-                UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
+                Platform.runLater(() -> UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled()));
+                exceptionOcurred = true;
             }
         }
 

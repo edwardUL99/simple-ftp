@@ -28,6 +28,9 @@ import java.util.ArrayList;
  * This class is to be used to keep track of many different static variables/objects used throughout the FTP program
  */
 public class FTPSystem {
+    /**
+     * The system connection manager
+     */
     private static FTPConnectionManager connectionManager;
     /**
      * The connection to be used throughout the system
@@ -37,7 +40,10 @@ public class FTPSystem {
      * Flag to indicate that the system is being tested. If true, getConnectionManager will always return null and setConnectionManager will be a no-op
      */
     private static boolean systemTesting;
-
+    /**
+     * Indicates whether debugging should take place inside the system
+     */
+    private static final boolean debug = System.getProperty("simpleftp.debug") != null;
 
     /**
      * Allows the connection manager for this FTPSystem to be used throughout different classes.
@@ -97,5 +103,13 @@ public class FTPSystem {
      */
     public static FTPConnection getConnection() {
         return connection;
+    }
+
+    /**
+     * Returns whether debugging is enabled. This can be only enabled at startup with the property -Dsimpleftp.debug
+     * @return true if debugging is enabled, false otherwise
+     */
+    public static boolean isDebugEnabled() {
+        return debug;
     }
 }

@@ -17,6 +17,7 @@
 
 package com.simpleftp.ftp.connection;
 
+import com.simpleftp.FTPSystem;
 import com.simpleftp.ftp.exceptions.FTPError;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -39,14 +40,13 @@ import java.time.format.DateTimeFormatter;
 @RequiredArgsConstructor
 @Log4j2
 public class FTPLookup {
-    private final boolean debug = Boolean.parseBoolean(System.getProperty("simpleftp.debug"));
     /**
      * The client object which will be used by this class
      */
     private final FTPClient ftpClient;
 
     private void logDebug(String message, Object... options) {
-        if (debug)
+        if (FTPSystem.isDebugEnabled())
             log.debug(message, options);
     }
 

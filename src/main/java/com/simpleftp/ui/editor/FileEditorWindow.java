@@ -17,6 +17,7 @@
 
 package com.simpleftp.ui.editor;
 
+import com.simpleftp.FTPSystem;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ui.UI;
@@ -256,7 +257,7 @@ public class FileEditorWindow extends VBox {
                 }
             });
         } catch (Exception ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
         }
     }
 }

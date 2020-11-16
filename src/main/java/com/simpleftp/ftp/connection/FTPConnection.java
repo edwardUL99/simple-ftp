@@ -47,7 +47,6 @@ import java.util.TimerTask;
 @Log4j2
 @EqualsAndHashCode(of = {"ftpServer", "ftpConnectionDetails", "connected", "loggedIn"})
 public class FTPConnection {
-    private final boolean debug = Boolean.parseBoolean(System.getProperty("simpleftp.debug"));
     /**
      * The FTP Client which provides the main FTP functionality
      */
@@ -133,7 +132,7 @@ public class FTPConnection {
     }
 
     private void logDebug(String message, Object... options) {
-        if (debug)
+        if (FTPSystem.isDebugEnabled())
             log.debug(message, options);
     }
 

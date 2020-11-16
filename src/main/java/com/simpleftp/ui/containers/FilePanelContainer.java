@@ -17,6 +17,7 @@
 
 package com.simpleftp.ui.containers;
 
+import com.simpleftp.FTPSystem;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
@@ -295,7 +296,7 @@ public class FilePanelContainer extends VBox {
                         UI.doError("File Not Created", "Failed to make file with path: " + path);
                     }
                 } catch (IOException ex) {
-                    UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
+                    UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
                 }
             }
 
@@ -372,9 +373,9 @@ public class FilePanelContainer extends VBox {
                 }
             }
         } catch (FTPException ex) {
-            UI.doException(ex, UI.ExceptionType.ERROR, true);
+            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         } catch (IOException ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
         }
     }
 
@@ -493,7 +494,7 @@ public class FilePanelContainer extends VBox {
                 UI.doError("Path does not exist", "The path: " + path + " does not exist or it is not a directory");
             }
         } catch (FTPException ex) {
-            UI.doException(ex, UI.ExceptionType.ERROR, true);
+            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
     }
 
@@ -512,7 +513,7 @@ public class FilePanelContainer extends VBox {
                 }
 
             } catch (FileSystemException | FTPException ex) {
-                UI.doException(ex, UI.ExceptionType.EXCEPTION, true);
+                UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
             }
         }
     }

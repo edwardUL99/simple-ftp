@@ -25,6 +25,7 @@ import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
+import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 
@@ -75,6 +76,10 @@ class FileUploader extends Service<Void> {
      * The contents of the file to upload
      */
     private String savedFileContents;
+    /**
+     * Tracks if an exception occurred during saving
+     */
+    private boolean exceptionOccurred;
 
     /**
      * Constructs a file uploader
@@ -87,8 +92,12 @@ class FileUploader extends Service<Void> {
         this.filePath = filePath;
         this.savedFileContents = savedFileContents;
         setOnSucceeded(e -> {
-            editorWindow.getCreatingPanel().refresh();
             UI.removeBackgroundTask(this);
+
+            if (!exceptionOccurred) {
+                editorWindow.getCreatingPanel().refresh();
+                Platform.runLater(() -> UI.doInfo("File Saved", "File " + filePath + " saved successfully"));
+            }
         });
     }
 
@@ -136,34 +145,39 @@ class FileUploader extends Service<Void> {
      * Saves the specified file contents in a file specified by filePath.
      * @throwa Exception if any error occurs
      */
-    private void saveFile() throws Exception {
-        File file = new File(filePath);
-        String fileName = file.getName();
-        String saveFilePath;
-        FileSystem fileSystem = editorWindow.getCreatingPanel().getFileSystem();
-        boolean remoteFileSystem = fileSystem instanceof RemoteFileSystem;
-        FTPConnection uploadingConnection = getUploadingConnection();
+    private void saveFile() {
+        try {
+            File file = new File(filePath);
+            String fileName = file.getName();
+            String saveFilePath;
+            FileSystem fileSystem = editorWindow.getCreatingPanel().getFileSystem();
+            boolean remoteFileSystem = fileSystem instanceof RemoteFileSystem;
+            FTPConnection uploadingConnection = getUploadingConnection();
 
-        if (remoteFileSystem) {
-            saveFilePath = UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + fileName;
-            file = new File(saveFilePath);
-            fileSystem = new RemoteFileSystem(uploadingConnection);
-        } else {
-            saveFilePath = filePath;
-            fileSystem = new LocalFileSystem(uploadingConnection);
+            if (remoteFileSystem) {
+                saveFilePath = UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + fileName;
+                file = new File(saveFilePath);
+                fileSystem = new RemoteFileSystem(uploadingConnection);
+            } else {
+                saveFilePath = filePath;
+                fileSystem = new LocalFileSystem(uploadingConnection);
+            }
+
+            writeToFile(saveFilePath);
+
+            if (remoteFileSystem) {
+                fileSystem.removeFile(filePath); // remove as we are overwriting
+                String parent = new File(filePath).getParent();
+                parent = parent == null ? "/" : parent;
+                fileSystem.addFile(new LocalFile(saveFilePath), parent);
+                file.delete();
+            }
+
+            uploadingConnection.disconnect();
+            // don't need to bother add file to local file system, because write to file would have already added it
+        } catch (Exception ex) {
+            Platform.runLater(() -> UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled()));
+            exceptionOccurred = true;
         }
-
-        writeToFile(saveFilePath);
-
-        if (remoteFileSystem) {
-            fileSystem.removeFile(filePath); // remove as we are overwriting
-            String parent = new File(filePath).getParent();
-            parent = parent == null ? "/":parent;
-            fileSystem.addFile(new LocalFile(saveFilePath), parent);
-            file.delete();
-        }
-
-        uploadingConnection.disconnect();
-        // don't need to bother add file to local file system, because write to file would have already added it
     }
 }

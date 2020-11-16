@@ -30,6 +30,7 @@ import javafx.concurrent.Service;
 import javafx.geometry.Insets;
 
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 
 /**
@@ -225,6 +226,8 @@ public final class UI {
                 Throwable cause = ex.getCause();
                 if (cause instanceof FTPException)
                     doException((Exception)cause, ExceptionType.ERROR, false);
+            } else if (ex instanceof IOException) {
+                doError("I/O Exception occurred", ex.getMessage());
             }
         }
     }
