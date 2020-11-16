@@ -1085,7 +1085,7 @@ public class FTPConnection {
         if (!connected) {
             log.error("FTPConnection is not connected, cannot set text mode");
             loggedIn = false;
-            throw new FTPNotConnectedException("FTPConnection is not connected, cannot retrieve path stats", FTPNotConnectedException.ActionType.STATUS_CHECK);
+            throw new FTPNotConnectedException("FTPConnection is not connected, cannot set text transfer mode", FTPNotConnectedException.ActionType.MODIFICATION);
         }
 
         try {
