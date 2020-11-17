@@ -25,17 +25,18 @@ import javafx.scene.layout.Region;
 import java.util.Optional;
 
 /**
- * A dialog to warn that there are background tasks in progress on quit
+ * Gives the user a choice to still open a file even if it is over 100MB
  */
-public class BackgroundTaskRunningDialog extends Alert {
+public class FileSizeConfirmationDialog extends Alert {
     /**
-     * Constructs a BackgroundTaskRunningDialog
+     * Constructs the FileSizeConfirmationDialog
+     * @param path the file being opened
      */
-    public BackgroundTaskRunningDialog() {
+    public FileSizeConfirmationDialog(String path) {
         super(AlertType.WARNING);
-        setTitle("Background Task Dialog");
-        setHeaderText("Background Tasks Running");
-        setContentText("There are still background tasks running. Quitting now will cancel them. Are you sure?");
+        setHeaderText("File Size Warning");
+        setContentText("File " + path + " is over 100MB. Do you confirm that you still want to open it? (You may run out of memory)");
+        setTitle("Editing Large File Dialog");
         getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
         getButtonTypes().clear();
         getButtonTypes().addAll(new ButtonType("No", ButtonBar.ButtonData.CANCEL_CLOSE), new ButtonType("Yes", ButtonBar.ButtonData.FINISH));
@@ -43,7 +44,7 @@ public class BackgroundTaskRunningDialog extends Alert {
 
     /**
      * Shows the dialog and gets the confirmation
-     * @return true if confirmed to quit, false otherwise
+     * @return true if confirmed to open, false otherwise
      */
     public boolean showAndGetConfirmation() {
         Optional<ButtonType> result = showAndWait();

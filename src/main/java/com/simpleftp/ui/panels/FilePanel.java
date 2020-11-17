@@ -48,10 +48,14 @@ import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import lombok.Getter;
+import org.apache.commons.net.ftp.FTP;
+import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 
 /*
@@ -665,12 +669,61 @@ public class FilePanel extends VBox {
     }
 
     /**
+     * Gets the size of the provided file
+     * @param file the file to get the size of
+     * @return file size
+     * @throws FTPException if file is a RemoteFile and an error occurs
+     */
+    private long getFileSize(CommonFile file) throws FTPException {
+        long size;
+        String path = file.getFilePath();
+
+        if (file instanceof RemoteFile) {
+            FTPFile file1 = fileSystem.getFTPConnection().getFTPFile(path);
+
+            if (file1 != null) {
+                size = file1.getSize();
+            } else {
+                throw new FTPRemotePathNotFoundException("File " + path + " does not exist", path);
+            }
+        } else {
+            LocalFile file1 = (LocalFile)file;
+
+            if (file1.exists()) {
+                size = file1.length();
+            } else {
+                throw new LocalPathNotFoundException("File " + path + " does not exist", path);
+            }
+        }
+
+        return size;
+    }
+
+    /**
+     * Checks the size of the file and if under 100MB returns true, if over, gets confirmation if file size is ok and returns true
+     * @param file the file to check size of
+     * @return true if under 100MB or if over, the user confirmed it is ok to open this file
+     * @throws FTPException if an error occurs checking file size if the file is a remote file
+     */
+    private boolean checkFileSize(CommonFile file) throws FTPException {
+        long size = getFileSize(file);
+
+        if (size >= 100000000)  {
+            return UI.doFileSizeWarningDialog(file.getFilePath());
+        }
+
+        return true;
+    }
+
+    /**
      * Handles double clicks of the specified file entry
      * @param lineEntry the file entry to double click
      */
-    private void doubleClickFileEntry(final FileLineEntry lineEntry) throws FTPException{
-        FileStringDownloader fileStringDownloader = new FileStringDownloader(lineEntry.getFile(), fileSystem, this);
-        fileStringDownloader.getFileString();
+    private void doubleClickFileEntry(final FileLineEntry lineEntry) throws FTPException {
+        if (checkFileSize(lineEntry.getFile())) {
+            FileStringDownloader fileStringDownloader = new FileStringDownloader(lineEntry.getFile(), fileSystem, this);
+            fileStringDownloader.getFileString();
+        }
     }
 
     /**
@@ -891,6 +944,7 @@ class FileStringDownloader extends Service<String> {
         } else {
             try {
                 RemoteFile remoteFile = (RemoteFile) file;
+
                 LocalFile downloaded = new LocalFile(UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + remoteFile.getName());
                 new LocalFileSystem(readingConnection).addFile(remoteFile, downloaded.getParentFile().getAbsolutePath()); // download the file
                 String ret = fileToString(downloaded);
@@ -900,6 +954,11 @@ class FileStringDownloader extends Service<String> {
             } catch (FileSystemException ex) {
                 Platform.runLater(() -> UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled()));
                 exceptionOccurred = true;
+                return null;
+            } catch (Exception ex) {
+                Platform.runLater(() -> UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled()));
+                exceptionOccurred = true;
+                return null;
             }
         }
 

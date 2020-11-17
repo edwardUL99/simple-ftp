@@ -27,8 +27,10 @@ import com.simpleftp.ui.panels.FilePanel;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.geometry.Insets;
+import javafx.scene.control.Alert;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 /**
@@ -369,5 +371,15 @@ public final class UI {
         }
 
         return false;
+    }
+
+    /**
+     * Shows a dialog saying the specified file is over 100MB and may cause you to run out of memory if opened in editor
+     * @param path the path of the file
+     * @return true if editor should be opened, false if not
+     */
+    public static boolean doFileSizeWarningDialog(String path) {
+        FileSizeConfirmationDialog confirmationDialog = new FileSizeConfirmationDialog(path);
+        return confirmationDialog.showAndGetConfirmation();
     }
 }
