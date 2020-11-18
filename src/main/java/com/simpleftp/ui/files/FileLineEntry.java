@@ -17,6 +17,7 @@
 
 package com.simpleftp.ui.files;
 
+import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
@@ -34,7 +35,7 @@ public class FileLineEntry extends LineEntry {
      * @throws FTPRemotePathNotFoundException
      * @throws LocalPathNotFoundException
      */
-    public FileLineEntry(CommonFile file, FilePanel owningPanel) throws FTPRemotePathNotFoundException, LocalPathNotFoundException {
+    public FileLineEntry(CommonFile file, FilePanel owningPanel) throws FTPRemotePathNotFoundException, LocalPathNotFoundException, FileSystemException {
         super("file_icon.png", file, owningPanel);
     }
 }

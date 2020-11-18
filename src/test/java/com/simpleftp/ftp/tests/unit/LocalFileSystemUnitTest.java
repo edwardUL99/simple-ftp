@@ -28,6 +28,7 @@ import com.simpleftp.ftp.connection.FTPConnectionManager;
 import com.simpleftp.ftp.connection.FTPServer;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.security.PasswordEncryption;
+import org.apache.commons.net.ftp.FTPFile;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -87,7 +88,10 @@ public class LocalFileSystemUnitTest {
     }
 
     private RemoteFile createRemoteFile() throws FileSystemException {
-        return new RemoteFile("/test/path/file.txt", connectionManager);
+        String fileName = "/test/path/file.txt";
+        FTPFile file = new FTPFile();
+        file.setName("fileName");
+        return new RemoteFile(fileName, connectionManager, file);
     }
 
     private LocalFile createLocalFile() {

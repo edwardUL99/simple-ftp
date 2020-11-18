@@ -25,6 +25,7 @@ import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
+import com.simpleftp.ui.panels.FilePanel;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
@@ -77,9 +78,9 @@ class FileUploader extends Service<Void> {
      */
     private String savedFileContents;
     /**
-     * Tracks if an exception occurred during saving
+     * Tracks if an exception/error occurred during saving
      */
-    private boolean exceptionOccurred;
+    private boolean errorOccurred;
 
     /**
      * Constructs a file uploader
@@ -94,9 +95,19 @@ class FileUploader extends Service<Void> {
         setOnSucceeded(e -> {
             UI.removeBackgroundTask(this);
 
-            if (!exceptionOccurred) {
-                editorWindow.getCreatingPanel().refresh();
-                Platform.runLater(() -> UI.doInfo("File Saved", "File " + filePath + " saved successfully"));
+            if (!errorOccurred) {
+                FilePanel filePanel = editorWindow.getCreatingPanel();
+                String parent = new File(filePath).getParent();
+                final String finalParent = parent == null ? "/":parent;
+
+                // only refresh if the file we're saving is in out current working directory
+                Platform.runLater(() -> {
+                    UI.doInfo("File Saved", "File " + filePath + " saved successfully");
+
+                    if (finalParent.equals(filePanel.getDirectory().getFilePath())) {
+                        filePanel.refresh();
+                    }
+                });
             }
         });
     }
@@ -142,6 +153,46 @@ class FileUploader extends Service<Void> {
     }
 
     /**
+     * Writes the backup version (i.e. renames the filePath to filePath~. If filePath~ already exists, it is removed as some servers overwrite, others throw an error. If any failure occurs here, it returns false and saving should abort
+     * @param filePath the filePath to backup
+     * @return true if backed up successfully. If this returns false, you should abort saving
+     */
+    private boolean writeLocalBackup(String filePath) {
+        File file = new File(filePath);
+        if (file.exists()) {
+            String backupPath = filePath + "~";
+            File backup = new File(backupPath);
+            try {
+                return backup.createNewFile();
+            } catch (IOException e) {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Writes the backup version (i.e. renames the filePath to filePath~. If filePath~ already exists, it is removed as some servers overwrite, others throw an error. If any failure occurs here, it returns false and saving should abort
+     * @param filePath the filePath to backup
+     * @param uploadingConnection the connection being used to upload the file
+     * @return true if backed up successfully. If this returns false, you should abort saving
+     */
+    private boolean writeRemoteBackup(String filePath, FTPConnection uploadingConnection) {
+        try {
+            String backupPath = filePath + "~";
+            if (uploadingConnection.remotePathExists(backupPath)) {
+                if (!uploadingConnection.removeFile(backupPath))
+                    return false; // return false as we haven't removed our backup.
+            }
+
+            return uploadingConnection.renameFile(filePath, backupPath);
+        } catch (FTPException ex) {
+            return false;
+        }
+    }
+
+    /**
      * Saves the specified file contents in a file specified by filePath.
      * @throwa Exception if any error occurs
      */
@@ -163,21 +214,37 @@ class FileUploader extends Service<Void> {
                 fileSystem = new LocalFileSystem(uploadingConnection);
             }
 
-            writeToFile(saveFilePath);
+            boolean backupWritten = remoteFileSystem ? writeRemoteBackup(filePath, uploadingConnection):writeLocalBackup(filePath);
 
-            if (remoteFileSystem) {
-                fileSystem.removeFile(filePath); // remove as we are overwriting
-                String parent = new File(filePath).getParent();
-                parent = parent == null ? "/" : parent;
-                fileSystem.addFile(new LocalFile(saveFilePath), parent);
-                file.delete();
+            String backupPath = filePath + "~";
+            if (backupWritten) {
+                writeToFile(saveFilePath);
+
+                if (remoteFileSystem) {
+                    String parent = new File(filePath).getParent();
+                    parent = parent == null ? "/" : parent;
+                    fileSystem.addFile(new LocalFile(saveFilePath), parent);
+                    file.delete();
+                    uploadingConnection.removeFile(backupPath); // after successful upload delete file
+                } else {
+                    new File(backupPath).delete();
+                }
+            } else {
+                Platform.runLater(() -> {
+                    editorWindow.setSave(false);
+                    UI.doError("Save Failed", "Failed to save file " + filePath + " as could not create backup " + backupPath);
+                });
+                errorOccurred = true;
             }
 
             uploadingConnection.disconnect();
             // don't need to bother add file to local file system, because write to file would have already added it
         } catch (Exception ex) {
-            Platform.runLater(() -> UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled()));
-            exceptionOccurred = true;
+            Platform.runLater(() -> {
+                editorWindow.setSave(false);
+                UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+            });
+            errorOccurred = true;
         }
     }
 }

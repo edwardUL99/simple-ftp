@@ -132,7 +132,7 @@ public class FilePropertyWindow extends VBox {
         /**
          * The fileSize of the line entry
          */
-        private Integer fileSize;
+        private Long fileSize;
 
         /**
          * Creates a properties panel
@@ -195,8 +195,7 @@ public class FilePropertyWindow extends VBox {
          */
         private void initFileSize() throws Exception {
             if (fileSize == null) {
-                String[] textSplit = propertyWindow.lineEntry.getModificationTimeAndSize().trim().split(" ");
-                fileSize = Integer.valueOf(textSplit[0]);
+                fileSize = lineEntry.file.getSize();
             }
         }
 

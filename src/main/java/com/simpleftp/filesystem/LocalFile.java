@@ -53,4 +53,14 @@ public class LocalFile extends File implements CommonFile {
     public boolean isNormalFile() {
         return super.isFile();
     }
+
+    /**
+     * Returns the size in bytes of the file
+     *
+     * @return size in bytes of the file
+     */
+    @Override
+    public long getSize() {
+        return length();
+    }
 }

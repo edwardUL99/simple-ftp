@@ -154,7 +154,7 @@ public class RemoteFileSystem implements FileSystem {
         try {
             FTPFile ftpFile = ftpConnection.getFTPFile(fileName);
             if (ftpFile != null) {
-                return new RemoteFile(fileName, ftpConnectionManager);
+                return new RemoteFile(fileName, ftpConnectionManager, ftpFile);
             }
 
             return null;
@@ -198,7 +198,7 @@ public class RemoteFileSystem implements FileSystem {
                 int i = 0;
                 for (FTPFile f : files) {
                     String path = dir.equals("/") ? dir + f.getName():dir + "/" + f.getName();
-                    remoteFiles[i++] = new RemoteFile(path, ftpConnectionManager);
+                    remoteFiles[i++] = new RemoteFile(path, ftpConnectionManager, f);
                 }
 
                 return remoteFiles;

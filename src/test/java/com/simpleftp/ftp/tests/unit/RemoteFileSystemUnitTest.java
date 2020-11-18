@@ -90,7 +90,9 @@ public class RemoteFileSystemUnitTest {
     }
 
     private RemoteFile createRemoteFile() throws FileSystemException {
-        return new RemoteFile(TEST_FILE, ftpConnectionManager);
+        FTPFile file = new FTPFile();
+        file.setName(TEST_FILE);
+        return new RemoteFile(TEST_FILE, ftpConnectionManager, file);
     }
 
     private LocalFile createLocalFile() {
@@ -152,7 +154,7 @@ public class RemoteFileSystemUnitTest {
         RemoteFile remoteFile = createRemoteFile();
 
         given(connection.getFTPFile(TEST_FILE))
-                .willReturn(remoteFile);
+                .willReturn(remoteFile.getFtpFile());
         given(connection.removeDirectory(TEST_FILE))
                 .willReturn(true);
 
@@ -174,7 +176,7 @@ public class RemoteFileSystemUnitTest {
         mockConnection();
         RemoteFile remoteFile = createRemoteFile();
         given(connection.getFTPFile(TEST_FILE))
-                .willReturn(remoteFile);
+                .willReturn(remoteFile.getFtpFile());
         doThrow(FTPConnectionFailedException.class).when(connection).removeDirectory(TEST_FILE);
         assertThrows(FileSystemException.class, () -> remoteFileSystem.removeFile(TEST_FILE));
     }
