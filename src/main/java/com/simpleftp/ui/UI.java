@@ -31,7 +31,10 @@ import javafx.scene.control.Alert;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Calendar;
 
 /**
  * This class provides static util methods and constants for UI
@@ -131,6 +134,11 @@ public final class UI {
      * The general padding value to use throughout the UI
      */
     public static final int UNIVERSAL_PADDING = 2;
+
+    /**
+     * The format for the date time string throughout the UI for files
+     */
+    public static final String FILE_DATETIME_FORMAT = "MMM dd HH:mm";
 
     /**
      * An enum to determine which type of dialog to show for a given exception
@@ -381,5 +389,21 @@ public final class UI {
     public static boolean doFileSizeWarningDialog(String path) {
         FileSizeConfirmationDialog confirmationDialog = new FileSizeConfirmationDialog(path);
         return confirmationDialog.showAndGetConfirmation();
+    }
+
+    /**
+     * Takes a calendar object, presumably from a FTPFile and uses it to parse it to a time in the format for the UI to display
+     * @param calendar the calendar object to convert
+     * @return the formatted String
+     */
+    public static String parseCalendarToUITime(Calendar calendar) {
+        int hour = calendar.get(Calendar.HOUR_OF_DAY);
+        int minute = calendar.get(Calendar.MINUTE);
+        int month = calendar.get(Calendar.MONTH) + 1;
+        int day = calendar.get(Calendar.DAY_OF_MONTH);
+        int year = calendar.get(Calendar.YEAR);
+
+        LocalDateTime localDateTime = LocalDateTime.of(year, month, day, hour, minute);
+        return localDateTime.format(DateTimeFormatter.ofPattern(FILE_DATETIME_FORMAT));
     }
 }

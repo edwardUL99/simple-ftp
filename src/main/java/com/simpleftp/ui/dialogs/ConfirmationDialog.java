@@ -47,6 +47,6 @@ public class ConfirmationDialog extends Alert {
     public boolean showAndGetChoice() {
         Optional<ButtonType> result = showAndWait();
 
-        return result.get() == ButtonType.OK;
+        return result.map(buttonType -> buttonType.equals(ButtonType.OK)).orElse(false);
     }
 }

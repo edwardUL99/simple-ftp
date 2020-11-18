@@ -55,4 +55,10 @@ public interface CommonFile {
      * @throws FileSystemException if any error occurs and it cannot be determined if it is a normal file
      */
     boolean isNormalFile() throws FileSystemException;
+
+    /**
+     * Returns the size in bytes of the file
+     * @return size in bytes of the file, -1 if could not be determined
+     */
+    long getSize() throws FileSystemException;
 }

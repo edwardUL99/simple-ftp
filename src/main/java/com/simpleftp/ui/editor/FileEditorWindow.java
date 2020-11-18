@@ -237,6 +237,20 @@ public class FileEditorWindow extends VBox {
     }
 
     /**
+     * Sets the value for save field variable and determines whether to show star or not on title. THIS DOES NOT SAVE THE FILE
+     * @param saved the value for saved
+     */
+    public void setSave(boolean saved) {
+        if (saved) {
+            removeStarFromStageTitle();
+        } else {
+            addStarToStageTitle();
+        }
+
+        this.saved = saved;
+    }
+
+    /**
      * Shows this FileEditorWindow
      */
     public void show() {

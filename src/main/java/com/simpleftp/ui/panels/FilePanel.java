@@ -618,19 +618,17 @@ public class FilePanel extends VBox {
      */
     public void refresh() {
         ArrayList<LineEntry> lineEntries = constructListOfFiles();
-        if (lineEntries != null) {
-            this.lineEntries.clear();
-            getChildren().clear();
-            getChildren().add(statusPanel);
-            entriesBox.getChildren().clear();
-            if (lineEntries.size() > 0) {
-                addLineEntriesFromList(lineEntries);
-                getChildren().add(entriesScrollPane);
-            } else {
-                getChildren().add(emptyFolderPane);
-            }
-            this.lineEntries = lineEntries;
+        this.lineEntries.clear();
+        getChildren().clear();
+        getChildren().add(statusPanel);
+        entriesBox.getChildren().clear();
+        if (lineEntries.size() > 0) {
+            addLineEntriesFromList(lineEntries);
+            getChildren().add(entriesScrollPane);
+        } else {
+            getChildren().add(emptyFolderPane);
         }
+        this.lineEntries = lineEntries;
 
         if (parentContainer != null)
             parentContainer.refresh();
@@ -669,44 +667,13 @@ public class FilePanel extends VBox {
     }
 
     /**
-     * Gets the size of the provided file
-     * @param file the file to get the size of
-     * @return file size
-     * @throws FTPException if file is a RemoteFile and an error occurs
-     */
-    private long getFileSize(CommonFile file) throws FTPException {
-        long size;
-        String path = file.getFilePath();
-
-        if (file instanceof RemoteFile) {
-            FTPFile file1 = fileSystem.getFTPConnection().getFTPFile(path);
-
-            if (file1 != null) {
-                size = file1.getSize();
-            } else {
-                throw new FTPRemotePathNotFoundException("File " + path + " does not exist", path);
-            }
-        } else {
-            LocalFile file1 = (LocalFile)file;
-
-            if (file1.exists()) {
-                size = file1.length();
-            } else {
-                throw new LocalPathNotFoundException("File " + path + " does not exist", path);
-            }
-        }
-
-        return size;
-    }
-
-    /**
      * Checks the size of the file and if under 100MB returns true, if over, gets confirmation if file size is ok and returns true
      * @param file the file to check size of
      * @return true if under 100MB or if over, the user confirmed it is ok to open this file
-     * @throws FTPException if an error occurs checking file size if the file is a remote file
+     * @throws FileSystemException if an error occurs checking file size if the file is a remote file
      */
-    private boolean checkFileSize(CommonFile file) throws FTPException {
-        long size = getFileSize(file);
+    private boolean checkFileSize(CommonFile file) throws FileSystemException {
+        long size = file.getSize();
 
         if (size >= 100000000)  {
             return UI.doFileSizeWarningDialog(file.getFilePath());
@@ -719,7 +686,7 @@ public class FilePanel extends VBox {
      * Handles double clicks of the specified file entry
      * @param lineEntry the file entry to double click
      */
-    private void doubleClickFileEntry(final FileLineEntry lineEntry) throws FTPException {
+    private void doubleClickFileEntry(final FileLineEntry lineEntry) throws FTPException, FileSystemException {
         if (checkFileSize(lineEntry.getFile())) {
             FileStringDownloader fileStringDownloader = new FileStringDownloader(lineEntry.getFile(), fileSystem, this);
             fileStringDownloader.getFileString();
@@ -746,7 +713,7 @@ public class FilePanel extends VBox {
                 UI.doError("File not found", "The file " + lineEntry.getFile().getFilePath() + " does not exist...");
             }
         } catch (FileSystemException ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
+            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
     }
 
