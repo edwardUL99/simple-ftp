@@ -97,8 +97,10 @@ class FileUploader extends Service<Void> {
 
             if (!errorOccurred) {
                 FilePanel filePanel = editorWindow.getCreatingPanel();
-                String parent = new File(filePath).getParent();
-                final String finalParent = parent == null ? "/":parent;
+                String parentPath = new File(filePath).getParent();
+                String windowsParent;
+                parentPath = parentPath == null ? ((windowsParent = System.getProperty("SystemDrive")) != null ? windowsParent:"/"):parentPath; // if windows, find the root
+                final String finalParent = parentPath;
 
                 // only refresh if the file we're saving is in out current working directory
                 Platform.runLater(() -> {

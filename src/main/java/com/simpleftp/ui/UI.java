@@ -29,6 +29,7 @@ import javafx.concurrent.Service;
 import javafx.geometry.Insets;
 import javafx.scene.control.Alert;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -405,5 +406,18 @@ public final class UI {
 
         LocalDateTime localDateTime = LocalDateTime.of(year, month, day, hour, minute);
         return localDateTime.format(DateTimeFormatter.ofPattern(FILE_DATETIME_FORMAT));
+    }
+
+    /**
+     * Retrieves the parent of the provided path
+     * @param filePath the path to get the parent of
+     * @return the parent path
+     */
+    public static String getParentPath(String filePath) {
+        String parentPath = new File(filePath).getParent();
+        String windowsParent;
+        parentPath = parentPath == null ? ((windowsParent = System.getProperty("SystemDrive")) != null ? windowsParent:"/"):parentPath; // if windows, find the root
+
+        return parentPath;
     }
 }

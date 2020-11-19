@@ -484,7 +484,8 @@ public class FilePanel extends VBox {
      */
     private void renameLocalFile(final LocalFile localFile) {
         String filePath = localFile.getFilePath();
-        String parentPath = new File(filePath).getParent();
+        String parentPath = UI.getParentPath(filePath);
+
         String fileName = localFile.getName();
         String newPath = UI.doRenameDialog(fileName);
 
@@ -513,7 +514,8 @@ public class FilePanel extends VBox {
      */
     private void renameRemoteFile(final RemoteFile remoteFile) {
         String filePath = remoteFile.getFilePath();
-        String parentPath = new File(filePath).getParent();
+        String parentPath = UI.getParentPath(filePath);
+
         String fileName = remoteFile.getName();
         String newPath = UI.doRenameDialog(fileName);
 

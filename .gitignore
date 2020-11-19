@@ -30,3 +30,4 @@ dependency-reduced-pom.xml
 src/main/java/TestSessionSaver.java
 # ignore FTPClient for now for testing
 src/main/java/com/simpleftp/FTPClient.java
+*.txt

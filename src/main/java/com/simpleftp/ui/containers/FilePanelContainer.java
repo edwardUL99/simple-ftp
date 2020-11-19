@@ -271,12 +271,9 @@ public class FilePanelContainer extends VBox {
             absolute = new File(path).isAbsolute();
         }
 
-        String parentPath = new File(path).getParent();
+        String parentPath = UI.getParentPath(path);
 
-        boolean existsAsDir = true;
-        if (parentPath != null) {
-            existsAsDir = new File(parentPath).isDirectory();
-        }
+        boolean existsAsDir = new File(parentPath).isDirectory();
 
         if (!existsAsDir) {
             UI.doError("Directory does not exist", "Cannot create directory as path: " + parentPath + " does not exist");
@@ -321,13 +318,9 @@ public class FilePanelContainer extends VBox {
             boolean absolute = (boolean)resolvedPath[1];
 
             FTPConnection connection = filePanel.getFileSystem().getFTPConnection();
-            String parentPath = new File(path).getParent(); // even though this isn't a local file we can still use getParent to get the parent i.e. the path without the last /....
-            boolean existsAsDir = true;
-            if (parentPath != null) {
-                existsAsDir = connection.remotePathExists(parentPath, true);
-            } else {
-                parentPath = "/";
-            }
+            String parentPath = UI.getParentPath(path);
+
+            boolean existsAsDir = connection.remotePathExists(parentPath, true);
 
             if (!existsAsDir) {
                 UI.doError("Directory does not exist", "Cannot create directory as path: " + parentPath + " does not exist");
