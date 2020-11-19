@@ -351,7 +351,7 @@ public class FilePanel extends VBox {
 
         if (remote && directory instanceof LocalFile) {
             throw new IllegalArgumentException("This is a Remote FilePanel. Directory passed in must be an instance of RemoteFile");
-        } else if (local && directory instanceof LocalFile) {
+        } else if (local && directory instanceof RemoteFile) {
             throw new IllegalArgumentException("This is a Local FilePanel. Directory passed in must be an instance of LocalFile");
         }
     }
