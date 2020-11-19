@@ -45,7 +45,6 @@ import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Calendar;
 
 /**
  * This is an abstract class representing a line entry on the panel.
@@ -67,10 +66,6 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
      */
     private static final int FILE_NAME_LENGTH = 20;
     /**
-     * The pane containing the image and name
-     */
-    private final HBox imageNamePanel = new HBox();
-    /**
      * The filePanel this LineEntry is a part of
      */
     @Getter
@@ -88,11 +83,15 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     protected LineEntry(String imageURL, CommonFile file, FilePanel owningPanel) throws FTPRemotePathNotFoundException, LocalPathNotFoundException, FileSystemException {
         setSpacing(30);
         setStyle(UI.WHITE_BACKGROUND);
+        /**
+         * The pane containing the image and name
+         */
+        HBox imageNamePanel = new HBox();
         imageNamePanel.setSpacing(30);
         image = new ImageView();
         image.setFitWidth(UI.FILE_ICON_SIZE);
         image.setFitHeight(UI.FILE_ICON_SIZE);
-        image.setImage(new Image(ClassLoader.getSystemResourceAsStream(imageURL)));
+        image.setImage(new Image(imageURL));
         this.file = file;
         imageNamePanel.getChildren().add(image);
 

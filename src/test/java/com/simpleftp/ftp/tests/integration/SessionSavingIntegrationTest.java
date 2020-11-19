@@ -112,7 +112,7 @@ public class SessionSavingIntegrationTest {
     }
 
     @Test
-    void shouldLoadFTPSessionFileSuccessfully() throws SessionLoadException, XMLStreamException {
+    void shouldLoadFTPSessionFileSuccessfully() throws SessionLoadException, XMLStreamException, SessionLoadException {
         FTPSessionFile file = getFTPSessionFile();
         assertDoesNotThrow(() -> {
             sessionSaver.initialiseWriter(file);
@@ -127,7 +127,7 @@ public class SessionSavingIntegrationTest {
     }
 
     @Test
-    void shouldThrowIfFTPSessionFileThrowsException() throws XMLStreamException {
+    void shouldThrowIfFTPSessionFileThrowsException() throws XMLStreamException, SessionLoadException {
         doThrow(XMLStreamException.class).when(streamReader2).hasNext();
 
         assertDoesNotThrow(() -> {

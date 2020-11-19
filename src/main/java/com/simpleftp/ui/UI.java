@@ -27,11 +27,9 @@ import com.simpleftp.ui.panels.FilePanel;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.geometry.Insets;
-import javafx.scene.control.Alert;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;

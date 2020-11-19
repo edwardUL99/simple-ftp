@@ -26,11 +26,24 @@ import com.simpleftp.sessions.exceptions.SessionLoadException;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import org.codehaus.stax2.XMLStreamReader2;
+import org.xml.sax.ErrorHandler;
+import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
 
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.events.XMLEvent;
+import javax.xml.transform.sax.SAXSource;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.validation.Schema;
+import javax.xml.validation.SchemaFactory;
+import javax.xml.validation.Validator;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * This class loads in saved sessions from a specified xml file
@@ -46,11 +59,12 @@ public class SessionLoader {
      * @param fileName the name of the file to read
      * @throws XMLStreamException if an error occurs
      */
-    public void initialiseReader(String fileName) throws XMLStreamException {
+    public void initialiseReader(String fileName) throws XMLStreamException, SessionLoadException {
         WstxInputFactory inputFactory = new WstxInputFactory();
         inputFactory.configureForXmlConformance();
         reader = inputFactory.createXMLStreamReader(new File(fileName));
         currentFile = fileName;
+        validate(fileName);
     }
 
     /**
@@ -59,6 +73,47 @@ public class SessionLoader {
      */
     public void setReader(XMLStreamReader2 streamReader2) {
         this.reader = streamReader2;
+    }
+
+    /**
+     * Validates the XML file before loading it in
+     * @param fileName the filename to load in
+     */
+    private void validate(String fileName) throws SessionLoadException {
+        String xsdFileName = "ftp_session.xsd"; // XSD is in the jar file
+        SchemaFactory schemaFactory = SchemaFactory.newInstance(javax.xml.XMLConstants.W3C_XML_SCHEMA_NS_URI);
+        try {
+            Schema schema = schemaFactory.newSchema(ClassLoader.getSystemResource(xsdFileName));
+            Validator validator = schema.newValidator();
+            AtomicBoolean validated = new AtomicBoolean(true);
+            AtomicReference<String> message = new AtomicReference<>();
+            validator.setErrorHandler(new ErrorHandler() {
+                @Override
+                public void warning(SAXParseException exception) {
+                    System.out.println(exception.getMessage());
+                }
+
+                @Override
+                public void error(SAXParseException exception) {
+                    validated.set(false);
+                    message.set(exception.getMessage());
+                }
+
+                @Override
+                public void fatalError(SAXParseException exception) {
+                    validated.set(false);
+                    message.set(exception.getMessage());
+                }
+            });
+
+            validator.validate(new StreamSource(new File(fileName)));
+
+            if (!validated.get()) {
+                throw new SessionLoadException("XML File " + fileName + " not valid with error: " + message.get());
+            }
+        } catch (SAXException | IOException e) {
+            throw new SessionLoadException("An error occurred validating " + fileName);
+        }
     }
 
     private boolean isText(String text) {

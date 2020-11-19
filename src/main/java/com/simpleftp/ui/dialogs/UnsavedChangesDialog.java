@@ -48,12 +48,6 @@ public class UnsavedChangesDialog extends Alert {
     public boolean showAndGetConfirmation() {
         Optional<ButtonType> result = showAndWait();
 
-        return result.map(e -> {
-            if (e.getText().equals("Don't save")) {
-                return false;
-            } else {
-                return true;
-            }
-        }).orElse(false);
+        return result.map(e -> !e.getText().equals("Don't save")).orElse(false);
     }
 }

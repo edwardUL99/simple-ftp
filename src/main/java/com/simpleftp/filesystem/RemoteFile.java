@@ -124,6 +124,15 @@ public class RemoteFile implements CommonFile {
 
         if (name.equals(".") || name.equals("..")) {
             String parentPath = UI.getParentPath(absolutePath);
+            if (new File(absolutePath).getParent() == null) {
+                // we're at root
+                FTPFile root = new FTPFile();
+                root.setName(absolutePath);
+                root.setSize(4096); // default directory size
+
+                return root;
+            }
+
             FTPFile[] files = connection.listFiles(parentPath);
 
             FTPFile result = Arrays.stream(files).filter(f -> f.getName().equals(getName()))
@@ -188,7 +197,7 @@ public class RemoteFile implements CommonFile {
     @Override
     public boolean isADirectory() throws FileSystemException {
         if (ftpFile.isValid()) {
-            return ftpFile.isDirectory();
+            return ftpFile.isDirectory() || absolutePath.equals("/"); // root is always a directory
         } else {
             try {
                 return connection.remotePathExists(absolutePath, true); // always explicitly check for remote path as ftpFile may be "." if the file is the same name as current directory
@@ -206,7 +215,7 @@ public class RemoteFile implements CommonFile {
     @Override
     public boolean isNormalFile() throws FileSystemException {
         if (ftpFile.isValid()) {
-            return ftpFile.isFile();
+            return ftpFile.isFile() && !absolutePath.equals("/"); // root is always a directory
         } else {
             try {
                 return connection.remotePathExists(absolutePath, false); // always explicitly check for remote path as ftpFile may be "." if the file is the same name as current directory

@@ -144,19 +144,22 @@ public class LocalFileSystem implements FileSystem {
     public CommonFile[] listFiles(String dir) {
         File file = new File(dir);
 
-        if (!file.isDirectory()) {
-            return null;
-        } else {
+        if (file.isDirectory()) {
             File[] files = file.listFiles();
-            LocalFile[] localFiles = new LocalFile[files.length];
 
-            int i = 0;
-            for (File f : files) {
-                localFiles[i++] = new LocalFile(f.getAbsolutePath());
+            if (files != null) {
+                LocalFile[] localFiles = new LocalFile[files.length];
+
+                int i = 0;
+                for (File f : files) {
+                    localFiles[i++] = new LocalFile(f.getAbsolutePath());
+                }
+
+                return localFiles;
             }
 
-            return localFiles;
         }
+        return null;
     }
 
     /**

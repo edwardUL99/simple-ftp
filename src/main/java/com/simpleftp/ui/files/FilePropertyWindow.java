@@ -44,11 +44,6 @@ public class FilePropertyWindow extends VBox {
     private HBox namePanel;
 
     /**
-     * The properties panel containing all the properties and toggles (to change size unit)
-     */
-    private PropertiesPanel propertiesPanel;
-
-    /**
      * Max length for path before abbreviating
      */
     private static final int MAX_PATH_LENGTH = 25;
@@ -71,7 +66,10 @@ public class FilePropertyWindow extends VBox {
         initNamePanel();
         Separator separator = new Separator();
         separator.setOrientation(Orientation.HORIZONTAL);
-        propertiesPanel = new PropertiesPanel(this);
+        /**
+         * The properties panel containing all the properties and toggles (to change size unit)
+         */
+        PropertiesPanel propertiesPanel = new PropertiesPanel(this);
 
         getChildren().addAll(namePanel, separator, propertiesPanel);
     }

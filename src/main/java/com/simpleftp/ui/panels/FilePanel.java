@@ -48,14 +48,10 @@ import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import lombok.Getter;
-import org.apache.commons.net.ftp.FTP;
-import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 
 /*
@@ -63,7 +59,9 @@ The conditions for determining if an exception or error dialog show up may have 
  */
 
 /**
- * Represents a panel of files. Can be used for local or remote directories
+ * Represents a panel of files. Can be used for local or remote directories.
+ * To create a Local FilePanel, pass in an instance of LocalFile to the constructor.
+ * To create a Remote FilePanel, pass in an instance of RemoteFile to the constructor.
  */
 public class FilePanel extends VBox {
     /**
@@ -343,11 +341,31 @@ public class FilePanel extends VBox {
     }
 
     /**
+     * Checks the directory passed in to see if the type matches the current directory
+     * @param directory the directory to check
+     * @throws IllegalArgumentException if the type of directory is different to the type of the current one
+     */
+    private void checkFileType(CommonFile directory) throws IllegalArgumentException {
+        boolean remote = this.directory instanceof RemoteFile;
+        boolean local = this.directory instanceof LocalFile;
+
+        if (remote && directory instanceof LocalFile) {
+            throw new IllegalArgumentException("This is a Remote FilePanel. Directory passed in must be an instance of RemoteFile");
+        } else if (local && directory instanceof LocalFile) {
+            throw new IllegalArgumentException("This is a Local FilePanel. Directory passed in must be an instance of LocalFile");
+        }
+    }
+
+    /**
      * Changes directory. Refresh should be called after this action
      * @param directory the directory to change to, local, or remote
      * @throws FileSystemException if the directory is not a directory
+     * @throws IllegalArgumentException if type of the directory is different to the type that was initially passed in.
+     *              You're not allowed pass in RemoteFile to constructor and then suddenly set directory to a LocalFile
      */
-    public void setDirectory(CommonFile directory) throws FileSystemException {
+    public void setDirectory(CommonFile directory) throws FileSystemException, IllegalArgumentException {
+        checkFileType(directory);
+
         if (directory.isADirectory()) {
             this.directory = directory;
 
@@ -920,10 +938,6 @@ class FileStringDownloader extends Service<String> {
                 downloaded.delete();
 
                 return ret;
-            } catch (FileSystemException ex) {
-                Platform.runLater(() -> UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled()));
-                exceptionOccurred = true;
-                return null;
             } catch (Exception ex) {
                 Platform.runLater(() -> UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled()));
                 exceptionOccurred = true;

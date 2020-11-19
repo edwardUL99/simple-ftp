@@ -340,9 +340,8 @@ public class FilePanelContainer extends VBox {
                     if (!connection.remotePathExists(path, false)) {
                         String fileName = new File(path).getName();
                         LocalFile localFile = new LocalFile(UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + fileName);
-                        localFile.createNewFile();
 
-                        if (connection.uploadFile(localFile, parentPath) != null) {
+                        if (localFile.createNewFile() && connection.uploadFile(localFile, parentPath) != null) {
                             UI.doInfo("File Created", "The file: " + path + " has been created successfully");
                         } else {
                             String reply = connection.getReplyString();

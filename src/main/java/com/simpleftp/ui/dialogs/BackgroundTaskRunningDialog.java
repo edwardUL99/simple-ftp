@@ -48,12 +48,6 @@ public class BackgroundTaskRunningDialog extends Alert {
     public boolean showAndGetConfirmation() {
         Optional<ButtonType> result = showAndWait();
 
-        return result.map(e -> {
-            if (e.getText().equals("No")) {
-                return false;
-            } else {
-                return true;
-            }
-        }).orElse(false);
+        return result.map(e -> !e.getText().equals("No")).orElse(false);
     }
 }

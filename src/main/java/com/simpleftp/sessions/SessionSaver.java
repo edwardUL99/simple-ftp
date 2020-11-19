@@ -52,7 +52,8 @@ public class SessionSaver {
         currentFile = file;
         WstxOutputFactory outputFactory = new WstxOutputFactory();
         outputFactory.configureForSpeed();
-        File outFile = new File(file.getFileName());
+        String fileName = file.getFileName();
+        File outFile = new File(fileName);
         outFile.createNewFile();
         writer = outputFactory.createXMLStreamWriter(new FileOutputStream(outFile));
     }
