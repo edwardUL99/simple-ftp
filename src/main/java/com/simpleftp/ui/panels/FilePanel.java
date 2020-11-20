@@ -304,6 +304,17 @@ public class FilePanel extends VBox {
     }
 
     /**
+     * Attempts to change to the remote parent directory. If not symbolic link this is connection.changeToParentDirectory, if symbolic, it is the parent folder containing symbolic link
+     * @throws FTPException if an exception occurs
+     */
+    private void changeToRemoteParent() throws FileSystemException {
+        String parentPath = UI.getParentPath(directory.getFilePath()); // the directory's path should be the current one
+        RemoteFile parentFile = new RemoteFile(parentPath);
+        setDirectory(parentFile);
+        refresh();
+    }
+
+    /**
      * Controls going up to parent directory
      */
     public void up() {
@@ -319,27 +330,10 @@ public class FilePanel extends VBox {
                     }
                 }
             } else {
-                RemoteFile remoteFile;
-                FTPConnection connection = fileSystem.getFTPConnection();
-                if (connection != null) {
-                    try {
-                        if (!connection.getWorkingDirectory().equals("/")) { // you are not at root, so go up
-                            boolean changed = connection.changeToParentDirectory();
-                            if (changed) {
-                                String currentWorkingDirectory = connection.getWorkingDirectory();
-                                remoteFile = new RemoteFile(currentWorkingDirectory);
-                                setDirectory(remoteFile);
-                                refresh();
-                            }
-                        }
-                    } catch (FTPException ex) {
-                        UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-                    }
-                }
+                changeToRemoteParent();
             }
-
         } catch (FileSystemException ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
+            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
     }
 
@@ -357,6 +351,16 @@ public class FilePanel extends VBox {
         } else if (local && directory instanceof RemoteFile) {
             throw new IllegalArgumentException("This is a Local FilePanel. Directory passed in must be an instance of LocalFile");
         }
+    }
+
+    /**
+     * Checks if the file represents a symbolic link and throws IllegalArgumentException if not
+     * @param symbolicLink the file to check for being a link
+     * @throws IllegalArgumentException if it is not a symbolic link
+     */
+    private void checkSymbolicLink(CommonFile symbolicLink) throws IllegalArgumentException {
+        if (!UI.isFileSymbolicLink(symbolicLink))
+            throw new IllegalArgumentException("The file provided is not a symbolic link");
     }
 
     /**
@@ -386,15 +390,65 @@ public class FilePanel extends VBox {
                         UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
                     }
                 }
-
-                FTPFile ftpFile = ((RemoteFile)directory).getFtpFile();
-                if (ftpFile.isSymbolicLink())
-                    path = ftpFile.getLink();
             }
 
             setCurrDirText(path);
         } else {
             throw new FileSystemException("The directory for a FilePanel must be in fact a directory, not a file");
+        }
+    }
+
+    /**
+     * Gets the target of the directory symbolic link. It is assumed you have already checked if the file is a symbolic link before calling this method
+     * @param directory the directory to get target of
+     * @return the target of the symbolic link
+     * @throws IOException if directory is a local file and the directory provided is not a symbolic link
+     */
+    private String getSymLinkTargetPath(CommonFile directory) throws IOException {
+        String path;
+        String currentFilePath = this.directory.getFilePath();
+        if (directory instanceof LocalFile) {
+            if (currentFilePath.equals(UI.PATH_SEPARATOR))
+                currentFilePath = ""; // don't add on 2 separators
+            if (currentFilePath.endsWith(UI.PATH_SEPARATOR))
+                currentFilePath = currentFilePath.substring(0, currentFilePath.length() - 1);
+            String target = Files.readSymbolicLink(((LocalFile)directory).toPath()).toString();
+            if (target.startsWith("/")) {
+                target = target.substring(1);
+            }
+            path = currentFilePath + UI.PATH_SEPARATOR + target;
+        } else {
+            if (currentFilePath.equals("/"))
+                currentFilePath = ""; //don't add on two //
+            if (currentFilePath.endsWith("/"))
+                currentFilePath = currentFilePath.substring(0, currentFilePath.length() - 1);
+            String target = ((RemoteFile)directory).getFtpFile().getLink();
+            if (target.startsWith("/")) {
+                target = target.substring(1);
+            }
+            path = currentFilePath + "/" + target;
+        }
+
+        return path;
+    }
+
+    /**
+     * This method is for changing to a directory that is a symbolic link and indicates to follow it to the destination.
+     * setDirectory called on symbolic link follows it symbolically, represents it as a folder of the parent
+     * @param directory the directory to change to
+     * @throws FileSystemException if an error occurs
+     * @throws IllegalArgumentException if the directory is not in fact a directory and is not a symbolic link
+     */
+    public void setDirectorySymbolicLink(CommonFile directory) throws FileSystemException, IllegalArgumentException {
+        checkFileType(directory);
+        checkSymbolicLink(directory);
+
+        try {
+            CommonFile targetFile = fileSystem.getFile(getSymLinkTargetPath(directory));
+            setDirectory(targetFile);
+            refresh();
+        } catch (IOException ex) {
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); // treat this as an exception dialog because this shouldn't happen
         }
     }
 
@@ -690,59 +744,14 @@ public class FilePanel extends VBox {
     }
 
     /**
-     * Checks the file if it is a common link and warns that pressing up after following will take you to parent of where link points to, not current directory
-     * @param file the file to check
-     * @return true if user confirms that they want to do this
-     */
-    private boolean checkDirectoryForSymbolicLink(final CommonFile file) {
-        boolean symbolic;
-
-        String destination = "";
-        if (file instanceof LocalFile) {
-            LocalFile localFile = (LocalFile)file;
-            Path path = localFile.toPath();
-            symbolic = Files.isSymbolicLink(path);
-
-            if (symbolic) {
-                try {
-                    destination = Files.readSymbolicLink(path).toString();
-                } catch (IOException ex) {
-                    UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-                }
-            }
-        } else {
-            RemoteFile remoteFile = (RemoteFile)file;
-            FTPFile ftpFile = remoteFile.getFtpFile();
-            symbolic = ftpFile.isSymbolicLink();
-
-            if (symbolic)
-                destination = ftpFile.getLink();
-        }
-
-        if (symbolic) {
-            return UI.doConfirmation("Symbolic Link", "You are about to open a symbolic link to " + destination + ". After opening, " +
-                    "clicking Up will bring you to the parent of the link destination, not this directory. Do you want to continue?");
-        }
-
-        return true; // we always want to open if normal
-    }
-
-    /**
      * Handles double click of the specified directory entry
      * @param lineEntry the directory entry to double click
      */
     private void doubleClickDirectoryEntry(final DirectoryLineEntry lineEntry) {
         try {
             CommonFile file = lineEntry.getFile();
-            boolean openDir = true;
-            
-            if (file instanceof RemoteFile)
-                openDir = checkDirectoryForSymbolicLink(file); // on linux, symbolic links are followed perfectly, parent of symbolic link is the cwd, so no need of warning
-            
-            if (openDir) {
-                setDirectory(file);
-                refresh();
-            }
+            setDirectory(file);
+            refresh();
         } catch (FileSystemException ex) {
             UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
         }

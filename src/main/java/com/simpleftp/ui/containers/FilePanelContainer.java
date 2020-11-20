@@ -87,6 +87,10 @@ public class FilePanelContainer extends VBox {
      */
     private Button maskButton;
     /**
+     * A button to take you to symbolic link destination. Should be the last button on the toolbar
+     */
+    private Button symLinkDestButton;
+    /**
      * The combobox displaying the base names of files displayed in the FilePanel
      */
     private ComboBox<String> comboBox;
@@ -112,7 +116,7 @@ public class FilePanelContainer extends VBox {
         setFilePanel(filePanel);
         initButtons();
 
-        toolBar.getChildren().addAll(new Label("Files: "), comboBox, delete, open, gotoButton, hideHiddenFiles, createButton, maskButton);
+        toolBar.getChildren().addAll(new Label("Files: "), comboBox, delete, open, gotoButton, hideHiddenFiles, createButton, maskButton, symLinkDestButton);
         setKeyBindings();
     }
 
@@ -127,6 +131,8 @@ public class FilePanelContainer extends VBox {
             }
         });
         comboBox.setPrefWidth(UI.PANEL_CONTAINER_COMBO_WIDTH);
+        comboBox.setOnAction(e -> checkComboBoxValue());
+        comboBox.setTooltip(new Tooltip("Currently Selected File"));
     }
 
     /**
@@ -170,6 +176,19 @@ public class FilePanelContainer extends VBox {
         maskButton.setMnemonicParsing(true);
         maskButton.setText("File _Mask");
         initMaskButton();
+
+        initSymLinkButton();
+    }
+
+    /**
+     * Initialises the symbolic link button
+     */
+    private void initSymLinkButton() {
+        symLinkDestButton = new Button("Go to Target");
+        symLinkDestButton.setTooltip(new Tooltip("The selected file is a symbolic link. Click this to go the directory it points to"));
+        symLinkDestButton.setOnAction(e -> goToSymLinkTarget());
+        symLinkDestButton.managedProperty().bind(symLinkDestButton.visibleProperty()); // if hidden, re-arrange toolbar. But for best effects, keep the button as the last button so ToolBar doesn't keep chopping and changing
+        symLinkDestButton.setVisible(false);
     }
 
     /**
@@ -252,6 +271,42 @@ public class FilePanelContainer extends VBox {
                }
             }
         });
+    }
+
+    /**
+     * Goes to the target of a symbolic link
+     */
+    private void goToSymLinkTarget() {
+        LineEntry lineEntry = getLineEntryFromComboBox(); // the line entry in question
+        if (lineEntry != null) {
+            try {
+                filePanel.setDirectorySymbolicLink(lineEntry.getFile());
+            } catch (Exception ex) {
+                UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+            }
+        }
+    }
+
+    /**
+     * This method checks the current value of the combo box for a certain property. At the moment, it just checks for symbolic link directory
+     */
+    private void checkComboBoxValue() {
+        LineEntry lineEntry = getLineEntryFromComboBox(); // the line entry in question
+        if (lineEntry != null) {
+            CommonFile file = lineEntry.getFile();
+
+            try {
+                if (UI.isFileSymbolicLink(file) && file.isADirectory()) {
+                    symLinkDestButton.setVisible(true);
+                } else {
+                    symLinkDestButton.setVisible(false);
+                }
+            } catch (FileSystemException ex) {
+                UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+            }
+        } else {
+            symLinkDestButton.setVisible(false);
+        }
     }
 
     /**
@@ -601,6 +656,7 @@ public class FilePanelContainer extends VBox {
 
         if (comboBox.getItems().contains(name)) {
             comboBox.setValue(name);
+            checkComboBoxValue();
         }
     }
 }

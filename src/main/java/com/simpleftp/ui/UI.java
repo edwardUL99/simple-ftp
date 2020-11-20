@@ -17,6 +17,8 @@
 
 package com.simpleftp.ui;
 
+import com.simpleftp.filesystem.LocalFile;
+import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.exceptions.*;
@@ -30,6 +32,7 @@ import javafx.geometry.Insets;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -417,5 +420,23 @@ public final class UI {
         parentPath = parentPath == null ? ((windowsParent = System.getProperty("SystemDrive")) != null ? windowsParent:"/"):parentPath; // if windows, find the root
 
         return parentPath;
+    }
+
+    /**
+     * The UI supports symbolic links. It regularly needs to check if a CommonFile is a symbolic link.
+     * This method provides one place to check this
+     * @param file the file to check
+     * @return true if symbolic link, false if not
+     */
+    public static boolean isFileSymbolicLink(CommonFile file) {
+        boolean symbolic;
+
+        if (file instanceof LocalFile) {
+            symbolic = Files.isSymbolicLink(((LocalFile)file).toPath());
+        } else {
+            symbolic = ((RemoteFile)file).getFtpFile().isSymbolicLink();
+        }
+
+        return symbolic;
     }
 }

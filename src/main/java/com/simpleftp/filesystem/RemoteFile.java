@@ -200,10 +200,7 @@ public class RemoteFile implements CommonFile {
             return ftpFile.isDirectory() || absolutePath.equals("/"); // root is always a directory
         } else {
             try {
-                if (ftpFile.isSymbolicLink())                                       // make sure the link isn't broken
-                    return connection.remotePathExists(absolutePath, true) && connection.remotePathExists(ftpFile.getLink()); // always explicitly check for remote path as ftpFile may be "." if the file is the same name as current directory
-                else
-                    return connection.remotePathExists(absolutePath, true);
+                return connection.remotePathExists(absolutePath, true);
             } catch (FTPException ex) {
                 throw new FileSystemException("A FTP Exception occurred, it could not be determined if this file is a directory", ex);
             }
