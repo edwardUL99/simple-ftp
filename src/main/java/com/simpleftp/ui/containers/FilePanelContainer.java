@@ -29,6 +29,7 @@ import com.simpleftp.ui.UI;
 import com.simpleftp.ui.files.FileLineEntry;
 import com.simpleftp.ui.panels.FilePanel;
 import com.simpleftp.ui.files.LineEntry;
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -324,6 +325,9 @@ public class FilePanelContainer extends VBox {
             // shouldn't happen but log in case
             log.warn("Unexpected exception occurred", ex);
             absolute = new File(path).isAbsolute();
+        } catch (IOException ex) {
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); //this could keep happening, so show exception dialog
+            absolute = new File(path).isAbsolute();
         }
 
         String parentPath = UI.getParentPath(path);
@@ -463,31 +467,30 @@ public class FilePanelContainer extends VBox {
      * @return an array where position 0 = path, position 1 = boolean (true if absolute, false if relative)
      * @throws FTPException if local is false and a FTP exception occurs
      */
-    private Object[] pathToAbsolute(String path, boolean local) throws FTPException {
+    public Object[] pathToAbsolute(String path, boolean local) throws FTPException, IOException {
         Object[] retArr = new Object[2];
         if (local) {
             LocalFile file = new LocalFile(path);
-            if (!file.isAbsolute()) {
-                String pwd = filePanel.getDirectory().getFilePath();
-                String fileSeparator = System.getProperty("file.separator");
-                if (!pwd.equals(fileSeparator)) {
-                    path = pwd + fileSeparator + path;
-                } else {
-                    path = pwd + path;
-                }
+            if (!file.isAbsolute() || path.contains(".")) {
+                path = file.getCanonicalPath();
                 retArr[1] = false;
             } else {
                 retArr[1] = true;
             }
         } else {
-            if (!path.startsWith("/")) {
+            if (!path.startsWith("/") || path.contains(".")) {
                 FTPConnection connection = filePanel.getFileSystem().getFTPConnection();
                 // a relative path
-                String pwd = connection.getWorkingDirectory();
-                if (!pwd.equals("/")) {
-                    path = pwd + "/" + path;
+                if (path.startsWith(".") || path.startsWith("..")) {
+                    connection.changeWorkingDirectory(path); // allow the connection to resolve the . or .. by physically following the links
+                    path = connection.getWorkingDirectory();
                 } else {
-                    path = pwd + path;
+                    String pwd = connection.getWorkingDirectory();
+                    if (!pwd.equals("/")) {
+                        path = pwd + "/" + path;
+                    } else {
+                        path = pwd + path;
+                    }
                 }
 
                 retArr[1] = false;
@@ -506,17 +509,21 @@ public class FilePanelContainer extends VBox {
      * @param path the path to go to
      */
     private void goToLocalPath(String path) throws FileSystemException, FTPException {
-        path = (String)pathToAbsolute(path, true)[0];
+        try {
+            path = (String) pathToAbsolute(path, true)[0];
 
-        LocalFile file = new LocalFile(new File(path).getAbsoluteFile().getPath());
+            LocalFile file = new LocalFile(new File(path).getAbsoluteFile().getPath());
 
-        if (file.exists() && file.isDirectory()) {
-            filePanel.setDirectory(file);
-            filePanel.refresh();
-        } else if (file.exists()) {
-            filePanel.openLineEntry(new FileLineEntry(file, filePanel));
-        } else {
-            UI.doError("Path does not exist", "The path: " + path + " does not exist");
+            if (file.exists() && file.isDirectory()) {
+                filePanel.setDirectory(file);
+                filePanel.refresh();
+            } else if (file.exists()) {
+                filePanel.openLineEntry(new FileLineEntry(file, filePanel));
+            } else {
+                UI.doError("Path does not exist", "The path: " + path + " does not exist");
+            }
+        } catch (IOException ex) {
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); // if it fails here, it'll keep failing, show exception
         }
     }
 
@@ -542,6 +549,8 @@ public class FilePanelContainer extends VBox {
             }
         } catch (FTPException ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+        } catch (IOException ex) {
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); // show exception dialog as this shouldn't happen for remote file
         }
     }
 

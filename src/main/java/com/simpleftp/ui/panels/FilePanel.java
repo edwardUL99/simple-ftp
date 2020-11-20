@@ -406,27 +406,18 @@ public class FilePanel extends VBox {
      */
     private String getSymLinkTargetPath(CommonFile directory) throws IOException {
         String path;
-        String currentFilePath = this.directory.getFilePath();
         if (directory instanceof LocalFile) {
-            if (currentFilePath.equals(UI.PATH_SEPARATOR))
-                currentFilePath = ""; // don't add on 2 separators
-            if (currentFilePath.endsWith(UI.PATH_SEPARATOR))
-                currentFilePath = currentFilePath.substring(0, currentFilePath.length() - 1);
-            String target = Files.readSymbolicLink(((LocalFile)directory).toPath()).toString();
-            if (target.startsWith("/")) {
-                target = target.substring(1);
+            path = Files.readSymbolicLink(((LocalFile)directory).toPath()).toString();
+            if (path.startsWith(".") || path.startsWith("..")) {
+                String currentPath = this.directory.getFilePath();
+                if (currentPath.equals(UI.PATH_SEPARATOR))
+                    currentPath = "";
+                else if (currentPath.endsWith(UI.PATH_SEPARATOR))
+                    currentPath = currentPath.substring(0, currentPath.length() - 1);
+                path = currentPath + UI.PATH_SEPARATOR + path;
             }
-            path = currentFilePath + UI.PATH_SEPARATOR + target;
         } else {
-            if (currentFilePath.equals("/"))
-                currentFilePath = ""; //don't add on two //
-            if (currentFilePath.endsWith("/"))
-                currentFilePath = currentFilePath.substring(0, currentFilePath.length() - 1);
-            String target = ((RemoteFile)directory).getFtpFile().getLink();
-            if (target.startsWith("/")) {
-                target = target.substring(1);
-            }
-            path = currentFilePath + "/" + target;
+            path = ((RemoteFile)directory).getFtpFile().getLink();
         }
 
         return path;
@@ -444,11 +435,15 @@ public class FilePanel extends VBox {
         checkSymbolicLink(directory);
 
         try {
-            CommonFile targetFile = fileSystem.getFile(getSymLinkTargetPath(directory));
+            String path = getSymLinkTargetPath(directory);
+            path = (String)parentContainer.pathToAbsolute(path, directory instanceof LocalFile)[0];
+            CommonFile targetFile = fileSystem.getFile(path);
             setDirectory(targetFile);
             refresh();
         } catch (IOException ex) {
             UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); // treat this as an exception dialog because this shouldn't happen
+        } catch (FTPException ex) {
+            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
     }
 
