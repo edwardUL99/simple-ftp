@@ -48,7 +48,6 @@ import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import lombok.Getter;
-import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.*;
 import java.nio.file.Files;

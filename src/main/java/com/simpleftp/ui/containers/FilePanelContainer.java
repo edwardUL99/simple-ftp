@@ -29,7 +29,6 @@ import com.simpleftp.ui.UI;
 import com.simpleftp.ui.files.FileLineEntry;
 import com.simpleftp.ui.panels.FilePanel;
 import com.simpleftp.ui.files.LineEntry;
-import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
