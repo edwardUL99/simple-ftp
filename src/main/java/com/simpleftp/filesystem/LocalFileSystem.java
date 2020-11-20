@@ -91,7 +91,8 @@ public class LocalFileSystem implements FileSystem {
             throw new FileSystemException("Cannot download a file to the LocalFileSystem that already exists locally, the mapping is Remote File to Local File System");
 
         try {
-            return ftpConnection.downloadFile(file.getFilePath(), path).exists();
+            File downloaded = ftpConnection.downloadFile(file.getFilePath(), path);
+            return downloaded != null && downloaded.exists();
         } catch (FTPException ex) {
             throw new FileSystemException("A FTPException occurred when adding the specified file to the local file system", ex);
         }

@@ -178,7 +178,7 @@ public class RemoteFile implements CommonFile {
     @Override
     public boolean exists() throws FileSystemException {
         if (ftpFile.isValid()) {
-            return ftpFile.isDirectory() || ftpFile.isFile();
+            return ftpFile.isDirectory() || ftpFile.isFile() || ftpFile.isSymbolicLink();
         } else {
             try {
                 String path = absolutePath;
@@ -196,11 +196,14 @@ public class RemoteFile implements CommonFile {
      */
     @Override
     public boolean isADirectory() throws FileSystemException {
-        if (ftpFile.isValid()) {
+        if (ftpFile.isValid() && !ftpFile.isSymbolicLink()) {
             return ftpFile.isDirectory() || absolutePath.equals("/"); // root is always a directory
         } else {
             try {
-                return connection.remotePathExists(absolutePath, true); // always explicitly check for remote path as ftpFile may be "." if the file is the same name as current directory
+                if (ftpFile.isSymbolicLink())                                       // make sure the link isn't broken
+                    return connection.remotePathExists(absolutePath, true) && connection.remotePathExists(ftpFile.getLink()); // always explicitly check for remote path as ftpFile may be "." if the file is the same name as current directory
+                else
+                    return connection.remotePathExists(absolutePath, true);
             } catch (FTPException ex) {
                 throw new FileSystemException("A FTP Exception occurred, it could not be determined if this file is a directory", ex);
             }
@@ -214,11 +217,14 @@ public class RemoteFile implements CommonFile {
      */
     @Override
     public boolean isNormalFile() throws FileSystemException {
-        if (ftpFile.isValid()) {
+        if (ftpFile.isValid() && !ftpFile.isSymbolicLink()) {
             return ftpFile.isFile() && !absolutePath.equals("/"); // root is always a directory
         } else {
             try {
-                return connection.remotePathExists(absolutePath, false); // always explicitly check for remote path as ftpFile may be "." if the file is the same name as current directory
+                if (ftpFile.isSymbolicLink())                                       // make sure the link isn't broken
+                    return connection.remotePathExists(absolutePath, false) && connection.remotePathExists(ftpFile.getLink()); // always explicitly check for remote path as ftpFile may be "." if the file is the same name as current directory
+                else
+                    return connection.remotePathExists(absolutePath, false);
             } catch (FTPException ex) {
                 throw new FileSystemException("A FTP Exception occurred, it could not be determined if this file is a normal file", ex);
             }

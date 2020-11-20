@@ -48,8 +48,11 @@ import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import lombok.Getter;
+import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.function.Predicate;
@@ -368,6 +371,7 @@ public class FilePanel extends VBox {
 
         if (directory.isADirectory()) {
             this.directory = directory;
+            String path = directory.getFilePath();
 
             if (directory instanceof RemoteFile) {
                 FTPConnection connection = fileSystem.getFTPConnection();
@@ -382,9 +386,13 @@ public class FilePanel extends VBox {
                         UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
                     }
                 }
+
+                FTPFile ftpFile = ((RemoteFile)directory).getFtpFile();
+                if (ftpFile.isSymbolicLink())
+                    path = ftpFile.getLink();
             }
 
-            setCurrDirText(directory.getFilePath());
+            setCurrDirText(path);
         } else {
             throw new FileSystemException("The directory for a FilePanel must be in fact a directory, not a file");
         }
@@ -456,7 +464,10 @@ public class FilePanel extends VBox {
                         boolean showFile = showFile(file, e -> showHiddenFiles || !file1.isHidden());
 
                         if (showFile) {
-                            lineEntries.add(createLineEntry(file1));
+                            LineEntry constructed = createLineEntry(file1);
+
+                            if (constructed != null)
+                                lineEntries.add(constructed);
                         }
                     } catch (FTPRemotePathNotFoundException | LocalPathNotFoundException ex) {
                         UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
@@ -487,7 +498,10 @@ public class FilePanel extends VBox {
                 });
 
                 if (showFile) {
-                    lineEntries.add(createLineEntry(f));
+                    LineEntry constructed = createLineEntry(f);
+
+                    if (constructed != null)
+                        lineEntries.add(constructed);
                 }
             }
         } catch (FTPException | FileSystemException ex) {
@@ -585,8 +599,10 @@ public class FilePanel extends VBox {
         LineEntry lineEntry;
         if (file.isNormalFile()) {
             lineEntry = new FileLineEntry(file, this);
-        } else {
+        } else if (file.isADirectory()) {
             lineEntry = new DirectoryLineEntry(file, this);
+        } else {
+            return null;
         }
 
         ContextMenu contextMenu = new ContextMenu();
@@ -674,13 +690,59 @@ public class FilePanel extends VBox {
     }
 
     /**
+     * Checks the file if it is a common link and warns that pressing up after following will take you to parent of where link points to, not current directory
+     * @param file the file to check
+     * @return true if user confirms that they want to do this
+     */
+    private boolean checkDirectoryForSymbolicLink(final CommonFile file) {
+        boolean symbolic;
+
+        String destination = "";
+        if (file instanceof LocalFile) {
+            LocalFile localFile = (LocalFile)file;
+            Path path = localFile.toPath();
+            symbolic = Files.isSymbolicLink(path);
+
+            if (symbolic) {
+                try {
+                    destination = Files.readSymbolicLink(path).toString();
+                } catch (IOException ex) {
+                    UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+                }
+            }
+        } else {
+            RemoteFile remoteFile = (RemoteFile)file;
+            FTPFile ftpFile = remoteFile.getFtpFile();
+            symbolic = ftpFile.isSymbolicLink();
+
+            if (symbolic)
+                destination = ftpFile.getLink();
+        }
+
+        if (symbolic) {
+            return UI.doConfirmation("Symbolic Link", "You are about to open a symbolic link to " + destination + ". After opening, " +
+                    "clicking Up will bring you to the parent of the link destination, not this directory. Do you want to continue?");
+        }
+
+        return true; // we always want to open if normal
+    }
+
+    /**
      * Handles double click of the specified directory entry
      * @param lineEntry the directory entry to double click
      */
     private void doubleClickDirectoryEntry(final DirectoryLineEntry lineEntry) {
         try {
-            setDirectory(lineEntry.getFile());
-            refresh();
+            CommonFile file = lineEntry.getFile();
+            boolean openDir = true;
+            
+            if (file instanceof RemoteFile)
+                openDir = checkDirectoryForSymbolicLink(file); // on linux, symbolic links are followed perfectly, parent of symbolic link is the cwd, so no need of warning
+            
+            if (openDir) {
+                setDirectory(file);
+                refresh();
+            }
         } catch (FileSystemException ex) {
             UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
         }

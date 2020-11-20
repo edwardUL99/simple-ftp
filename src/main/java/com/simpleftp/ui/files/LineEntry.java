@@ -219,8 +219,16 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         if (file instanceof LocalFile) {
             LocalFile localFile = (LocalFile)file;
 
-            if (!localFile.exists() && !Files.isSymbolicLink(localFile.toPath())) {
+            if (!localFile.exists()) {
                 throw new LocalPathNotFoundException("The file no longer exists", localFile.getFilePath());
+            }
+
+            if (Files.isSymbolicLink(localFile.toPath())) {
+                permissions += "l";
+            } else if (localFile.isADirectory()) {
+                permissions += "d";
+            } else {
+                permissions += "-";
             }
 
             if (localFile.canRead()) {
@@ -248,7 +256,9 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
                 } else {
                     FTPFile file = remoteFile.getFtpFile();
 
-                    if (file.isDirectory()) {
+                    if (file.isSymbolicLink()) {
+                        permissions += "l";
+                    } else if (file.isDirectory()) {
                         permissions += "d";
                     } else {
                         permissions += "-";
