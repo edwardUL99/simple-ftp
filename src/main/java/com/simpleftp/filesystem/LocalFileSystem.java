@@ -71,12 +71,8 @@ public class LocalFileSystem implements FileSystem {
             throw new FileSystemException("Could not configure the FTP Server this File system is supposed to connect to, did you set the System properties ftp-server ftp-user ftp-pass and ftp-port?");
     }
 
-    public LocalFileSystem(FTPConnection connection) throws FileSystemException {
-        if (!connection.isConnected() && !connection.isLoggedIn()) {
-            throw new FileSystemException("The provided connection must be connected and logged in");
-        } else {
-            ftpConnection = connection;
-        }
+    public LocalFileSystem(FTPConnection connection) {
+        ftpConnection = connection;
     }
 
     /**

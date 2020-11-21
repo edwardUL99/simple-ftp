@@ -29,6 +29,7 @@ import com.simpleftp.ui.panels.FilePanel;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.geometry.Insets;
+import org.apache.tika.Tika;
 
 import java.io.File;
 import java.io.IOException;
@@ -438,5 +439,30 @@ public final class UI {
         }
 
         return symbolic;
+    }
+
+    /**
+     * Attempts to get the type of the specified file
+     * @param file the file to query
+     * @return the file type
+     */
+    private static String getFileType(LocalFile file) throws IOException {
+        Tika tika = new Tika();
+        return tika.detect(file);
+    }
+
+    /**
+     * Attempts to determine if the specified file can be opened in an editor
+     * @param file the file to check
+     * @return true if the file can be opened (txt or xml), false if not or can't be determined
+     */
+    public static boolean canOpenFile(LocalFile file) {
+        try {
+            String type = getFileType(file);
+
+            return type.contains("xml") || type.contains("text") || file.length() == 0;
+        } catch (IOException ex) {
+            return false;
+        }
     }
 }

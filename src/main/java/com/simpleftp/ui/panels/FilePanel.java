@@ -51,7 +51,6 @@ import lombok.Getter;
 
 import java.io.*;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.function.Predicate;
@@ -917,7 +916,7 @@ class FileStringDownloader extends Service<String> {
      */
     private FTPConnection readingConnection;
     private FilePanel creatingPanel;
-    private boolean exceptionOccurred;
+    private boolean errorOccurred;
 
     /**
      * Creates a FileStringDownloader object
@@ -941,11 +940,11 @@ class FileStringDownloader extends Service<String> {
      */
     void getFileString() {
         setOnSucceeded(e -> {
-            if (!exceptionOccurred) {
+            if (!errorOccurred) {
                 String contents = (String) e.getSource().getValue();
                 Platform.runLater(() -> UI.showFileEditor(creatingPanel, file, contents));
-                UI.removeBackgroundTask(this);
             }
+            UI.removeBackgroundTask(this);
         });
         UI.addBackgroundTask(this);
         start();
@@ -982,16 +981,24 @@ class FileStringDownloader extends Service<String> {
 
         if (file instanceof LocalFile) {
             LocalFile localFile = (LocalFile)file;
-            BufferedReader reader = new BufferedReader(new FileReader(localFile));
 
-            String line;
-            try {
-                while ((line = reader.readLine()) != null) {
-                    str.append(line).append("\n");
+            if (UI.canOpenFile(localFile)) {
+                BufferedReader reader = new BufferedReader(new FileReader(localFile));
+
+                String line;
+                try {
+                    while ((line = reader.readLine()) != null) {
+                        str.append(line).append("\n");
+                    }
+                } catch (IOException ex) {
+                    Platform.runLater(() -> UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled()));
+                    errorOccurred = true;
                 }
-            } catch (IOException ex) {
-                Platform.runLater(() -> UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled()));
-                exceptionOccurred = true;
+            } else {
+                errorOccurred = true;
+                Platform.runLater(() -> UI.doError("File Unsupported", "The file " + file.getName() + " is not a supported file type"));
+
+                return null;
             }
         } else {
             try {
@@ -1005,7 +1012,7 @@ class FileStringDownloader extends Service<String> {
                 return ret;
             } catch (Exception ex) {
                 Platform.runLater(() -> UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled()));
-                exceptionOccurred = true;
+                errorOccurred = true;
                 return null;
             }
         }

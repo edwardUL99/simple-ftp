@@ -185,7 +185,7 @@ public class FilePanelContainer extends VBox {
      */
     private void initSymLinkButton() {
         symLinkDestButton = new Button("Go to Target");
-        symLinkDestButton.setTooltip(new Tooltip("The selected file is a symbolic link. Click this to go the directory it points to"));
+        symLinkDestButton.setTooltip(new Tooltip("The selected directory is a symbolic link. Click to go directly to the directory it points to"));
         symLinkDestButton.setOnAction(e -> goToSymLinkTarget());
         symLinkDestButton.managedProperty().bind(symLinkDestButton.visibleProperty()); // if hidden, re-arrange toolbar. But for best effects, keep the button as the last button so ToolBar doesn't keep chopping and changing
         symLinkDestButton.setVisible(false);
@@ -268,6 +268,8 @@ public class FilePanelContainer extends VBox {
                     UI.doQuit();
                } else if (keyCode == KeyCode.UP || keyCode == KeyCode.DOWN) {
                    comboBox.requestFocus();
+               } else if (keyCode == KeyCode.DELETE) {
+                   delete();
                }
             }
         });
@@ -371,7 +373,7 @@ public class FilePanelContainer extends VBox {
      */
     private void createRemoteFile(String path, boolean directory) {
         try {
-            Object[] resolvedPath = pathToAbsolute(path, true);
+            Object[] resolvedPath = pathToAbsolute(path, false);
             path = (String)resolvedPath[0];
             boolean absolute = (boolean)resolvedPath[1];
 
@@ -415,8 +417,9 @@ public class FilePanelContainer extends VBox {
                     }
                 }
 
-                boolean parentPathMatchesPanelsPath = filePanel.getDirectory().getFilePath().equals(parentPath);
-                if (!absolute && parentPathMatchesPanelsPath) {
+                CommonFile file = filePanel.getDirectory();
+                boolean parentPathMatchesPanelsPath = file.getFilePath().equals(parentPath);
+                if (!absolute && (parentPathMatchesPanelsPath || UI.isFileSymbolicLink(file))) {
                     filePanel.refresh(); // only need to refresh if the path was relative (as the directory would be created in the current folder) or if absolute and the prent path doesnt match current path. The path identified by the absolute will be refreshed when its navigated to
                 } else if (parentPathMatchesPanelsPath) {
                     filePanel.refresh();
@@ -460,6 +463,79 @@ public class FilePanelContainer extends VBox {
     }
 
     /**
+     * Adds the present working directory to the start of the path
+     * @param path the path to prepend to
+     * @param local true if this is for a local path, false if remote
+     * @return full path
+     */
+    private String addPwdToPath(String path, boolean local) {
+        String separator = local ? UI.PATH_SEPARATOR:"/";
+        String currentPath = filePanel.getDirectory().getFilePath();
+        if (currentPath.endsWith(separator))
+            path = currentPath + path;
+        else {
+            path = currentPath + separator + path;
+        }
+
+        return path;
+    }
+
+    /**
+     * Checks if the remote path already exists
+     * @param path the path to check
+     * @return true if already exists, false if not
+     * @throws FTPException if a FTP error occurs
+     */
+    private boolean remPathAlreadyExists(String path) throws FTPException {
+        return filePanel.getFileSystem()
+                .getFTPConnection()
+                .remotePathExists(path);
+    }
+
+    /**
+     * Converts the remote path to an canonical version. It is assumed the path is not canonical before hand.
+     * @param path the path to convert
+     * @return the absolute path version of path
+     * @throws FTPException if any FTPConnection methods throw an exception
+     */
+    private String absoluteRemotePathToCanonical(String path) throws FTPException {
+        FTPConnection connection = filePanel.getFileSystem().getFTPConnection();
+        String fileName = new File(path).getName();
+        path = addPwdToPath(path, false);
+        String workingDir = UI.getParentPath(path); // the working directory to change to
+        boolean alreadyExists = remPathAlreadyExists(path);
+        boolean existsAsFile = false;
+        if (alreadyExists) { // if it doesn't exist we always want workingDir to be the parent of the file identified by path so that the file is created in that directory
+            existsAsFile = connection.remotePathExists(path, false);
+            workingDir = existsAsFile ? workingDir:path; // already exists, so we are going to a file/directory. If file, change to parent directory and append file name after
+        }
+        String oldWorkingDir = connection.getWorkingDirectory();
+        connection.changeWorkingDirectory(workingDir); // allow the connection to resolve the . or .. by physically following the links
+        path = connection.getWorkingDirectory();
+        connection.changeWorkingDirectory(oldWorkingDir); // change back
+        if ((!fileName.equals(".") && !fileName.equals("..")) || (alreadyExists && existsAsFile)) {
+            if (path.endsWith("/")) {
+                path += fileName;
+            } else {
+                path += "/" + fileName;
+            }
+        }
+
+        return path;
+    }
+
+    /**
+     * Checks if the path is canonical, i.e. doesn't contain any .. or . (excluding . in file extensions
+     * @param path the path to check
+     * @return true if canonical, false if not
+     */
+    private boolean isPathCanonical(String path) {
+        return !path.contains("/..") && !path.contains("../")
+                && !path.contains("/.") && !path.contains("./")
+                && !path.equals("..") && !path.equals(".");
+    }
+
+    /**
      * Converts a path to an absolute one. If already absolute, it is returned as is
      * @param path the path to make absolute
      * @param local true if a local path, false if remote
@@ -470,19 +546,22 @@ public class FilePanelContainer extends VBox {
         Object[] retArr = new Object[2];
         if (local) {
             LocalFile file = new LocalFile(path);
-            if (!file.isAbsolute() || path.contains(".")) {
+            if (!file.isAbsolute() || !isPathCanonical(path)) {
+                path = addPwdToPath(path, true);
+                file = new LocalFile(path);
                 path = file.getCanonicalPath();
                 retArr[1] = false;
             } else {
                 retArr[1] = true;
             }
         } else {
-            if (!path.startsWith("/") || path.contains(".")) {
+            boolean canonical = isPathCanonical(path);
+            boolean absolute = path.startsWith("/");
+            if (!absolute || !canonical) {
                 FTPConnection connection = filePanel.getFileSystem().getFTPConnection();
                 // a relative path
-                if (path.startsWith(".") || path.startsWith("..")) {
-                    connection.changeWorkingDirectory(path); // allow the connection to resolve the . or .. by physically following the links
-                    path = connection.getWorkingDirectory();
+                if (!canonical) {
+                    path = absoluteRemotePathToCanonical(path);
                 } else {
                     String pwd = connection.getWorkingDirectory();
                     if (!pwd.equals("/")) {
