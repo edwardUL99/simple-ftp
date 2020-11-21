@@ -434,7 +434,7 @@ public class FilePanel extends VBox {
 
         try {
             String path = getSymLinkTargetPath(directory);
-            path = (String)parentContainer.pathToAbsolute(path, directory instanceof LocalFile)[0];
+            path = (String)parentContainer.pathToAbsolute(path, directory instanceof LocalFile, true)[0];
             CommonFile targetFile = fileSystem.getFile(path);
             setDirectory(targetFile);
             refresh();
