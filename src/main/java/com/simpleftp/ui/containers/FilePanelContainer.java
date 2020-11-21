@@ -489,7 +489,8 @@ public class FilePanelContainer extends VBox {
     private boolean remPathAlreadyExists(String path) throws FTPException {
         return filePanel.getFileSystem()
                 .getFTPConnection()
-                .remotePathExists(path);
+                .remotePathExists(path)
+                && !(path.endsWith("/.") || path.endsWith("/./"));
     }
 
     /**
@@ -509,7 +510,7 @@ public class FilePanelContainer extends VBox {
             existsAsFile = connection.remotePathExists(path, false);
             workingDir = existsAsFile ? workingDir:path; // already exists, so we are going to a file/directory. If file, change to parent directory and append file name after
         }
-        String oldWorkingDir = connection.getWorkingDirectory();
+        String oldWorkingDir = filePanel.getDirectory().getFilePath();
         connection.changeWorkingDirectory(workingDir); // allow the connection to resolve the . or .. by physically following the links
         path = connection.getWorkingDirectory();
         connection.changeWorkingDirectory(oldWorkingDir); // change back
@@ -555,15 +556,16 @@ public class FilePanelContainer extends VBox {
                 retArr[1] = true;
             }
         } else {
+            if (path.startsWith("./"))
+                path = path.substring(2); // if it starts with ./, remove it and make the method look at this as a file starting in pwd
             boolean canonical = isPathCanonical(path);
             boolean absolute = path.startsWith("/");
             if (!absolute || !canonical) {
-                FTPConnection connection = filePanel.getFileSystem().getFTPConnection();
                 // a relative path
                 if (!canonical) {
                     path = absoluteRemotePathToCanonical(path);
                 } else {
-                    String pwd = connection.getWorkingDirectory();
+                    String pwd = filePanel.getDirectory().getFilePath();
                     if (!pwd.equals("/")) {
                         path = pwd + "/" + path;
                     } else {
