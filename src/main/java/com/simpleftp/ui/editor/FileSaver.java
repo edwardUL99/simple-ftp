@@ -157,40 +157,76 @@ class FileUploader extends Service<Void> {
     /**
      * Writes the backup version (i.e. renames the filePath to filePath~. If filePath~ already exists, it is removed as some servers overwrite, others throw an error. If any failure occurs here, it returns false and saving should abort
      * @param filePath the filePath to backup
-     * @return true if backed up successfully. If this returns false, you should abort saving
+     * @return backup path if backed up successfully. If this returns null, you should abort saving
      */
-    private boolean writeLocalBackup(String filePath) {
+    private String writeLocalBackup(String filePath) {
         File file = new File(filePath);
         if (file.exists()) {
-            String backupPath = filePath + "~";
+            String backupPath = getBackupPath(filePath, true);
             File backup = new File(backupPath);
             try {
-                return backup.createNewFile();
+                if (backup.exists()) {
+                    if (!backup.delete())
+                        return null;
+                }
+
+                if (backup.createNewFile()) {
+                    return backupPath;
+                } else {
+                    return null;
+                }
             } catch (IOException e) {
-                return false;
+                return null;
             }
         }
 
-        return false;
+        return filePath; // if it's been deleted, no need to make backup, just save it
+    }
+
+    /**
+     * Gets the backup path
+     * @param filePath the path to backup
+     * @param local true if local, false if remote
+     * @return backup path
+     */
+    private String getBackupPath(String filePath, boolean local) {
+        String pathSeparator = local ? UI.PATH_SEPARATOR:"/";
+        String backupPath;
+        if (filePath.endsWith(pathSeparator)) {
+            backupPath = filePath.substring(0, filePath.length() - 1);
+            backupPath = backupPath + "~" + pathSeparator;
+        } else {
+            backupPath = filePath + "~";
+        }
+
+        return backupPath;
     }
 
     /**
      * Writes the backup version (i.e. renames the filePath to filePath~. If filePath~ already exists, it is removed as some servers overwrite, others throw an error. If any failure occurs here, it returns false and saving should abort
      * @param filePath the filePath to backup
      * @param uploadingConnection the connection being used to upload the file
-     * @return true if backed up successfully. If this returns false, you should abort saving
+     * @return the written backup path, null if an error occurs
      */
-    private boolean writeRemoteBackup(String filePath, FTPConnection uploadingConnection) {
+    private String writeRemoteBackup(String filePath, FTPConnection uploadingConnection) {
         try {
-            String backupPath = filePath + "~";
-            if (uploadingConnection.remotePathExists(backupPath)) {
-                if (!uploadingConnection.removeFile(backupPath))
-                    return false; // return false as we haven't removed our backup.
+            if (uploadingConnection.remotePathExists(filePath)) {
+                String backupPath = getBackupPath(filePath, false);
+                if (uploadingConnection.remotePathExists(backupPath)) {
+                    if (!uploadingConnection.removeFile(backupPath))
+                        return null; // return false as we haven't removed our backup.
+                }
+
+                if (uploadingConnection.renameFile(filePath, backupPath)) {
+                    return backupPath;
+                } else {
+                    return null;
+                }
             }
 
-            return uploadingConnection.renameFile(filePath, backupPath);
+            return filePath; // act like it has been backed-up but no need to create backup if it has been deleted before saving
         } catch (FTPException ex) {
-            return false;
+            return null;
         }
     }
 
@@ -216,9 +252,10 @@ class FileUploader extends Service<Void> {
                 fileSystem = new LocalFileSystem(uploadingConnection);
             }
 
-            boolean backupWritten = remoteFileSystem ? writeRemoteBackup(filePath, uploadingConnection):writeLocalBackup(filePath);
+            String backupPath = remoteFileSystem ? writeRemoteBackup(filePath, uploadingConnection):writeLocalBackup(filePath);
+            boolean backupWritten = backupPath != null;
+            boolean deleteBackup = new LocalFile(backupPath).getName().endsWith("~"); // the backup may not have had to be created, so if the backup path is just the file, don't delete it
 
-            String backupPath = filePath + "~";
             if (backupWritten) {
                 writeToFile(saveFilePath);
 
@@ -227,9 +264,12 @@ class FileUploader extends Service<Void> {
                     parent = parent == null ? "/" : parent;
                     fileSystem.addFile(new LocalFile(saveFilePath), parent);
                     file.delete();
-                    uploadingConnection.removeFile(backupPath); // after successful upload delete file
+
+                    if (uploadingConnection.remotePathExists(backupPath) && deleteBackup)
+                        uploadingConnection.removeFile(backupPath); // after successful upload delete file
                 } else {
-                    new File(backupPath).delete();
+                    if (deleteBackup)
+                        new File(backupPath).delete();
                 }
             } else {
                 Platform.runLater(() -> {

@@ -35,7 +35,7 @@ public class UnsavedChangesDialog extends Alert {
         super(AlertType.WARNING);
         setTitle("Save Dialog");
         setHeaderText("Unsaved Changes");
-        setContentText("THere are unsaved changes. Save or don't save?");
+        setContentText("There are unsaved changes. Save or don't save?");
         getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
         getButtonTypes().clear();
         getButtonTypes().addAll(new ButtonType("Don't save", ButtonBar.ButtonData.CANCEL_CLOSE), new ButtonType("Save", ButtonBar.ButtonData.FINISH));

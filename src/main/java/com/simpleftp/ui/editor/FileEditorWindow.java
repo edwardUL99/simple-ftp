@@ -19,6 +19,7 @@ package com.simpleftp.ui.editor;
 
 import com.simpleftp.FTPSystem;
 import com.simpleftp.filesystem.RemoteFile;
+import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.panels.FilePanel;
@@ -251,6 +252,19 @@ public class FileEditorWindow extends VBox {
     }
 
     /**
+     * Checks if the file still exists.
+     * @return true if exists, false if not or it couldn't be determined
+     */
+    private boolean checkFileStillExists() {
+        try {
+            return file.exists();
+        } catch (FileSystemException ex) {
+            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+            return false;
+        }
+    }
+
+    /**
      * Shows this FileEditorWindow
      */
     public void show() {
@@ -262,12 +276,22 @@ public class FileEditorWindow extends VBox {
             stage.show();
             editor.requestFocus();
             stage.setOnCloseRequest(e -> {
-                if (!saved) {
-                    if (UI.doUnsavedChanges()) {
-                        if (!save()) {
-                            e.consume(); // consume so you can view what happened
+                boolean stillExists = checkFileStillExists();
+                if (!saved || stillExists) {
+                    if (!saved) {
+                        if (!stillExists)
+                            UI.doError("File No Longer Exists", "The file may no longer exist, if you want to keep the file, press save in the next dialog", true);
+                        if (UI.doUnsavedChanges()) {
+                            if (!save()) {
+                                e.consume(); // consume so you can view what happened
+                            }
                         }
                     }
+                } else {
+                    UI.doError("File No Longer Exists", "File may no longer exist, go back and decide to save or just quit");
+                    setSave(false);
+                    e.consume();
+                    originalText = editor.getText(); // save the text that was there at the time, in case reset is pressed
                 }
             });
         } catch (Exception ex) {

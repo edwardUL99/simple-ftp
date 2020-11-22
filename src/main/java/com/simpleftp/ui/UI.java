@@ -259,8 +259,21 @@ public final class UI {
      * @param messageText the message text to display
      */
     public static void doError(String headerText, String messageText) {
+        doError(headerText, messageText, false);
+    }
+
+    /**
+     * Shows an error dialog with the header text and message text
+     * @param headerText the text for the header to display
+     * @param messageText the message text to display
+     * @param toFront true to show this dialog in front of others
+     */
+    public static void doError(String headerText, String messageText, boolean toFront) {
         ErrorDialog errorDialog = new ErrorDialog(headerText, messageText);
-        errorDialog.show();
+        if (toFront)
+            errorDialog.showAndWait();
+        else
+            errorDialog.show();
     }
 
     /**
