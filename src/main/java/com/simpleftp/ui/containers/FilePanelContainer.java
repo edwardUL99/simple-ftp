@@ -20,6 +20,7 @@ package com.simpleftp.ui.containers;
 import com.simpleftp.FTPSystem;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFile;
+import com.simpleftp.filesystem.paths.ResolvedPath;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.filesystem.interfaces.FileSystem;
@@ -318,17 +319,14 @@ public class FilePanelContainer extends VBox {
      */
     private void createLocalFile(String path, boolean directory) {
         boolean absolute;
+        String currentDirectory = filePanel.getCurrentWorkingDirectory();
         try {
-            Object[] resolvedPath = pathToAbsolute(path, true, false);
-            path = (String)resolvedPath[0];
-            absolute = (boolean)resolvedPath[1];
-        } catch (FTPException ex) {
-            // shouldn't happen but log in case
-            log.warn("Unexpected exception occurred", ex);
-            absolute = new File(path).isAbsolute();
+            ResolvedPath resolvedPath = UI.resolveLocalPath(path, currentDirectory);
+            path = resolvedPath.getResolvedPath();
+            absolute = resolvedPath.isPathAlreadyAbsolute();
         } catch (IOException ex) {
             UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); //this could keep happening, so show exception dialog
-            absolute = new File(path).isAbsolute();
+            return;
         }
 
         String parentPath = UI.getParentPath(path);
@@ -357,7 +355,7 @@ public class FilePanelContainer extends VBox {
                 }
             }
 
-            boolean parentPathMatchesPanelsPath = filePanel.getDirectory().getFilePath().equals(parentPath);
+            boolean parentPathMatchesPanelsPath = currentDirectory.equals(parentPath);
             if (!absolute && parentPathMatchesPanelsPath) {
                 filePanel.refresh(); // only need to refresh if the path was relative (as the directory would be created in the current folder) or if absolute and the prent path doesnt match current path. The path identified by the absolute will be refreshed when its navigated to
             } else if (parentPathMatchesPanelsPath) {
@@ -373,13 +371,15 @@ public class FilePanelContainer extends VBox {
      */
     private void createRemoteFile(String path, boolean directory) {
         try {
-            Object[] resolvedPath = pathToAbsolute(path, false, false);
-            path = (String) resolvedPath[0];
-            boolean absolute = (boolean) resolvedPath[1];
-
+            CommonFile file = filePanel.getDirectory();
+            String currentPath = file.getFilePath();
             FTPConnection connection = filePanel.getFileSystem().getFTPConnection();
-            String parentPath = UI.getParentPath(path);
 
+            ResolvedPath resolvedPath = UI.resolveRemotePath(path, currentPath, false, connection);
+            path = resolvedPath.getResolvedPath();
+            boolean absolute = resolvedPath.isPathAlreadyAbsolute();
+
+            String parentPath = UI.getParentPath(path);
             boolean existsAsDir = connection.remotePathExists(parentPath, true);
 
             if (!existsAsDir) {
@@ -400,6 +400,8 @@ public class FilePanelContainer extends VBox {
                     if (!connection.remotePathExists(path, false)) {
                         String fileName = new File(path).getName();
                         LocalFile localFile = new LocalFile(UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + fileName);
+                        if (localFile.exists())
+                            localFile.delete(); // it's in a temp directory, so can be deleted
 
                         if (localFile.createNewFile() && connection.uploadFile(localFile, parentPath) != null) {
                             UI.doInfo("File Created", "The file: " + path + " has been created successfully");
@@ -417,8 +419,7 @@ public class FilePanelContainer extends VBox {
                     }
                 }
 
-                CommonFile file = filePanel.getDirectory();
-                boolean parentPathMatchesPanelsPath = file.getFilePath().equals(parentPath);
+                boolean parentPathMatchesPanelsPath = currentPath.equals(parentPath);
                 if (!absolute && (parentPathMatchesPanelsPath || UI.isFileSymbolicLink(file))) {
                     filePanel.refresh(); // only need to refresh if the path was relative (as the directory would be created in the current folder) or if absolute and the prent path doesnt match current path. The path identified by the absolute will be refreshed when its navigated to
                 } else if (parentPathMatchesPanelsPath) {
@@ -463,123 +464,13 @@ public class FilePanelContainer extends VBox {
     }
 
     /**
-     * Adds the present working directory to the start of the path
-     * @param path the path to prepend to
-     * @param local true if this is for a local path, false if remote
-     * @return full path
-     */
-    private String addPwdToPath(String path, boolean local) {
-        String separator = local ? UI.PATH_SEPARATOR:"/";
-        String currentPath = filePanel.getDirectory().getFilePath();
-        if (currentPath.endsWith(separator))
-            path = currentPath + path;
-        else {
-            path = currentPath + separator + path;
-        }
-
-        return path;
-    }
-
-    /**
-     * Converts the remote path to an canonical version. It is assumed the path is not canonical before hand.
-     * @param path the path to convert
-     * @param pathExists true if this path should already exist (e.g. if it is a go to command) false, if the path is to be created
-     * @return the absolute path version of path
-     * @throws FTPException if any FTPConnection methods throw an exception
-     */
-    private String absoluteRemotePathToCanonical(String path, boolean pathExists) throws FTPException {
-        FTPConnection connection = filePanel.getFileSystem().getFTPConnection();
-        String fileName = new File(path).getName();
-        path = addPwdToPath(path, false);
-        boolean specialDirs = fileName.equals("..") || fileName.equals(".");
-        String workingDir = specialDirs ? path:UI.getParentPath(path); // the working directory to change to. If filename is .. or . they indicate directories
-        boolean appendFileName = !specialDirs; // by default, filename should always be appended if it is a creation, as you want to append the new file name onto the parent directory. If it is .. or ., we don't want to append
-        if (pathExists) { // if it doesn't exist we always want workingDir to be the parent of the file identified by path so that the file is created in that directory
-            appendFileName = connection.remotePathExists(path, false); // check if the file already exists as file, as if it is, we change to the parent directory and then append the file name after
-            workingDir = appendFileName ? workingDir:path; // already exists, so we are going to a file/directory. If file, change to parent directory and append file name after
-        }
-        String oldWorkingDir = filePanel.getDirectory().getFilePath();
-        connection.changeWorkingDirectory(workingDir); // allow the connection to resolve the . or .. by physically following the links
-        path = connection.getWorkingDirectory();
-        connection.changeWorkingDirectory(oldWorkingDir); // change back
-        if ((!fileName.equals(".") && !fileName.equals("..")) && appendFileName) {
-            if (path.endsWith("/")) {
-                path += fileName;
-            } else {
-                path += "/" + fileName;
-            }
-        }
-
-        return path;
-    }
-
-    /**
-     * Checks if the path is canonical, i.e. doesn't contain any .. or . (excluding . in file extensions
-     * @param path the path to check
-     * @return true if canonical, false if not
-     */
-    private boolean isPathCanonical(String path) {
-        return !path.contains("/..") && !path.contains("../")
-                && !path.contains("/.") && !path.contains("./")
-                && !path.equals("..") && !path.equals(".");
-    }
-
-    /**
-     * Converts a path to an absolute one. If already absolute, it is returned as is
-     * @param path the path to make absolute
-     * @param local true if a local path, false if remote
-     * @param pathExists true if the path should already exist, i.e a go to, false if the path is to be created. If local is true, this value if irrelevant
-     * @return an array where position 0 = path, position 1 = boolean (true if absolute, false if relative)
-     * @throws FTPException if local is false and a FTP exception occurs
-     */
-    public Object[] pathToAbsolute(String path, boolean local, boolean pathExists) throws FTPException, IOException {
-        Object[] retArr = new Object[2];
-        if (local) {
-            LocalFile file = new LocalFile(path);
-            if (!file.isAbsolute() || !isPathCanonical(path)) {
-                path = addPwdToPath(path, true);
-                file = new LocalFile(path);
-                path = file.getCanonicalPath();
-                retArr[1] = false;
-            } else {
-                retArr[1] = true;
-            }
-        } else {
-            if (path.startsWith("./"))
-                path = path.substring(2); // if it starts with ./, remove it and make the method look at this as a file starting in pwd
-            boolean canonical = isPathCanonical(path);
-            boolean absolute = path.startsWith("/");
-            if (!absolute || !canonical) {
-                // a relative path
-                if (!canonical) {
-                    path = absoluteRemotePathToCanonical(path, pathExists);
-                } else {
-                    String pwd = filePanel.getDirectory().getFilePath();
-                    if (!pwd.equals("/")) {
-                        path = pwd + "/" + path;
-                    } else {
-                        path = pwd + path;
-                    }
-                }
-
-                retArr[1] = false;
-            } else {
-                retArr[1] = true;
-            }
-        }
-
-        retArr[0] = path;
-
-        return retArr;
-    }
-
-    /**
      * Takes the given path and attempts to go the the location in the local file system identified by it.
      * @param path the path to go to
      */
     private void goToLocalPath(String path) throws FileSystemException, FTPException {
         try {
-            path = (String) pathToAbsolute(path, true, true)[0];
+            ResolvedPath resolvedPath = UI.resolveLocalPath(path, filePanel.getCurrentWorkingDirectory());
+            path = resolvedPath.getResolvedPath();
 
             LocalFile file = new LocalFile(new File(path).getAbsoluteFile().getPath());
 
@@ -605,7 +496,8 @@ public class FilePanelContainer extends VBox {
         FTPConnection connection = fileSystem.getFTPConnection();
 
         try {
-            path = (String)pathToAbsolute(path, false, true)[0];
+            ResolvedPath resolvedPath = UI.resolveRemotePath(path, filePanel.getCurrentWorkingDirectory(), true, fileSystem.getFTPConnection());
+            path = resolvedPath.getResolvedPath();
 
             if (connection.remotePathExists(path, true)) {
                 CommonFile file = fileSystem.getFile(path);
@@ -618,8 +510,6 @@ public class FilePanelContainer extends VBox {
             }
         } catch (FTPException ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-        } catch (IOException ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); // show exception dialog as this shouldn't happen for remote file
         }
     }
 

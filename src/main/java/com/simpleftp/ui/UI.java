@@ -18,9 +18,14 @@
 package com.simpleftp.ui;
 
 import com.simpleftp.filesystem.LocalFile;
+import com.simpleftp.filesystem.paths.PathResolverFactory;
 import com.simpleftp.filesystem.RemoteFile;
+import com.simpleftp.filesystem.paths.ResolvedPath;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
+import com.simpleftp.filesystem.exceptions.PathResolverException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
+import com.simpleftp.filesystem.paths.interfaces.PathResolver;
+import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.dialogs.*;
@@ -174,6 +179,11 @@ public final class UI {
      * List of background UI tasks running
      */
     private static ArrayList<Service<?>> backgroundTasks = new ArrayList<>();
+
+    /**
+     * Prevent instantiation
+     */
+    private UI() {}
 
     /**
      * This method handles the specified exception graphically, showing the ignore button
@@ -460,9 +470,45 @@ public final class UI {
         try {
             String type = getFileType(file);
 
-            return type.contains("xml") || type.contains("text") || file.length() == 0;
+            return type.contains("xml") || type.contains("text") || (type.contains("application") && !type.contains("octet-stream") && !type.contains("executable") && !type.contains("java-vm")) || file.length() == 0;
         } catch (IOException ex) {
             return false;
+        }
+    }
+
+    /**
+     * Resolves a local path
+     * @param localPath the path to resolve
+     * @param currWorkingDir the current working directory
+     * @return the resolved path
+     * @throws IOException if it fails to be resolved
+     */
+    public static ResolvedPath resolveLocalPath(String localPath, String currWorkingDir) throws IOException {
+        PathResolverFactory resolverFactory = PathResolverFactory.newInstance();
+        PathResolver pathResolver = resolverFactory.setLocal(currWorkingDir).build();
+        try {
+            return pathResolver.resolvePath(localPath);
+        } catch (PathResolverException ex) {
+            throw (IOException)ex.getWrappedException();
+        }
+    }
+
+    /**
+     * Resolves a remote path
+     * @param remotePath the path to resolve
+     * @param currWorkingDir the current working directory
+     * @param pathExists true if the path already exists (i.e. resolving a path to travel to), false if it is to be created
+     * @param connection the connection to resolve the path with. Expected to be non-null and connected and logged in
+     * @return the resolved path
+     * @throws FTPException if it fails to be resolved
+     */
+    public static ResolvedPath resolveRemotePath(String remotePath, String currWorkingDir, boolean pathExists, FTPConnection connection) throws FTPException {
+        PathResolverFactory resolverFactory = PathResolverFactory.newInstance();
+        PathResolver pathResolver = resolverFactory.setRemote(currWorkingDir, connection, pathExists).build();
+        try {
+            return pathResolver.resolvePath(remotePath);
+        } catch (PathResolverException ex) {
+            throw (FTPException)ex.getWrappedException();
         }
     }
 }
