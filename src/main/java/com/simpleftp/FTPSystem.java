@@ -43,6 +43,11 @@ public class FTPSystem {
     private static final boolean debug = System.getProperty("simpleftp.debug") != null;
 
     /**
+     * Prevent instantiation
+     */
+    private FTPSystem() {}
+
+    /**
      * Allows the connection manager for this FTPSystem to be used throughout different classes.
      * @param connectionManager the connection manager to set
      */

@@ -352,6 +352,14 @@ public class FilePanel extends VBox {
     }
 
     /**
+     * Returns the path of the current working directory
+     * @return the current working directory path
+     */
+    public String getCurrentWorkingDirectory() {
+        return directory.getFilePath();
+    }
+
+    /**
      * Checks if the file represents a symbolic link and throws IllegalArgumentException if not
      * @param symbolicLink the file to check for being a link
      * @throws IllegalArgumentException if it is not a symbolic link
@@ -434,7 +442,12 @@ public class FilePanel extends VBox {
 
         try {
             String path = getSymLinkTargetPath(directory);
-            path = (String)parentContainer.pathToAbsolute(path, directory instanceof LocalFile, true)[0];
+            String currWorkingDir = this.directory.getFilePath();
+            if (directory instanceof LocalFile) {
+                path = UI.resolveLocalPath(path, currWorkingDir).getResolvedPath();
+            } else {
+                path = UI.resolveRemotePath(path, currWorkingDir, true, this.fileSystem.getFTPConnection()).getResolvedPath();
+            }
             CommonFile targetFile = fileSystem.getFile(path);
             setDirectory(targetFile);
             refresh();
