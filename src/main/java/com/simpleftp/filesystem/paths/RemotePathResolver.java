@@ -111,10 +111,9 @@ public class RemotePathResolver implements PathResolver {
             isFile = connection.remotePathExists(path, false);
 
         String workingDir = isFile ? UI.getParentPath(path):path;
-        String oldWorkingDir = currWorkingDir;
         connection.changeWorkingDirectory(workingDir); // allow the connection to resolve the . or .. by physically following the links
         path = connection.getWorkingDirectory();
-        connection.changeWorkingDirectory(oldWorkingDir); // change back
+        connection.changeWorkingDirectory(currWorkingDir); // change back
         boolean appendFileName = false;
 
         if (!fileName.equals(".") && !fileName.equals("..")) {

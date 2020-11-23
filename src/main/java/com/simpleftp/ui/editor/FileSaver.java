@@ -274,7 +274,7 @@ class FileUploader extends Service<Void> {
             } else {
                 Platform.runLater(() -> {
                     editorWindow.setSave(false);
-                    UI.doError("Save Failed", "Failed to save file " + filePath + " as could not create backup " + backupPath);
+                    UI.doError("Save Failed", "Failed to save file " + filePath + " as could not create backup");
                 });
                 errorOccurred = true;
             }

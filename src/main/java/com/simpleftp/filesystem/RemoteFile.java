@@ -31,7 +31,6 @@ import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.File;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Properties;
 
 /**

@@ -30,7 +30,6 @@ import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.dialogs.*;
 import com.simpleftp.ui.editor.FileEditorWindow;
-import com.simpleftp.ui.files.LineEntry;
 import com.simpleftp.ui.panels.FilePanel;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
