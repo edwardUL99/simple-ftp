@@ -259,7 +259,7 @@ public class RemoteFile implements CommonFile {
         } else {
             RemoteFile remoteFile = (RemoteFile)obj;
 
-            return remoteFile.getFilePath().equals(remoteFile.getFilePath());
+            return this.getFilePath().equals(remoteFile.getFilePath());
         }
     }
 }

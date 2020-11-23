@@ -76,7 +76,7 @@ public class LocalFile extends File implements CommonFile {
         } else {
             LocalFile localFile = (LocalFile)obj;
 
-            return localFile.getFilePath().equals(localFile.getFilePath());
+            return this.getFilePath().equals(localFile.getFilePath());
         }
     }
 
