@@ -567,16 +567,22 @@ public class FilePanelContainer extends VBox {
      */
     public void delete() {
         LineEntry lineEntry = getLineEntryFromComboBox();
+        CommonFile file = lineEntry.getFile();
+        String fileName = file.getName();
 
-        if (lineEntry != null) {
-            if (UI.doConfirmation("Confirm file deletion", "Confirm deletion of " + lineEntry.getFile().getName())) {
-                if (filePanel.deleteEntry(lineEntry)) {
-                    UI.doInfo("File deleted successfully", "File " + lineEntry.getFile().getName() + " deleted");
-                    comboBox.getItems().remove(lineEntry.getFile().getName());
-                } else {
-                    UI.doError("File not deleted", "File " + lineEntry.getFile().getName() + " wasn't deleted. FTP Reply: " + filePanel.getFileSystem().getFTPConnection().getReplyString());
+        if (!UI.isFileOpened(file.getFilePath())) {
+            if (lineEntry != null) {
+                if (UI.doConfirmation("Confirm file deletion", "Confirm deletion of " + fileName)) {
+                    if (filePanel.deleteEntry(lineEntry)) {
+                        UI.doInfo("File deleted successfully", "File " + fileName + " deleted");
+                        comboBox.getItems().remove(fileName);
+                    } else {
+                        UI.doError("File not deleted", "File " + fileName + " wasn't deleted. FTP Reply: " + filePanel.getFileSystem().getFTPConnection().getReplyString());
+                    }
                 }
             }
+        } else {
+            UI.doError("File Open", "File " + fileName + " is currently opened, file can't be deleted");
         }
     }
 

@@ -31,6 +31,7 @@ import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Properties;
 
 /**
@@ -239,5 +240,26 @@ public class RemoteFile implements CommonFile {
         }
 
         return -1;
+    }
+
+
+    @Override
+    public int hashCode() {
+        return ftpFile.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof RemoteFile)) {
+            return false;
+        } else if (this == obj) {
+            return true;
+        } else if (this.hashCode() == obj.hashCode()) {
+            return true;
+        } else {
+            RemoteFile remoteFile = (RemoteFile)obj;
+
+            return remoteFile.getFilePath().equals(remoteFile.getFilePath());
+        }
     }
 }

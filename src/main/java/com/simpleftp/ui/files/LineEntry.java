@@ -41,13 +41,22 @@ import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.net.ftp.FTPFile;
 
+import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * This is an abstract class representing a line entry on the panel.
+ * FilePanel essentially displays a listing of the files in the current directory.
+ * Each file on the panel can be represented as an entry of the file listing.
+ * Since all the info for the file is laid out as a line by line basis on the panel, this class will be called a LineEntry
  * It can represent a Directory or File Line entry
  */
 @Log4j2
@@ -137,7 +146,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     }
 
     /**
-     * Retrieves the modification time and size of the file. Note that if ftpConnection.getModificationTime fails, the file.getTimestamp is used even if it is not very accurate
+     * Retrieves the modification time and size string of the file. Note that if ftpConnection.getModificationTime fails, the file.getTimestamp is used even if it is not very accurate
      * @return modification time or Cannot be determined
      * @throws FTPRemotePathNotFoundException if file is remote and cant be found
      * @throws LocalPathNotFoundException if file is local and cant be found
@@ -152,7 +161,8 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
                 throw new LocalPathNotFoundException("The file no longer exists", file.getFilePath());
             }
         } else {
-            FTPConnection connection = FTPSystem.getConnection();
+            FTPConnection connection = owningPanel.getFileSystem().getFTPConnection();
+            connection = connection == null ? FTPSystem.getConnection():connection;
             if (connection != null) {
                 try {
                     String filePath = file.getFilePath();
@@ -208,6 +218,184 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     }
 
     /**
+     * Checks if POSIX permissions are supported
+     * @return the permissions, null if posix permissions are not supported
+     */
+    private String resolvePosixPermissions() {
+        Path path = ((LocalFile)file).toPath();
+
+        if (path.getFileSystem().supportedFileAttributeViews().contains("posix")) {
+            try {
+                Set<PosixFilePermission> permissionsSet = Files.getPosixFilePermissions(path);
+                String[] permissionsStringArr= new String[9]; // first 3 indices, owner rwx, next 3, group, last 3 others
+                for (int i = 0; i < 9; i++)
+                    permissionsStringArr[i] = "-";
+
+                for (PosixFilePermission permission : permissionsSet) {
+                    switch (permission) {
+                        case OWNER_READ: permissionsStringArr[0] = "r"; break;
+                        case OWNER_WRITE: permissionsStringArr[1] = "w"; break;
+                        case OWNER_EXECUTE: permissionsStringArr[2] = "x"; break;
+                        case GROUP_READ: permissionsStringArr[3] = "r"; break;
+                        case GROUP_WRITE: permissionsStringArr[4] = "w"; break;
+                        case GROUP_EXECUTE: permissionsStringArr[5] = "x"; break;
+                        case OTHERS_READ: permissionsStringArr[6] = "r"; break;
+                        case OTHERS_WRITE: permissionsStringArr[7] = "w"; break;
+                        case OTHERS_EXECUTE: permissionsStringArr[8] = "x"; break;
+                    }
+                }
+
+                String permissions = "";
+
+                for (String s : permissionsStringArr)
+                    permissions += s;
+
+                return permissions;
+            } catch (IOException e) {
+                return null;
+            }
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Resolves permissions on systems that aren't posix standard. This can only return permissions for current user
+     * @return the permissions string
+     */
+    private String resolveNonPosixPermissions() {
+        LocalFile localFile = (LocalFile)file;
+        String permissions = "";
+
+        if (localFile.canRead()) {
+            permissions += "r";
+        } else {
+            permissions += "-";
+        }
+
+        if (localFile.canWrite()) {
+            permissions += "-w";
+        } else {
+            permissions += "--";
+        }
+
+        if (localFile.canExecute()) {
+            permissions += "-x";
+        } else {
+            permissions += "--";
+        }
+
+        return permissions;
+    }
+
+    /**
+     * Calculates the permissions for a local file
+     * @return the permissions
+     * @throws LocalPathNotFoundException if the file no longer exists
+     */
+    private String calculateLocalPermissions() throws LocalPathNotFoundException {
+        LocalFile localFile = (LocalFile)file;
+        if (!localFile.exists()) {
+            throw new LocalPathNotFoundException("The file no longer exists", localFile.getFilePath());
+        }
+
+        String permissions = resolvePosixPermissions();
+        if (permissions == null)
+            permissions = resolveNonPosixPermissions();
+
+        if (Files.isSymbolicLink(localFile.toPath())) {
+            permissions = "l" + permissions;
+        } else if (localFile.isDirectory()) {
+            permissions = "d" + permissions;
+        } else {
+            permissions = "-" + permissions;
+        }
+
+        return permissions;
+    }
+
+    /**
+     * Calculates the permissions for a remote file
+     * @return the permissions
+     * @throws FTPRemotePathNotFoundException if the file no longer exists
+     * @throws FileSystemException if an error occurs querying the file system
+     */
+    private String calculateRemotePermissions() throws FTPRemotePathNotFoundException, FileSystemException {
+        String permissions = "";
+        RemoteFile remoteFile = (RemoteFile)file;
+
+        if (!remoteFile.exists()) {
+            throw new FTPRemotePathNotFoundException("The file no longer exists", remoteFile.getFilePath());
+        } else {
+            FTPFile file = remoteFile.getFtpFile();
+
+            if (file.isSymbolicLink()) {
+                permissions += "l";
+            } else if (file.isDirectory()) {
+                permissions += "d";
+            } else {
+                permissions += "-";
+            }
+
+            if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.READ_PERMISSION)) {
+                permissions += "r";
+            } else {
+                permissions += "-";
+            }
+
+            if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.WRITE_PERMISSION)) {
+                permissions += "w";
+            } else {
+                permissions += "-";
+            }
+
+            if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
+                permissions += "x";
+            } else {
+                permissions += "-";
+            }
+
+            if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.READ_PERMISSION)) {
+                permissions += "r";
+            } else {
+                permissions += "-";
+            }
+
+            if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.WRITE_PERMISSION)) {
+                permissions += "w";
+            } else {
+                permissions += "-";
+            }
+
+            if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
+                permissions += "x";
+            } else {
+                permissions += "-";
+            }
+
+            if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.READ_PERMISSION)) {
+                permissions += "r";
+            } else {
+                permissions += "-";
+            }
+
+            if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.WRITE_PERMISSION)) {
+                permissions += "w";
+            } else {
+                permissions += "-";
+            }
+
+            if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
+                permissions += "x";
+            } else {
+                permissions += "-";
+            }
+        }
+
+        return permissions;
+    }
+
+    /**
      * Calculates the permissions for the file
      * @return permissions string for the file
      * @throws FTPRemotePathNotFoundException if a remote file and not found
@@ -217,107 +405,10 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         String permissions = "";
 
         if (file instanceof LocalFile) {
-            LocalFile localFile = (LocalFile)file;
-
-            if (!localFile.exists()) {
-                throw new LocalPathNotFoundException("The file no longer exists", localFile.getFilePath());
-            }
-
-            if (Files.isSymbolicLink(localFile.toPath())) {
-                permissions += "l";
-            } else if (localFile.isADirectory()) {
-                permissions += "d";
-            } else {
-                permissions += "-";
-            }
-
-            if (localFile.canRead()) {
-                permissions += "r";
-            } else {
-                permissions += "-";
-            }
-
-            if (localFile.canWrite()) {
-                permissions += "-w";
-            } else {
-                permissions += "--";
-            }
-
-            if (localFile.canExecute()) {
-                permissions += "-x";
-            } else {
-                permissions += "--";
-            }
+            permissions = calculateLocalPermissions();
         } else {
-            RemoteFile remoteFile = (RemoteFile)file;
             try {
-                if (!remoteFile.exists()) {
-                    throw new FTPRemotePathNotFoundException("The file no longer exists", remoteFile.getFilePath());
-                } else {
-                    FTPFile file = remoteFile.getFtpFile();
-
-                    if (file.isSymbolicLink()) {
-                        permissions += "l";
-                    } else if (file.isDirectory()) {
-                        permissions += "d";
-                    } else {
-                        permissions += "-";
-                    }
-
-                    if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.READ_PERMISSION)) {
-                        permissions += "r";
-                    } else {
-                        permissions += "-";
-                    }
-
-                    if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.WRITE_PERMISSION)) {
-                        permissions += "w";
-                    } else {
-                        permissions += "-";
-                    }
-
-                    if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
-                        permissions += "x";
-                    } else {
-                        permissions += "-";
-                    }
-
-                    if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.READ_PERMISSION)) {
-                        permissions += "r";
-                    } else {
-                        permissions += "-";
-                    }
-
-                    if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.WRITE_PERMISSION)) {
-                        permissions += "w";
-                    } else {
-                        permissions += "-";
-                    }
-
-                    if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
-                        permissions += "x";
-                    } else {
-                        permissions += "-";
-                    }
-
-                    if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.READ_PERMISSION)) {
-                        permissions += "r";
-                    } else {
-                        permissions += "-";
-                    }
-
-                    if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.WRITE_PERMISSION)) {
-                        permissions += "w";
-                    } else {
-                        permissions += "-";
-                    }
-
-                    if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
-                        permissions += "x";
-                    } else {
-                        permissions += "-";
-                    }
-                }
+                permissions = calculateRemotePermissions();
             } catch (FTPException ex) {
                 ex.printStackTrace();
                 if (ex instanceof FTPRemotePathNotFoundException) {
@@ -328,6 +419,15 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
 
         return permissions;
     }
+
+    /**
+     * Returns the file path this LineEntry is visually representing
+     * @return the file path this LineEntry represents
+     */
+    public String getFilePath() {
+        return file.getFilePath();
+    }
+
 
     @Override
     public int compareTo(LineEntry other) {

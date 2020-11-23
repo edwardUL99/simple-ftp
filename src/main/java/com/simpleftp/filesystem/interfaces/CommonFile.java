@@ -61,4 +61,17 @@ public interface CommonFile {
      * @return size in bytes of the file, -1 if could not be determined
      */
     long getSize() throws FileSystemException;
+
+    /**
+     * Returns the hashcode for this object
+     * @return the hash code
+     */
+    int hashCode();
+
+    /**
+     * Determines whether two CommonFiles are equal, either by hash code or path
+     * @param obj the object to compare to
+     * @return true if equals, false if not
+     */
+    boolean equals(Object obj);
 }
