@@ -43,6 +43,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * This class provides static util methods and constants for UI
@@ -178,7 +180,12 @@ public final class UI {
     /**
      * List of background UI tasks running
      */
-    private static ArrayList<Service<?>> backgroundTasks = new ArrayList<>();
+    private static final ArrayList<Service<?>> backgroundTasks = new ArrayList<>();
+
+    /**
+     * List of paths of opened files
+     */
+    private static final Set<String> openedFiles = new HashSet<>();
 
     /**
      * Prevent instantiation
@@ -523,5 +530,33 @@ public final class UI {
         } catch (PathResolverException ex) {
             throw (FTPException)ex.getWrappedException();
         }
+    }
+
+    /**
+     * "Opens" this file by adding its path to the list of opened files. A LineEntry represents a file with a path, so more efficient to just pass in it's path
+     * This method doesn't check if the file exists on the file system
+     * @param filePath the path of the file that has been opened in the UI. When opening a LineEntry, just call lineEntry.getFilePath to retrieve the path
+     */
+    public static void openFile(final String filePath) {
+        openedFiles.add(filePath);
+    }
+
+    /**
+     * "Closes" this file by removing its path from the list of opened files. A LineEntry represents a file with a path, so more efficient to just pass in it's path
+     * This method does not check if the path exists on the file system
+     * @param filePath the path of the file that has been opened in the UI. When opening a LineEntry, just call lineEntry.getFilePath to retrieve the path
+     */
+    public static void closeFile(final String filePath) {
+        openedFiles.remove(filePath);
+    }
+
+    /**
+     * Checks if the specified file is opened in the UI. A LineEntry represents a file with a path, so more efficient to just pass in it's path.
+     * Note that this method does not check if the path exists on the file system
+     * @param filePath the path of the file to check. When opening a LineEntry, just call lineEntry.getFilePath to retrieve the path
+     * @return true if the file has been opened in the UI, false otherwise
+     */
+    public static boolean isFileOpened(final String filePath) {
+        return openedFiles.contains(filePath);
     }
 }

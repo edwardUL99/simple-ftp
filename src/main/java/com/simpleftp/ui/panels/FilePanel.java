@@ -317,6 +317,7 @@ public class FilePanel extends VBox {
      */
     public void up() {
         try {
+            String filePath = directory.getFilePath();
             if (directory instanceof LocalFile) {
                 LocalFile localFile = (LocalFile) directory;
                 String parent = localFile.getParent();
@@ -330,6 +331,8 @@ public class FilePanel extends VBox {
             } else {
                 changeToRemoteParent();
             }
+
+            UI.closeFile(filePath);
         } catch (FileSystemException ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
@@ -642,10 +645,16 @@ public class FilePanel extends VBox {
      */
     private void renameLineEntry(final LineEntry lineEntry) {
         CommonFile file = lineEntry.getFile();
-        if (file instanceof LocalFile) {
-            renameLocalFile((LocalFile)file);
+        String filePath = file.getFilePath();
+
+        if (!UI.isFileOpened(filePath)) {
+            if (file instanceof LocalFile) {
+                renameLocalFile((LocalFile) file);
+            } else {
+                renameRemoteFile((RemoteFile) file);
+            }
         } else {
-            renameRemoteFile((RemoteFile)file);
+            UI.doError("File Open", "The file " + file.getName() + " is open, it cannot be renamed");
         }
     }
 
@@ -672,6 +681,8 @@ public class FilePanel extends VBox {
         menuItem2.setOnAction(e -> renameLineEntry(lineEntry));
         MenuItem menuItem3 = new MenuItem("Delete");
         menuItem3.setOnAction(e -> parentContainer.delete()); // right clicking this would have selected it in the container's combo box. So use containers delete method to display confirmation dialog
+                                                             // as a consequence, this method also checks if the file is open or not. If this call is to be changed to this.delete(), add the isOpen check and confirmation dialog to that method
+                                                            // this.delete doesn't remove the file from the combo box anyway (although refresh would get that)
         MenuItem menuItem4 = new MenuItem("Properties");
         menuItem4.setOnAction(e -> new FilePropertyWindow(lineEntry).show());
         contextMenu.getItems().addAll(menuItem1, menuItem2, menuItem3, menuItem4);
@@ -784,8 +795,9 @@ public class FilePanel extends VBox {
      * @param lineEntry the file entry to double click
      */
     private void doubleClickFileEntry(final FileLineEntry lineEntry) throws FTPException, FileSystemException {
-        if (checkFileSize(lineEntry.getFile())) {
-            FileStringDownloader fileStringDownloader = new FileStringDownloader(lineEntry.getFile(), fileSystem, this);
+        CommonFile file = lineEntry.getFile();
+        if (checkFileSize(file)) {
+            FileStringDownloader fileStringDownloader = new FileStringDownloader(file, fileSystem, this);
             fileStringDownloader.getFileString();
         }
     }
@@ -796,18 +808,25 @@ public class FilePanel extends VBox {
      */
     private void doubleClick(final LineEntry lineEntry) {
         try {
+            String filePath = lineEntry.getFilePath();
             if (entryStillExists(lineEntry)) {
-                if (lineEntry instanceof FileLineEntry) {
-                    try {
-                        doubleClickFileEntry((FileLineEntry) lineEntry);
-                    } catch (FTPException ex) {
-                        UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+                if (!UI.isFileOpened(filePath)) {
+                    if (lineEntry instanceof FileLineEntry) {
+                        try {
+                            doubleClickFileEntry((FileLineEntry) lineEntry);
+                            UI.openFile(filePath); // only open it if an error doesn't occur
+                        } catch (FTPException ex) {
+                            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+                        }
+                    } else {
+                        doubleClickDirectoryEntry((DirectoryLineEntry) lineEntry);
+                        UI.openFile(filePath);
                     }
                 } else {
-                    doubleClickDirectoryEntry((DirectoryLineEntry) lineEntry);
+                    UI.doInfo("File Open", "The file " + filePath + " is already opened");
                 }
             } else {
-                UI.doError("File not found", "The file " + lineEntry.getFile().getFilePath() + " does not exist...");
+                UI.doError("File not found", "The file " + filePath + " does not exist...");
             }
         } catch (FileSystemException ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
@@ -854,7 +873,7 @@ public class FilePanel extends VBox {
             }
         } else {
             try {
-                if (fileSystem.removeFile(lineEntry.getFile())) {
+                if (fileSystem.removeFile(file)) {
                     entriesBox.getChildren().remove(lineEntry);
                     lineEntries.remove(lineEntry);
 

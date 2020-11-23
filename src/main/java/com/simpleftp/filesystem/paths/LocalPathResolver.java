@@ -22,7 +22,6 @@ import com.simpleftp.filesystem.exceptions.PathResolverException;
 import com.simpleftp.filesystem.paths.interfaces.PathResolver;
 import com.simpleftp.ui.UI;
 
-import java.io.File;
 import java.io.IOException;
 
 /*

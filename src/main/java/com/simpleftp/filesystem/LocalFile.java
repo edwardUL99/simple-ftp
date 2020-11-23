@@ -54,6 +54,32 @@ public class LocalFile extends File implements CommonFile {
         return super.isFile();
     }
 
+    @Override
+    public int hashCode() {
+        return super.hashCode();
+    }
+
+    /**
+     * Determines whether two CommonFiles are equal, either by hash code or path
+     *
+     * @return true if equals, false if not
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof LocalFile))
+            return false;
+
+        if (this == obj) {
+            return true;
+        } else if (this.hashCode() == obj.hashCode()) {
+            return true;
+        } else {
+            LocalFile localFile = (LocalFile)obj;
+
+            return this.getFilePath().equals(localFile.getFilePath());
+        }
+    }
+
     /**
      * Returns the size in bytes of the file
      *

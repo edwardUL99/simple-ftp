@@ -293,6 +293,9 @@ public class FileEditorWindow extends VBox {
                     e.consume();
                     originalText = editor.getText(); // save the text that was there at the time, in case reset is pressed
                 }
+
+                if (!e.isConsumed())
+                    UI.closeFile(file.getFilePath());
             });
         } catch (Exception ex) {
             UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());

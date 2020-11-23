@@ -240,4 +240,25 @@ public class RemoteFile implements CommonFile {
 
         return -1;
     }
+
+
+    @Override
+    public int hashCode() {
+        return ftpFile.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof RemoteFile)) {
+            return false;
+        } else if (this == obj) {
+            return true;
+        } else if (this.hashCode() == obj.hashCode()) {
+            return true;
+        } else {
+            RemoteFile remoteFile = (RemoteFile)obj;
+
+            return this.getFilePath().equals(remoteFile.getFilePath());
+        }
+    }
 }
