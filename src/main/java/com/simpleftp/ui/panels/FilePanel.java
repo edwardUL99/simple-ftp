@@ -17,7 +17,7 @@
 
 package com.simpleftp.ui.panels;
 
-import com.simpleftp.FTPSystem;
+import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.LocalFileSystem;
 import com.simpleftp.filesystem.RemoteFile;
@@ -119,7 +119,7 @@ public class FilePanel extends VBox {
     /**
      * The max length for file path before it is shortened and ... added to the end of it
      */
-    private static final int MAX_FILE_PATH_LENGTH = 25;
+    private static final int MAX_FILE_PATH_LENGTH = 30;
     /**
      * Flag for showing hidden files
      * By default, it is false
@@ -235,31 +235,19 @@ public class FilePanel extends VBox {
     /**
      * Initialises the directory that this FilePanel is set up to view
      * @param directory the directory to set as initial directory
-     * @throws FileSystemException if the directory is not in fact a directory
+     * @throws IllegalArgumentException if the directory is not in fact a directory
      */
-    private void initDirectory(CommonFile directory) throws FileSystemException {
-        if (!directory.isADirectory()) {
-            throw new FileSystemException("The directory provided is not a directory");
-        }
+    private void initDirectory(CommonFile directory) throws IllegalArgumentException, FileSystemException {
 
         if (directory instanceof RemoteFile) {
-            fileSystem = new RemoteFileSystem(FTPSystem.getConnection()); // it is expected that when you have a FilePanel created, at this stage you already have a connection established and logged in
-            // the login process should call FTPSystem.setConnection
+            fileSystem = new RemoteFileSystem(); // it is expected that when you have a FilePanel created, at this stage you already have a connection established and logged in
+            // the login process should call FTPConnection.createSharedConnection
         } else {
-            fileSystem = new LocalFileSystem(FTPSystem.getConnection());
+            fileSystem = new LocalFileSystem();
         }
 
         setDirectory(directory);
         refresh();
-
-        try {
-            FTPConnection connection = fileSystem.getFTPConnection();
-            if (connection != null && !(directory instanceof LocalFile)) {
-                connection.changeWorkingDirectory(directory.getFilePath());
-            }
-        } catch (FTPException ex) {
-            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-        }
 
         setCurrDirText(directory.getFilePath());
     }
@@ -313,28 +301,35 @@ public class FilePanel extends VBox {
     }
 
     /**
+     * Checks if you are at the root directory
+     * @return true if at the root directory
+     */
+    private boolean isRootDirectory() {
+        return new LocalFile(directory.getFilePath()).getParent() == null;
+    }
+
+    /**
      * Controls going up to parent directory
      */
     public void up() {
-        try {
-            String filePath = directory.getFilePath();
-            if (directory instanceof LocalFile) {
-                LocalFile localFile = (LocalFile) directory;
-                String parent = localFile.getParent();
-                if (parent != null) {
-                    LocalFile parentFile = new LocalFile(parent);
-                    if (parentFile.exists() && parentFile.canRead()) {
-                        setDirectory(parentFile);
-                        refresh();
+        if (!isRootDirectory()) {
+            try {
+                if (directory instanceof LocalFile) {
+                    LocalFile localFile = (LocalFile) directory;
+                    String parent = localFile.getParent();
+                    if (parent != null) {
+                        LocalFile parentFile = new LocalFile(parent);
+                        if (parentFile.exists() && parentFile.canRead()) {
+                            setDirectory(parentFile);
+                            refresh();
+                        }
                     }
+                } else {
+                    changeToRemoteParent();
                 }
-            } else {
-                changeToRemoteParent();
+            } catch (FileSystemException ex) {
+                UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
             }
-
-            UI.closeFile(filePath);
-        } catch (FileSystemException ex) {
-            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
     }
 
@@ -373,37 +368,51 @@ public class FilePanel extends VBox {
     }
 
     /**
+     * Changes directory but doesn't check the type of the directory or if it is a directory.
+     * This is used internally as it is called by doubleClickDirectoryEntry. Since, you knew it was a directory to create a directory entry, you don't need to check it again.
+     * The types will also always stay the same. The public method setDirectory is a wrapper for this, doing validation checks and then calling this.
+     * While, internally these checks should be enforced, it can't be guaranteed an external class calling it would have stuck to them.
+     * @param directory the directory to set
+     */
+    private void setDirectoryUnchecked(CommonFile directory) {
+        if (this.directory != null)
+            UI.closeFile(getCurrentWorkingDirectory()); // after successfully leaving this directory to the new one, close it
+        this.directory = directory;
+        String path = directory.getFilePath();
+        UI.openFile(path); // open the new directory
+
+        if (directory instanceof RemoteFile) {
+            FTPConnection connection = fileSystem.getFTPConnection();
+            if (connection != null) {
+                try {
+                    boolean changed = connection.changeWorkingDirectory(path);
+
+                    if (!changed) {
+                        UI.doError("Error changing directory", "Current directory may not have been changed successfully. FTP Reply: " + connection.getReplyString());
+                    }
+                } catch (FTPException ex) {
+                    UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+                }
+            }
+        }
+
+        setCurrDirText(path);
+    }
+
+    /**
      * Changes directory. Refresh should be called after this action
      * @param directory the directory to change to, local, or remote
      * @throws FileSystemException if the directory is not a directory
      * @throws IllegalArgumentException if type of the directory is different to the type that was initially passed in.
-     *              You're not allowed pass in RemoteFile to constructor and then suddenly set directory to a LocalFile
+     *              You're not allowed pass in RemoteFile to constructor and then suddenly set directory to a LocalFile or it's not a directory
      */
     public void setDirectory(CommonFile directory) throws FileSystemException, IllegalArgumentException {
         checkFileType(directory);
 
         if (directory.isADirectory()) {
-            this.directory = directory;
-            String path = directory.getFilePath();
-
-            if (directory instanceof RemoteFile) {
-                FTPConnection connection = fileSystem.getFTPConnection();
-                if (connection != null) {
-                    try {
-                        boolean changed = connection.changeWorkingDirectory(directory.getFilePath());
-
-                        if (!changed) {
-                            UI.doError("Error changing directory", "Current directory may not have been changed successfully. FTP Reply: " + connection.getReplyString());
-                        }
-                    } catch (FTPException ex) {
-                        UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-                    }
-                }
-            }
-
-            setCurrDirText(path);
+            setDirectoryUnchecked(directory);
         } else {
-            throw new FileSystemException("The directory for a FilePanel must be in fact a directory, not a file");
+            throw new IllegalArgumentException("The directory for a FilePanel must be in fact a directory, not a file");
         }
     }
 
@@ -452,7 +461,7 @@ public class FilePanel extends VBox {
                 path = UI.resolveRemotePath(path, currWorkingDir, true, this.fileSystem.getFTPConnection()).getResolvedPath();
             }
             CommonFile targetFile = fileSystem.getFile(path);
-            setDirectory(targetFile);
+            setDirectory(targetFile); // need to use the checked setDirectory as this is a public method
             refresh();
         } catch (IOException ex) {
             UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); // treat this as an exception dialog because this shouldn't happen
@@ -521,7 +530,7 @@ public class FilePanel extends VBox {
             if (files == null || files.length == 0) {
                 lineEntries.clear();
             } else {
-                for (CommonFile file : fileSystem.listFiles(localFile.getFilePath())) {
+                for (CommonFile file : files) {
                     LocalFile file1 = (LocalFile) file;
                     try {
                         boolean showFile = showFile(file, e -> showHiddenFiles || !file1.isHidden());
@@ -765,13 +774,9 @@ public class FilePanel extends VBox {
      * @param lineEntry the directory entry to double click
      */
     private void doubleClickDirectoryEntry(final DirectoryLineEntry lineEntry) {
-        try {
-            CommonFile file = lineEntry.getFile();
-            setDirectory(file);
-            refresh();
-        } catch (FileSystemException ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
-        }
+        CommonFile file = lineEntry.getFile();
+        setDirectoryUnchecked(file);
+        refresh();
     }
 
     /**
@@ -809,8 +814,8 @@ public class FilePanel extends VBox {
     private void doubleClick(final LineEntry lineEntry) {
         try {
             String filePath = lineEntry.getFilePath();
-            if (entryStillExists(lineEntry)) {
-                if (!UI.isFileOpened(filePath)) {
+            if (!UI.isFileOpened(filePath)) {
+                if (entryStillExists(lineEntry)) {
                     if (lineEntry instanceof FileLineEntry) {
                         try {
                             doubleClickFileEntry((FileLineEntry) lineEntry);
@@ -819,16 +824,16 @@ public class FilePanel extends VBox {
                             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
                         }
                     } else {
-                        doubleClickDirectoryEntry((DirectoryLineEntry) lineEntry);
-                        UI.openFile(filePath);
+                        doubleClickDirectoryEntry((DirectoryLineEntry) lineEntry); // this calls setDirectory which opens the new path
                     }
                 } else {
-                    UI.doInfo("File Open", "The file " + filePath + " is already opened");
+                    UI.doError("File not found", "The file " + filePath + " no longer exists", true);
+                    removeEntryFromPanel(lineEntry);
                 }
             } else {
-                UI.doError("File not found", "The file " + filePath + " does not exist...");
+                UI.doInfo("File Open", "The file " + filePath + " is already opened");
             }
-        } catch (FileSystemException ex) {
+        } catch(FileSystemException ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
     }
@@ -852,38 +857,34 @@ public class FilePanel extends VBox {
     }
 
     /**
+     * Removes the line entry from view on the panel and it's parent container. Doesn't physically delete the file
+     * @param lineEntry the line entry to remove
+     */
+    private void removeEntryFromPanel(final LineEntry lineEntry) {
+        if (parentContainer != null) {
+            parentContainer.removeLineEntry(lineEntry);
+        }
+        entriesBox.getChildren().remove(lineEntry);
+        lineEntries.remove(lineEntry);
+    }
+
+    /**
      * Attempts to delete the specified line entry and the file associated with it
      * @param lineEntry the line entry to remove
      * @return true if successful, false if not
      */
     public boolean deleteEntry(final LineEntry lineEntry) {
         CommonFile file = lineEntry.getFile();
-        if (file instanceof LocalFile) {
-            try {
-                if (fileSystem.removeFile(file)) {
-                    entriesBox.getChildren().remove(lineEntry);
-                    lineEntries.remove(lineEntry);
 
-                    refresh();
+        try {
+            if (fileSystem.removeFile(file)) {
+                entriesBox.getChildren().remove(lineEntry);
+                lineEntries.remove(lineEntry);
 
-                    return true;
-                }
-            } catch (FileSystemException ex) {
-                UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+                return true;
             }
-        } else {
-            try {
-                if (fileSystem.removeFile(file)) {
-                    entriesBox.getChildren().remove(lineEntry);
-                    lineEntries.remove(lineEntry);
-
-                    refresh();
-
-                    return true;
-                }
-            } catch (FileSystemException ex) {
-                UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-            }
+        } catch (FileSystemException ex) {
+            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
 
         return false;
@@ -959,12 +960,12 @@ class FileStringDownloader extends Service<String> {
     FileStringDownloader(CommonFile file, FileSystem fileSystem, FilePanel creatingPanel) throws FTPException {
         this.file = file;
         this.creatingPanel = creatingPanel;
-        this.readingConnection = new FTPConnection();
-        this.readingConnection.setFtpServer(fileSystem.getFTPConnection().getFtpServer());
-        this.readingConnection.setTimeoutTime(200);
-        this.readingConnection.connect();
-        this.readingConnection.login();
-        this.readingConnection.setTextTransferMode(true);
+        this.readingConnection = FTPConnection.createTemporaryConnection(fileSystem.getFTPConnection());
+        if (file instanceof RemoteFile) {
+            this.readingConnection.connect();
+            this.readingConnection.login();
+            this.readingConnection.setTextTransferMode(true);
+        } // only need conenction for remote file
     }
 
     /**
@@ -996,7 +997,8 @@ class FileStringDownloader extends Service<String> {
             @Override
             protected String call() throws Exception {
                 String str = fileToString(file);
-                readingConnection.disconnect();
+                if (file instanceof RemoteFile)
+                    readingConnection.disconnect();
                 return str;
             }
         };

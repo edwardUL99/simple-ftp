@@ -17,7 +17,7 @@
 
 package com.simpleftp.ui.containers;
 
-import com.simpleftp.FTPSystem;
+import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.paths.ResolvedPath;
@@ -271,6 +271,8 @@ public class FilePanelContainer extends VBox {
                    comboBox.requestFocus();
                } else if (keyCode == KeyCode.DELETE) {
                    delete();
+               } else if (keyCode == KeyCode.F5) {
+                   filePanel.refresh();
                }
             }
         });
@@ -299,11 +301,7 @@ public class FilePanelContainer extends VBox {
             CommonFile file = lineEntry.getFile();
 
             try {
-                if (UI.isFileSymbolicLink(file) && file.isADirectory()) {
-                    symLinkDestButton.setVisible(true);
-                } else {
-                    symLinkDestButton.setVisible(false);
-                }
+                symLinkDestButton.setVisible(UI.isFileSymbolicLink(file) && file.isADirectory());
             } catch (FileSystemException ex) {
                 UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
             }
@@ -576,6 +574,8 @@ public class FilePanelContainer extends VBox {
                     if (filePanel.deleteEntry(lineEntry)) {
                         UI.doInfo("File deleted successfully", "File " + fileName + " deleted");
                         comboBox.getItems().remove(fileName);
+                        comboBox.setValue("");
+                        entryMappings.remove(fileName);
                     } else {
                         UI.doError("File not deleted", "File " + fileName + " wasn't deleted. FTP Reply: " + filePanel.getFileSystem().getFTPConnection().getReplyString());
                     }
@@ -631,6 +631,20 @@ public class FilePanelContainer extends VBox {
         if (comboBox.getItems().contains(name)) {
             comboBox.setValue(name);
             checkComboBoxValue();
+        }
+    }
+
+    /**
+     * Removes the line entry from the combo-box (doesn't delete the actual file)
+     * @param lineEntry the line entry to remove
+     */
+    public void removeLineEntry(final LineEntry lineEntry) {
+        String name = lineEntry.getFile().getName();
+
+        if (entryMappings.containsKey(name)) {
+            entryMappings.remove(name);
+            comboBox.getItems().remove(name);
+            comboBox.setValue("");
         }
     }
 }

@@ -17,18 +17,15 @@
 
 package com.simpleftp.filesystem;
 
+import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
-import com.simpleftp.ftp.connection.FTPConnectionManager;
-import com.simpleftp.ftp.connection.FTPConnectionManagerBuilder;
 import com.simpleftp.ftp.exceptions.*;
-import com.simpleftp.security.PasswordEncryption;
-import lombok.AllArgsConstructor;
 import org.apache.commons.net.ftp.FTPFile;
 
-import java.util.Properties;
+import java.util.Arrays;
 
 /**
  * Represents a remote file system "linked" to a remote FTP Connection.
@@ -42,43 +39,33 @@ import java.util.Properties;
  * Password is expected to be result of PasswordEncryption.encrypt()
  *
  * These should be set before calling this class by using System.setProperty.
+ * The connection should be created by calling FTPConnection.createSharedConnection where the server object represents the above properties (i.e. FTPSystem.getPropertiesDefinedDetails())
+ * For a RemoteFileSystem, it must be connected and logged in before use
  */
-@AllArgsConstructor
 public class RemoteFileSystem implements FileSystem {
     private final FTPConnection ftpConnection;
-    private final FTPConnectionManager ftpConnectionManager;
 
     public RemoteFileSystem() throws FileSystemException {
-        this(new FTPConnectionManagerBuilder()
-                .useSystemConnectionManager(true)
-                .setBuiltManagerAsSystemManager(true)
-                .build());
-    }
-
-    public RemoteFileSystem(FTPConnectionManager connectionManager) throws FileSystemException {
-        ftpConnectionManager = connectionManager;
-        Properties properties = System.getProperties();
-        if (!properties.containsKey("ftp-server") || !properties.containsKey("ftp-user") || !properties.containsKey("ftp-pass") || !properties.containsKey("ftp-port")) {
-            throw new FileSystemException("Could not initialise the FTP Connection backing this RemoteFileSystem");
-        }
-        ftpConnection = ftpConnectionManager.createReadyConnection(properties.getProperty("ftp-server"),
-                properties.getProperty("ftp-user"),
-                PasswordEncryption.decrypt(properties.getProperty("ftp-pass")),
-                Integer.parseInt(properties.getProperty("ftp-port")));
+        ftpConnection = FTPSystem.getConnection();
         if (ftpConnection == null) {
-            throw new FileSystemException("Could not configure the FTP Connection backing this RemoteFileSystem");
+            throw new FileSystemException("A FileSystem needs a FTPConnection object to function");
         }
+        validateConnection(ftpConnection);
     }
 
     public RemoteFileSystem(FTPConnection connection) throws FileSystemException {
-        ftpConnectionManager = new FTPConnectionManagerBuilder()
-                                    .useSystemConnectionManager(true)
-                                    .setBuiltManagerAsSystemManager(true)
-                                    .build();
+        ftpConnection = connection;
+        validateConnection(ftpConnection);
+    }
+
+    /**
+     * Validates that the connection is connected and logged in
+     * @param connection the connection to check
+     * @throws FileSystemException if not connected and logged in
+     */
+    private void validateConnection(FTPConnection connection) throws FileSystemException {
         if (!connection.isConnected() && !connection.isLoggedIn()) {
-            throw new FileSystemException("The provided connection must be connected and logged in");
-        } else {
-            ftpConnection = connection;
+            throw new FileSystemException("The backing FTPConnection is not connected and logged in");
         }
     }
 
@@ -154,7 +141,7 @@ public class RemoteFileSystem implements FileSystem {
         try {
             FTPFile ftpFile = ftpConnection.getFTPFile(fileName);
             if (ftpFile != null) {
-                return new RemoteFile(fileName, ftpConnectionManager, ftpFile);
+                return new RemoteFile(fileName, ftpConnection, ftpFile);
             }
 
             return null;
@@ -164,7 +151,7 @@ public class RemoteFileSystem implements FileSystem {
     }
 
     /**
-     * Checks if the specified file name exists
+     * Checks if the specified file name exists file/dir
      *
      * @param fileName the name/path to the file
      * @return true if the file exists, false if not
@@ -173,7 +160,7 @@ public class RemoteFileSystem implements FileSystem {
     @Override
     public boolean fileExists(String fileName) throws FileSystemException {
         try {
-            return ftpConnection.remotePathExists(fileName, true) || ftpConnection.remotePathExists(fileName, false);
+            return ftpConnection.remotePathExists(fileName);
         } catch (FTPException ex) {
             throw new FileSystemException("A FTP Exception occurred when checking if the remote file exists", ex);
         }
@@ -189,19 +176,24 @@ public class RemoteFileSystem implements FileSystem {
     @Override
     public CommonFile[] listFiles(String dir) throws FileSystemException {
         try {
-            if (!ftpConnection.remotePathExists(dir, true)) {
-                return null;
-            } else {
-                FTPFile[] files = ftpConnection.listFiles(dir);
+            FTPFile[] files = ftpConnection.listFiles(dir);
+            if (files != null) {
                 RemoteFile[] remoteFiles = new RemoteFile[files.length];
 
                 int i = 0;
                 for (FTPFile f : files) {
-                    String path = dir.equals("/") || dir.endsWith("/") ? dir + f.getName():dir + "/" + f.getName();
-                    remoteFiles[i++] = new RemoteFile(path, ftpConnectionManager, f);
+                    if (!f.getName().equals(".") && !f.getName().equals("..")) {
+                        String path = dir.equals("/") || dir.endsWith("/") ? dir + f.getName() : dir + "/" + f.getName();
+                        remoteFiles[i++] = new RemoteFile(path, ftpConnection, f);
+                    }
                 }
 
+                if (i < files.length)
+                    remoteFiles = Arrays.copyOf(remoteFiles, i);
+
                 return remoteFiles;
+            } else {
+                return null;
             }
         } catch (FTPException ex) {
             throw new FileSystemException("A FTP Exception occurred when listing files", ex);

@@ -490,7 +490,10 @@ public final class UI {
         try {
             String type = getFileType(file);
 
-            return type.contains("xml") || type.contains("text") || (type.contains("application") && !type.contains("octet-stream") && !type.contains("executable") && !type.contains("java-vm")) || file.length() == 0;
+            return type.contains("xml") || type.contains("text")
+                    || (type.contains("application") && !type.contains("octet-stream")
+                    && !type.contains("executable") && !type.contains("java-vm")
+                    && !type.contains("sharedlib")) || file.length() == 0;
         } catch (IOException ex) {
             return false;
         }
@@ -534,7 +537,10 @@ public final class UI {
 
     /**
      * "Opens" this file by adding its path to the list of opened files. A LineEntry represents a file with a path, so more efficient to just pass in it's path
-     * This method doesn't check if the file exists on the file system
+     * This method doesn't check if the file exists on the file system. It also doesn't open the window/do an action of opening on the file.
+     * This method simply is to just tell the UI that you have opened this file elsewhere so that other methods calling isFileOpened will know about it
+     * and so can block the action if it is an action that isn't allowed while a file is open, e.g. delete/rename.
+     * It is a way of tracking that the file has been opened. This call should be made everytime you open a file (like clicking into a directory or opening an editor). Example, opening a property window is not opening the file, because opening means either opening a directory or a file to view the contents
      * @param filePath the path of the file that has been opened in the UI. When opening a LineEntry, just call lineEntry.getFilePath to retrieve the path
      */
     public static void openFile(final String filePath) {
@@ -543,7 +549,11 @@ public final class UI {
 
     /**
      * "Closes" this file by removing its path from the list of opened files. A LineEntry represents a file with a path, so more efficient to just pass in it's path
-     * This method does not check if the path exists on the file system
+     * This method does not check if the path exists on the file system.
+     * It also doesn't close any window/do an action of closing on the file.
+     * This method simply is to just tell the UI that you have now closed this file elsewhere to tell other methods calling isFileOpened that they can now perform an action on the file
+     * that would otherwise not be allowed if isFileOpened returned true, e.g. if you want to delete a file, and a call to openFile for that path was made, you need to call closeFile before you can delete it.
+     * It is a way of tracking that the window is now closed. Should be made when leaving a file after it was opened (directory opened or file opened to view the contents, not opening a properties window for example)
      * @param filePath the path of the file that has been opened in the UI. When opening a LineEntry, just call lineEntry.getFilePath to retrieve the path
      */
     public static void closeFile(final String filePath) {
