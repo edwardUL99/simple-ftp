@@ -17,13 +17,11 @@
 
 package com.simpleftp.filesystem;
 
+import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.connection.FTPConnection;
-import com.simpleftp.ftp.connection.FTPConnectionManager;
-import com.simpleftp.ftp.connection.FTPConnectionManagerBuilder;
 import com.simpleftp.ftp.exceptions.*;
-import com.simpleftp.security.PasswordEncryption;
 import com.simpleftp.ui.UI;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -31,7 +29,6 @@ import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.File;
 import java.util.Arrays;
-import java.util.Properties;
 
 /**
  * Represents a remote file associated with the provided FTPConnection instance
@@ -43,53 +40,62 @@ import java.util.Properties;
  * Password is expected to be result of PasswordEncryption.encrypt()
  *
  * These should be set before calling this class by using System.setProperty
- * Can be set from command line too using -Dproperty=value but safer programatically as it's not secure passing in password on cli
+ * FTPConnection.createSharedConnection should be called with a FTPServer object representing the above properties. It must also be connected and logged in before creating this class
  */
 @AllArgsConstructor
 public class RemoteFile implements CommonFile {
     private FTPConnection connection;
-    private FTPConnectionManager ftpConnectionManager;
     @Getter
     private FTPFile ftpFile;
     private String absolutePath;
+    /**
+     * Tracks if this file exists. Calling the exists() method updates it
+     */
+    private boolean exists;
 
     /**
      * Constructs a remote file name with the specified file name
      * @param fileName the name of the file (absolute path preferred)
      */
     public RemoteFile(String fileName) throws FileSystemException {
-        this(fileName, new FTPConnectionManagerBuilder()
-                        .useSystemConnectionManager(true)
-                        .setBuiltManagerAsSystemManager(true)
-                        .build());
-    }
+        this.connection = FTPSystem.getConnection();
+        if (this.connection == null) {
+            throw new FileSystemException("Could not configure the FTP Server, did you set the System properties ftp-server ftp-user ftp-pass and ftp-port?");
+        }
 
-    /**
-     * Creates a RemoteFile with the specified connection manager to establish a connection. Uses fileName as path to search on FTPServer to initialise the FTPFile returned by getFtpFile
-     * @param fileName the name of the file (absolute path preferred)
-     * @param connectionManager the connection manager
-     */
-    public RemoteFile(String fileName, FTPConnectionManager connectionManager) throws FileSystemException {
-        this(fileName, connectionManager, null); // make null to force the constructor to get the file
+        validateConnection(this.connection);
+
+        absolutePath = fileName;
+        initialiseFTPFile(null);
     }
 
     /**
      * Creates a RemoteFile with the specified manager and ftp file. Uses fileName as path to search on FTPServer to initialise the FTPFile returned by getFtpFile
      * @param fileName the name of the file (absolute path preferred)
-     * @param connectionManager the connection manager managing connections
-     * @param ftpFile the FTPFile to initialise this RemoteFile with. Leave null to force a lookup on FTP Server with fileName as path
+     * @param ftpConnection the connection to use
+     * @param ftpFile the FTPFile to initialise this RemoteFile with. Leave null to force a lookup on FTP Server with fileName as path. This file may not exist. Assumed it does exist if you have the file
      * @throws FileSystemException
      */
-    public RemoteFile(String fileName, FTPConnectionManager connectionManager, FTPFile ftpFile) throws FileSystemException {
+    public RemoteFile(String fileName, FTPConnection ftpConnection, FTPFile ftpFile) throws FileSystemException {
         absolutePath = fileName;
-        Properties properties = System.getProperties();
-        ftpConnectionManager = connectionManager;
-        this.connection = ftpConnectionManager.createReadyConnection(properties.getProperty("ftp-server"), properties.getProperty("ftp-user"), PasswordEncryption.decrypt(properties.getProperty("ftp-pass")), Integer.parseInt(properties.getProperty("ftp-port")));
+        this.connection = ftpConnection;
         if (this.connection == null) {
             throw new FileSystemException("Could not configure the FTP Server, did you set the System properties ftp-server ftp-user ftp-pass and ftp-port?");
         }
 
+        validateConnection(this.connection);
         initialiseFTPFile(ftpFile);
+    }
+
+    /**
+     * Validates that the connection is connected and logged in
+     * @param connection the connection to check
+     * @throws FileSystemException if not connected and logged in
+     */
+    private void validateConnection(FTPConnection connection) throws FileSystemException {
+        if (!connection.isConnected() && !connection.isLoggedIn()) {
+            throw new FileSystemException("The backing FTPConnection is not connected and logged in");
+        }
     }
 
     /**
@@ -101,13 +107,13 @@ public class RemoteFile implements CommonFile {
            if (ftpFile == null) {
                this.ftpFile = this.connection.getFTPFile(absolutePath);
 
-               if (this.ftpFile == null)
-                   throw new FTPRemotePathNotFoundException("The path specified does not exist", absolutePath);
+               exists = this.ftpFile != null;
            } else {
                this.ftpFile = ftpFile;
+               exists = true;
            }
 
-           if (!absolutePath.equals(".") && !absolutePath.equals(".."))
+           if (!absolutePath.equals(".") && !absolutePath.equals("..") && exists)
                this.ftpFile = checkFileForCurrOrParentDir(this.ftpFile);
        } catch (FTPException ex) {
            throw new FileSystemException("Could not create RemoteFile due to a FTP Error", ex);
@@ -140,7 +146,7 @@ public class RemoteFile implements CommonFile {
                                     .orElse(null);
 
             if (result == null)
-                throw new FTPRemotePathNotFoundException("The path specified does not exist", absolutePath);
+                exists = false;
 
             return result;
         } else {
@@ -173,59 +179,88 @@ public class RemoteFile implements CommonFile {
     // the following three method don't check for existence from the ftpFile, as things may have changed since the ftpFile was populated
 
     /**
-     * Checks if this file exists as either a directory or a normal file on the provided FTPConnection
+     * Checks if this file exists as either a directory or a normal file on the provided FTPConnection.
+     * This syncs up the isADirectory, isNormalFile and getSize methods with the existsence of the file
      * @return true if exists, false if not
      * @throws FileSystemException if an error occurs
      */
     @Override
     public boolean exists() throws FileSystemException {
-        try {
+        try { // exists should always check up to date info
             String path = absolutePath;
-            return connection.remotePathExists(path, true) || connection.remotePathExists(path, false);
+            boolean oldExists = exists;
+            exists = connection.remotePathExists(path, true) || connection.remotePathExists(path, false);
+
+            if (!oldExists && exists) {
+                // it didn't exist before, but does not, update the file
+                try {
+                    initialiseFTPFile(null);
+                } catch (FileSystemException ex) {
+                    ftpFile = null; // if file isn't found, leave null
+                }
+            }
+
+            return exists;
         } catch (FTPException ex) {
             throw new FileSystemException("A FTP Exception occurred, it could not be determined if this file exists", ex);
         }
     }
 
     /**
-     * Checks if this file is a directory
+     * Checks if this file is a directory.
+     * May return true if the file no longer exists as this RemoteFile may not be an up to date version. Calling exists updates this information
      * @return true if a directory, false if not
      * @throws FileSystemException if an error occurs
      */
     @Override
     public boolean isADirectory() throws FileSystemException {
-        try {
-            return connection.remotePathExists(absolutePath, true);
-        } catch (FTPException ex) {
-            throw new FileSystemException("A FTP Exception occurred, it could not be determined if this file is a directory", ex);
+        if (!exists) {
+            return false;
+        } else if (ftpFile.isValid() && !ftpFile.isSymbolicLink()) { // if symbolic link, query the ftp server
+            return ftpFile.isDirectory();
+        } else {
+            try {
+                return connection.remotePathExists(absolutePath, true);
+            } catch (FTPException ex) {
+                throw new FileSystemException("A FTP Exception occurred, it could not be determined if this file is a directory", ex);
+            }
         }
     }
 
     /**
-     * Checks if this file is a normal file
+     * Checks if this file is a normal file.
+     * May return true, even if the file doesn't exist anymore, e.g. if the file is deleted after this RemoteFile is created. Calling exists() should be called if an update on the file is required or just general existence and if you don't need to know if it is a file or directory, calling exists updates this information
      * @return true if a directory, false if not
      * @throws FileSystemException if an error occurs
      */
     @Override
     public boolean isNormalFile() throws FileSystemException {
-        try {
-            if (ftpFile.isSymbolicLink())                                       // make sure the link isn't broken
-                return connection.remotePathExists(absolutePath, false) && connection.remotePathExists(ftpFile.getLink()); // always explicitly check for remote path as ftpFile may be "." if the file is the same name as current directory
-            else
-                return connection.remotePathExists(absolutePath, false);
-        } catch (FTPException ex) {
-            throw new FileSystemException("A FTP Exception occurred, it could not be determined if this file is a normal file", ex);
+        if (!exists) {
+            return false;
+        } else if (ftpFile.isValid() && !ftpFile.isSymbolicLink()) { // if symbolic link, query the ftp server
+            return ftpFile.isFile();
+        } else {
+            try {
+                if (ftpFile.isSymbolicLink())                                       // make sure the link isn't broken
+                    return connection.remotePathExists(absolutePath, false) && connection.remotePathExists(ftpFile.getLink()); // always explicitly check for remote path as ftpFile may be "." if the file is the same name as current directory
+                else
+                    return connection.remotePathExists(absolutePath, false);
+            } catch (FTPException ex) {
+                throw new FileSystemException("A FTP Exception occurred, it could not be determined if this file is a normal file", ex);
+            }
         }
     }
 
     /**
      * Returns the size in bytes of the file
-     *
+     * This may not be up to date, calling exists() updates the existence status if a file was removed after this RemoteFile was created.
      * @return size in bytes of the file
      */
     @Override
     public long getSize() throws FileSystemException {
-        if (ftpFile.isValid()) {
+        if (!exists) {
+            return -1;
+        } else if (ftpFile.isValid()) {
             return ftpFile.getSize();
         } else {
             try {

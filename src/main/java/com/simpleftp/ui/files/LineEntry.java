@@ -17,15 +17,12 @@
 
 package com.simpleftp.ui.files;
 
-import com.simpleftp.FTPSystem;
+import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFile;
-import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
-import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
-import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.panels.FilePanel;
 import javafx.geometry.Pos;
@@ -84,10 +81,8 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
      * @param imageURL the URL to the image (assumed to be in the JAR)
      * @param file the file this LineEntry represents
      * @param owningPanel the FilePanel this LineEntry is a part of
-     * @throws FTPRemotePathNotFoundException if it is a remote file and cant be found
-     * @throws LocalPathNotFoundException if it is a local file and cant be found
      */
-    protected LineEntry(String imageURL, CommonFile file, FilePanel owningPanel) throws FTPRemotePathNotFoundException, LocalPathNotFoundException, FileSystemException {
+    protected LineEntry(String imageURL, CommonFile file, FilePanel owningPanel) throws FTPException {
         setSpacing(30);
         setStyle(UI.WHITE_BACKGROUND);
         /**
@@ -109,10 +104,8 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
 
     /**
      * Initialises the line entry
-     * @throws FTPRemotePathNotFoundException if the file is remote and cant be found
-     * @throws LocalPathNotFoundException if the file is local and cant be found
      */
-    protected void init() throws FTPRemotePathNotFoundException, LocalPathNotFoundException, FileSystemException {
+    protected void init() throws FTPException {
         if (getChildren().size() > 1) {
             getChildren().clear();
         }
@@ -146,44 +139,31 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     /**
      * Retrieves the modification time and size string of the file. Note that if ftpConnection.getModificationTime fails, the file.getTimestamp is used even if it is not very accurate
      * @return modification time or Cannot be determined
-     * @throws FTPRemotePathNotFoundException if file is remote and cant be found
-     * @throws LocalPathNotFoundException if file is local and cant be found
      */
-    public String getModificationTimeAndSize() throws FTPRemotePathNotFoundException, LocalPathNotFoundException {
+    public String getModificationTimeAndSize() throws FTPException {
         String modificationTime = "";
         if (file instanceof LocalFile) {
             LocalFile localFile = (LocalFile)file;
-            if (localFile.exists()) {
-                modificationTime = localFile.length() + " " + new SimpleDateFormat(UI.FILE_DATETIME_FORMAT).format(localFile.lastModified());
-            } else if (!Files.isSymbolicLink(localFile.toPath())){
-                throw new LocalPathNotFoundException("The file no longer exists", file.getFilePath());
-            }
+            modificationTime = localFile.length() + " " + new SimpleDateFormat(UI.FILE_DATETIME_FORMAT).format(localFile.lastModified());
         } else {
             FTPConnection connection = owningPanel.getFileSystem().getFTPConnection();
             connection = connection == null ? FTPSystem.getConnection():connection;
             if (connection != null) {
-                try {
-                    String filePath = file.getFilePath();
-                    String fileModTime = connection.getModificationTime(filePath);
-                    if (fileModTime != null) {
-                        LocalDateTime dateTime = LocalDateTime.parse(fileModTime, DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy"));
-                        modificationTime = dateTime.format(DateTimeFormatter.ofPattern(UI.FILE_DATETIME_FORMAT));
-                        modificationTime = connection.getFileSize(filePath) + " " + modificationTime;
-                    } else {
-                        RemoteFile remoteFile = (RemoteFile)file;
-                        FTPFile ftpFile = remoteFile.getFtpFile();
-                        if (ftpFile.isValid()) {
-                            return ftpFile.getSize() + " " + UI.parseCalendarToUITime(ftpFile.getTimestamp());
-                        }
+                RemoteFile remoteFile = (RemoteFile)file;
+                FTPFile ftpFile = remoteFile.getFtpFile();
+                String filePath = file.getFilePath();
+                String fileModTime = connection.getModificationTime(filePath);
+                if (fileModTime != null) {
+                    LocalDateTime dateTime = LocalDateTime.parse(fileModTime, DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy"));
+                    modificationTime = dateTime.format(DateTimeFormatter.ofPattern(UI.FILE_DATETIME_FORMAT));
+                    modificationTime = (ftpFile.isValid() ? ftpFile.getSize():connection.getFileSize(filePath)) + " " + modificationTime;
+                } else {
+                    if (ftpFile.isValid()) {
+                        return ftpFile.getSize() + " " + UI.parseCalendarToUITime(ftpFile.getTimestamp());
+                    }
 
-                        log.warn("Could not determine modification time for file {}", filePath);
-                        return "Cannot be determined";
-                    }
-                } catch (FTPException ex) {
-                    ex.printStackTrace();
-                    if (ex instanceof FTPRemotePathNotFoundException) {
-                        throw (FTPRemotePathNotFoundException)ex;
-                    }
+                    log.warn("Could not determine modification time for file {}", filePath);
+                    return "Cannot be determined";
                 }
             }
         }
@@ -194,10 +174,8 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     /**
      * Gets the file name with modification time size and permissions
      * @return String of file name, size, modification time, permissions
-     * @throws FTPRemotePathNotFoundException if a remote file and not found
-     * @throws LocalPathNotFoundException if a local file and not found
      */
-    private String getFileNameString() throws FTPRemotePathNotFoundException, LocalPathNotFoundException, FileSystemException {
+    private String getFileNameString() throws FTPException {
         String fileName = file.getName();
         String paddedName = ""; // the name that will be displayed on the UI.
 
@@ -289,13 +267,9 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     /**
      * Calculates the permissions for a local file
      * @return the permissions
-     * @throws LocalPathNotFoundException if the file no longer exists
      */
-    private String calculateLocalPermissions() throws LocalPathNotFoundException {
+    private String calculateLocalPermissions() {
         LocalFile localFile = (LocalFile)file;
-        if (!localFile.exists()) {
-            throw new LocalPathNotFoundException("The file no longer exists", localFile.getFilePath());
-        }
 
         String permissions = resolvePosixPermissions();
         if (permissions == null)
@@ -315,79 +289,72 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     /**
      * Calculates the permissions for a remote file
      * @return the permissions
-     * @throws FTPRemotePathNotFoundException if the file no longer exists
-     * @throws FileSystemException if an error occurs querying the file system
      */
-    private String calculateRemotePermissions() throws FTPRemotePathNotFoundException, FileSystemException {
+    private String calculateRemotePermissions() {
         String permissions = "";
         RemoteFile remoteFile = (RemoteFile)file;
+        FTPFile file = remoteFile.getFtpFile();
 
-        if (!remoteFile.exists()) {
-            throw new FTPRemotePathNotFoundException("The file no longer exists", remoteFile.getFilePath());
+        if (file.isSymbolicLink()) {
+            permissions += "l";
+        } else if (file.isDirectory()) {
+            permissions += "d";
         } else {
-            FTPFile file = remoteFile.getFtpFile();
+            permissions += "-";
+        }
 
-            if (file.isSymbolicLink()) {
-                permissions += "l";
-            } else if (file.isDirectory()) {
-                permissions += "d";
-            } else {
-                permissions += "-";
-            }
+        if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.READ_PERMISSION)) {
+            permissions += "r";
+        } else {
+            permissions += "-";
+        }
 
-            if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.READ_PERMISSION)) {
-                permissions += "r";
-            } else {
-                permissions += "-";
-            }
+        if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.WRITE_PERMISSION)) {
+            permissions += "w";
+        } else {
+            permissions += "-";
+        }
 
-            if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.WRITE_PERMISSION)) {
-                permissions += "w";
-            } else {
-                permissions += "-";
-            }
+        if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
+            permissions += "x";
+        } else {
+            permissions += "-";
+        }
 
-            if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
-                permissions += "x";
-            } else {
-                permissions += "-";
-            }
+        if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.READ_PERMISSION)) {
+            permissions += "r";
+        } else {
+            permissions += "-";
+        }
 
-            if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.READ_PERMISSION)) {
-                permissions += "r";
-            } else {
-                permissions += "-";
-            }
+        if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.WRITE_PERMISSION)) {
+            permissions += "w";
+        } else {
+            permissions += "-";
+        }
 
-            if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.WRITE_PERMISSION)) {
-                permissions += "w";
-            } else {
-                permissions += "-";
-            }
+        if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
+            permissions += "x";
+        } else {
+            permissions += "-";
+        }
 
-            if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
-                permissions += "x";
-            } else {
-                permissions += "-";
-            }
+        if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.READ_PERMISSION)) {
+            permissions += "r";
+        } else {
+            permissions += "-";
+        }
 
-            if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.READ_PERMISSION)) {
-                permissions += "r";
-            } else {
-                permissions += "-";
-            }
+        if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.WRITE_PERMISSION)) {
+            permissions += "w";
+        } else {
+            permissions += "-";
+        }
 
-            if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.WRITE_PERMISSION)) {
-                permissions += "w";
-            } else {
-                permissions += "-";
-            }
-
-            if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
-                permissions += "x";
-            } else {
-                permissions += "-";
-            }
+        if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
+            permissions += "x";
+        } else {
+            permissions += "-";
         }
 
         return permissions;
@@ -396,23 +363,14 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     /**
      * Calculates the permissions for the file
      * @return permissions string for the file
-     * @throws FTPRemotePathNotFoundException if a remote file and not found
-     * @throws LocalPathNotFoundException if a local file and not found
      */
-    protected String calculatePermissionsString() throws FTPRemotePathNotFoundException, LocalPathNotFoundException, FileSystemException {
+    protected String calculatePermissionsString() {
         String permissions = "";
 
         if (file instanceof LocalFile) {
             permissions = calculateLocalPermissions();
         } else {
-            try {
-                permissions = calculateRemotePermissions();
-            } catch (FTPException ex) {
-                ex.printStackTrace();
-                if (ex instanceof FTPRemotePathNotFoundException) {
-                    throw (FTPRemotePathNotFoundException)ex;
-                }
-            }
+            permissions = calculateRemotePermissions();
         }
 
         return permissions;

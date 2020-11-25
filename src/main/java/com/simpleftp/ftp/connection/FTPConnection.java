@@ -17,14 +17,11 @@
 
 package com.simpleftp.ftp.connection;
 
-import com.simpleftp.FTPSystem;
+import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.exceptions.*;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.net.ftp.FTPClient;
-import org.apache.commons.net.ftp.FTPConnectionClosedException;
-import org.apache.commons.net.ftp.FTPFile;
-import org.apache.commons.net.ftp.FTPReply;
+import org.apache.commons.net.ftp.*;
 import org.apache.commons.net.io.CopyStreamException;
 
 import java.io.*;
@@ -43,9 +40,14 @@ import java.util.TimerTask;
  *
  * Note that if a FTPConnectionFailedException is thrown by any method of this class, it indicates a serious connection error occurred.
  * This means that this FTPConnection is no longer viable as isConnected() and isLoggedIn() will now return false.
+ *
+ *
+ * Outside of the connection package, the only option to create a connection are by the createSharedConnection and createTemporaryConnection methods.
+ * This is to enforce the purpose of the connection. I.e. for a connection to be used among filesystems etc., you want to share it. For temporary uploading.downloading for example, it's temporary
  */
 @Log4j2
 @EqualsAndHashCode(of = {"ftpServer", "ftpConnectionDetails", "connected", "loggedIn"})
+@AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class FTPConnection {
     /**
      * The FTP Client which provides the main FTP functionality
@@ -56,6 +58,7 @@ public class FTPConnection {
     /**
      * The lookup object backing retrieval services in terms of information, not downloads
      */
+    @Setter
     private FTPLookup ftpLookup;
     /**
      * The FTPServer object providing all the login details and server parameters
@@ -82,7 +85,7 @@ public class FTPConnection {
     /**
      * Constructs a default object
      */
-    public FTPConnection() {
+    protected FTPConnection() {
         ftpClient = new FTPClient();
         if (!FTPSystem.isSystemTesting()) // dont enable as if under test, hidden files causes issues
             ftpClient.setListHiddenFiles(true); // show hidden files and leave it up to UI to hide them or not
@@ -90,6 +93,7 @@ public class FTPConnection {
         ftpServer = new FTPServer();
         ftpConnectionDetails = new FTPConnectionDetails();
         setNoopDriver();
+        setTimeoutTime();
     }
 
     /**
@@ -98,42 +102,17 @@ public class FTPConnection {
      * @param ftpClient the client object to back this connection
      * @param ftpServer the object storing the server parameters
      * @param ftpConnectionDetails the object storing the connection details
+     * @param ftpLookup the ftp lookup object to use
      */
-    public FTPConnection(FTPClient ftpClient, FTPServer ftpServer, FTPConnectionDetails ftpConnectionDetails) {
-        this.ftpClient = ftpClient;
-        if (!FTPSystem.isSystemTesting()) // dont enable as if under test, hidden files causes issues
-            ftpClient.setListHiddenFiles(true); // show hidden files and leave it up to UI to hide them or not
-        ftpLookup = new FTPLookup(ftpClient);
-        this.ftpServer = ftpServer;
-        this.ftpConnectionDetails = ftpConnectionDetails;
-        setNoopDriver();
-    }
-
-    /*
-     * Constructs a FTPConnection with all specified parameters.
-     * Not recommended for use. Useful for testing only.
-     * @param ftpClient the FTPClient object backing this connection
-     * @param ftpLookup the lookup object providing look-up features
-     * @param ftpServer the object storing the server parameters
-     * @param ftpConnectionDetails the object storing the connection details
-     * @param connected a parameter specifying if this connection is connected
-     * @param loggedIn a parameter specifying if this connection is logged in
-     */
-    public FTPConnection(FTPClient ftpClient, FTPLookup ftpLookup, FTPServer ftpServer, FTPConnectionDetails ftpConnectionDetails, boolean connected, boolean loggedIn) {
+    protected FTPConnection(FTPClient ftpClient, FTPServer ftpServer, FTPConnectionDetails ftpConnectionDetails, FTPLookup ftpLookup) {
         this.ftpClient = ftpClient;
         if (!FTPSystem.isSystemTesting()) // dont enable as if under test, hidden files causes issues
             ftpClient.setListHiddenFiles(true); // show hidden files and leave it up to UI to hide them or not
         this.ftpLookup = ftpLookup;
         this.ftpServer = ftpServer;
-        this.ftpConnectionDetails = ftpConnectionDetails;
-        this.connected = connected;
-        this.loggedIn = loggedIn;
+        this.ftpConnectionDetails = ftpConnectionDetails == null ? new FTPConnectionDetails():ftpConnectionDetails;
         setNoopDriver();
-    }
-
-    private void logDebug(String message, Object... options) {
-        if (FTPSystem.isDebugEnabled())
-            log.debug(message, options);
+        setTimeoutTime();
     }
 
     /**
@@ -142,12 +121,20 @@ public class FTPConnection {
      * @param ftpServer the object storing the server parameters
      * @param ftpConnectionDetails the object storing the connection details
      */
-    public FTPConnection(FTPServer ftpServer, FTPConnectionDetails ftpConnectionDetails) {
+    protected FTPConnection(FTPServer ftpServer, FTPConnectionDetails ftpConnectionDetails) {
         this.ftpClient = new FTPClient();
+        if (!FTPSystem.isSystemTesting()) // dont enable as if under test, hidden files causes issues
+            ftpClient.setListHiddenFiles(true); // show hidden files and leave it up to UI to hide them or not
         this.ftpLookup = new FTPLookup(ftpClient);
         this.ftpServer = ftpServer;
-        this.ftpConnectionDetails = ftpConnectionDetails;
+        this.ftpConnectionDetails = ftpConnectionDetails == null ? new FTPConnectionDetails():ftpConnectionDetails;
         setNoopDriver();
+        setTimeoutTime();
+    }
+
+    private void logDebug(String message, Object... options) {
+        if (FTPSystem.isDebugEnabled())
+            log.debug(message, options);
     }
 
     private void setNoopDriver() {
@@ -327,9 +314,8 @@ public class FTPConnection {
      * @throws FTPNotConnectedException if this is attempted when isConnected() returns false
      * @throws FTPConnectionFailedException if a connection error occurs
      * @throws FTPCommandFailedException if an error occurs sending the command or receiving a reply from the server
-     * @throws FTPError if a general error occurs
      */
-    public boolean changeWorkingDirectory(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException, FTPError, FTPRemotePathNotFoundException {
+    public boolean changeWorkingDirectory(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
             log.error("Cannot change to directory {} as the FTPConnection is not connected", path);
             loggedIn = false;
@@ -338,10 +324,6 @@ public class FTPConnection {
 
         try {
             if (loggedIn) {
-                if (!ftpLookup.remotePathExists(path, true)) {
-                    log.error("Path {} does not exist or is a file", path);
-                    throw new FTPRemotePathNotFoundException("A given path is either a file or does not exist", path);
-                }
                 logDebug("Changing working directory to {}", path);
                 return ftpClient.changeWorkingDirectory(path);
             }
@@ -359,7 +341,8 @@ public class FTPConnection {
     }
 
     /**
-     * Attempts to change to the parent directory of the current working directory
+     * Attempts to change to the parent directory of the current working directory.
+     * Expected to check if the path exists before calling this method
      * @return true if the operation was successful
      * @throws FTPNotConnectedException if this is attempted when isConnected() returns false
      * @throws FTPConnectionFailedException if a connection error occurs
@@ -424,14 +407,14 @@ public class FTPConnection {
     }
 
     /**
-     * Attempts to retrieve the FTP File specified at the path
+     * Attempts to retrieve the FTP File specified at the path. If path is not found, it returns null
      * @param path the path to the file
      * @return a FTPFile object representing the specified path, or null if not found
      * @throws FTPNotConnectedException if isConnected() returns false when this is connected
      * @throws FTPConnectionFailedException if a connection error occurs
      * @throws FTPCommandFailedException if an error occurs executing the command
      */
-    public FTPFile getFTPFile(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException, FTPRemotePathNotFoundException, FTPError {
+    public FTPFile getFTPFile(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
             log.error("Cannot retrieve file specified by {} as the FTPConnection is not connected", path);
             loggedIn = false;
@@ -440,10 +423,6 @@ public class FTPConnection {
 
         try {
             if (loggedIn) {
-                if (!ftpLookup.remotePathExists(path)) {
-                    log.error("The specified path {} does not exist", path);
-                    throw new FTPRemotePathNotFoundException("A provided path to retrieve a remote file does not exist", path);
-                }
                 logDebug("Retrieving FTPFile for path {} from server", path);
                 return ftpLookup.getFTPFile(path);
             }
@@ -460,6 +439,14 @@ public class FTPConnection {
         }
     }
 
+    /**
+     * Lists files in the given path
+     * @param path the path to list
+     * @return the array of retrieved files, null if path doesn't exist or not logged in
+     * @throws FTPNotConnectedException if isConnected() returns false
+     * @throws FTPConnectionFailedException if connection fails
+     * @throws FTPCommandFailedException if an error occurs sending or receiving the command
+     */
     public FTPFile[] listFiles(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
             log.error("FTPConnection not connected to the server, cannot list files for path {}", path);
@@ -1033,22 +1020,18 @@ public class FTPConnection {
      * SHOULD BE CALLED BEFORE connect(), if not the server may time out too soon or have unexpected behaviour
      *
      * This client uses keep alive with this timeout
-     *
-     * @param seconds the number of seconds to time out in
-     * @throws FTPConnectionFailedException if there is no FTPConnectionDetails associated with this Connection
+     * Uses the seconds from FTPConnectionDetails. This can be called if it was changed and to refresh it after disconnecting
      */
-    public void setTimeoutTime(int seconds) throws FTPConnectionFailedException {
+    public void setTimeoutTime() {
         if (!connected) {
             loggedIn = false;
 
             if (ftpConnectionDetails == null) {
-                log.error("Cannot set timeout time, there is no FTPConnectionDetails object associated with this FTPConnection");
-                resetConnectionValues();
-                throw new FTPConnectionFailedException("Cannot set timeout time, there is no FTPConnectionDetails object associated with this FTPConnection", ftpClient.getReplyString(), ftpServer);
+                ftpConnectionDetails = new FTPConnectionDetails();
             }
 
+            int seconds = ftpConnectionDetails.getTimeout();
             logDebug("Setting FTPConnection timeout time to {} seconds", seconds);
-            ftpConnectionDetails.setTimeout(seconds);
             noopDriver.timeoutSecs = seconds;
             int mSeconds = seconds * 1000;
 
@@ -1107,6 +1090,78 @@ public class FTPConnection {
         }
     }
 
+    /**
+     * Checks if the FTPSystem.getConnection matches the server details provided
+     * @param ftpServer the server details
+     * @return true if matches, false if not
+     */
+    private static boolean connectionMatches(FTPServer ftpServer) {
+        FTPConnection systemConnection = FTPSystem.getConnection();
+        if (systemConnection == null) {
+            return false;
+        } else {
+            FTPServer server = systemConnection.getFtpServer();
+
+            return server.equals(ftpServer);
+        }
+    }
+
+    /**
+     * This method sets the connection, but doesn't connect or log in
+     * @param ftpServer the details to create the connection with
+     * @param connectionDetails the connection details to use
+     * @return the created connection
+     */
+    private static FTPConnection createConnection(FTPServer ftpServer, FTPConnectionDetails connectionDetails) {
+        FTPConnection connection = new FTPConnection(ftpServer, connectionDetails);
+        ConnectionFTPSystem.setConnection(connection);
+
+        return connection;
+    }
+
+    /**
+     * Creates a shared FTPConnection. It does this by setting the FTPSystem.setConnection.
+     * This should be used for when you want a connection to be shared among filesystem classes as the default constructors for the files and file systems uses the FTPSystem connection
+     * It checks if the system's connection already matches the server details and returns that, if not, it creates a new one.
+     * It does not connect or log it in.
+     * @param serverDetails the server details to check/create a connection with
+     * @param connectionDetails the connection details without timeout time etc
+     * @return the created connection. This connection should equal FTPSystem.getConnection
+     */
+    public static FTPConnection createSharedConnection(FTPServer serverDetails, FTPConnectionDetails connectionDetails) {
+        serverDetails = serverDetails == null ? new FTPServer():serverDetails;
+        connectionDetails = connectionDetails == null ? new FTPConnectionDetails():connectionDetails;
+        if (!connectionMatches(serverDetails)) {
+            return createConnection(serverDetails, connectionDetails);
+        } else {
+            return FTPSystem.getConnection();
+        }
+    }
+
+    /**
+     * Creates a temporary FTPConnection based on the provided connection.
+     * This doesn't share it with other classes. Useful for creating a separate connection for upload/download but based on the same details
+     * @param connectionBasis the connection to base the temporary connection on
+     * @return the temporary connection
+     */
+    public static FTPConnection createTemporaryConnection(FTPConnection connectionBasis) {
+        return new FTPConnection(connectionBasis.ftpServer, connectionBasis.ftpConnectionDetails);
+    }
+
+    /**
+     * This allows creating a temporary FTPConnection not shared with other classes from the provided details.
+     * This could be useful for creating an uploading/downloading connection as another temporary user
+     * @param ftpServer the FTPServer object containing the login details
+     * @param ftpConnectionDetails the details for timeout etc.
+     * @return the temporary connection
+     */
+    public static FTPConnection createTemporaryConnection(FTPServer ftpServer, FTPConnectionDetails ftpConnectionDetails) {
+        return new FTPConnection(ftpServer, ftpConnectionDetails);
+    }
+
+    /**
+     * This class is responsible for periodically sending a no-op to the server
+     */
     private class NoopDriver {
         private int timeoutSecs;
         private final Timer timer;
@@ -1144,5 +1199,22 @@ public class FTPConnection {
                 log.warn("An exception occurred sending a no-op, server may time-out");
             }
         }
+    }
+}
+
+/**
+ * This class is done so that only FTPConnection is allowed set the system connection.
+ * It is a design fault to extend FTPSystem elsewhere
+ */
+final class ConnectionFTPSystem extends FTPSystem {
+    static void setConnection(FTPConnection connection) {
+        if (FTPSystem.connection != null) {
+            try {
+                FTPSystem.connection.disconnect();
+            } catch (FTPException ex) {
+                ex.printStackTrace();
+            }
+        }
+        FTPSystem.connection = connection;
     }
 }

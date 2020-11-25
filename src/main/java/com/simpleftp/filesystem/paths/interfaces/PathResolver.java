@@ -20,8 +20,6 @@ package com.simpleftp.filesystem.paths.interfaces;
 import com.simpleftp.filesystem.paths.ResolvedPath;
 import com.simpleftp.filesystem.exceptions.PathResolverException;
 
-// TODO test this interface more before committing and merging
-
 /**
  * This interface provides a interface for resolving paths.
  *

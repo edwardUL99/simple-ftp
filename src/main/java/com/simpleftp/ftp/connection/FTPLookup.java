@@ -17,7 +17,7 @@
 
 package com.simpleftp.ftp.connection;
 
-import com.simpleftp.FTPSystem;
+import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.exceptions.FTPError;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -58,11 +58,15 @@ public class FTPLookup {
         } else {
             // server doesn't support MLST, using LIST
             logDebug("Using LIST command to attempt to retrieve the file {}", path);
-            FTPFile[] file = ftpClient.listFiles(path);
+            FTPFile[] files = ftpClient.listFiles(path);
 
-            if (file != null && file.length > 0) {
+            if (files != null && files.length > 0) {
                 logDebug("File retrieved successfully from server");
-                return file[0];
+                FTPFile file = files[0];
+                if (file.getName().equals("."))
+                    // this is a directory you're listing and thus . is the same as path
+                    file.setName(path);
+                return file;
             } else {
                 logDebug("File cannot be retrieved from server");
                 return null;
@@ -91,9 +95,19 @@ public class FTPLookup {
         }
     }
 
+    /**
+     * Lists the files in the given path
+     * @param path the path to list
+     * @return the list of files
+     * @throws IOException if an error occurs
+     */
     public FTPFile[] listFTPFiles(String path) throws IOException {
         logDebug("Attempting to return list of files from server with path {}", path);
-        return retrieveFilesListing(path);
+        FTPFile[] files = retrieveFilesListing(path);
+        if (files != null && files.length == 0)
+            return null;
+
+        return files;
     }
 
     /**

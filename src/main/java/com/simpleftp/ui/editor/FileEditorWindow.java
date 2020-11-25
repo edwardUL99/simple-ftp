@@ -17,7 +17,7 @@
 
 package com.simpleftp.ui.editor;
 
-import com.simpleftp.FTPSystem;
+import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
@@ -46,6 +46,7 @@ public class FileEditorWindow extends VBox {
     /**
      * The file to display in this editor
      */
+    @Getter
     private final CommonFile file;
     /**
      * The contents of the file

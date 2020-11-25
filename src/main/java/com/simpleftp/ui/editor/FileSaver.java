@@ -17,9 +17,10 @@
 
 package com.simpleftp.ui.editor;
 
-import com.simpleftp.FTPSystem;
+import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.LocalFileSystem;
+import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.RemoteFileSystem;
 import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
@@ -146,11 +147,13 @@ class FileUploader extends Service<Void> {
      */
     private FTPConnection getUploadingConnection() throws FTPException {
         FileSystem fileSystem = editorWindow.getCreatingPanel().getFileSystem();
-        FTPConnection uploadingConnection = new FTPConnection();
-        uploadingConnection.setFtpServer(fileSystem.getFTPConnection().getFtpServer());
-        uploadingConnection.connect();
-        uploadingConnection.login();
-        uploadingConnection.setTextTransferMode(true);
+        FTPConnection uploadingConnection = FTPConnection.createTemporaryConnection(fileSystem.getFTPConnection());
+
+        if (editorWindow.getFile() instanceof RemoteFile) {
+            uploadingConnection.connect();
+            uploadingConnection.login();
+            uploadingConnection.setTextTransferMode(true);
+        } // we don't need it to be connected for local
         return uploadingConnection;
     }
 
@@ -232,7 +235,6 @@ class FileUploader extends Service<Void> {
 
     /**
      * Saves the specified file contents in a file specified by filePath.
-     * @throwa Exception if any error occurs
      */
     private void saveFile() {
         try {
@@ -279,7 +281,8 @@ class FileUploader extends Service<Void> {
                 errorOccurred = true;
             }
 
-            uploadingConnection.disconnect();
+            if (remoteFileSystem)
+                uploadingConnection.disconnect(); // only need to disconnect if it was remote
             // don't need to bother add file to local file system, because write to file would have already added it
         } catch (Exception ex) {
             Platform.runLater(() -> {

@@ -17,16 +17,11 @@
 
 package com.simpleftp.ftp.tests.unit;
 
-import com.simpleftp.FTPSystem;
-import com.simpleftp.ftp.connection.FTPLookup;
-import com.simpleftp.ftp.connection.FTPPathStats;
-import com.simpleftp.ftp.connection.FTPServer;
+import com.simpleftp.ftp.FTPSystem;
+import com.simpleftp.ftp.connection.*;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.ftp.tests.FTPConnectionTestable;
-import org.apache.commons.net.ftp.FTPClient;
-import org.apache.commons.net.ftp.FTPConnectionClosedException;
-import org.apache.commons.net.ftp.FTPFile;
-import org.apache.commons.net.ftp.FTPReply;
+import org.apache.commons.net.ftp.*;
 import org.apache.commons.net.io.CopyStreamException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,13 +68,13 @@ class FTPConnectionUnitTest {
     private static final String TEST_SIZE = "test-size";
     private static final String TEST_TIME = "test-time";
     private static final String TEST_FILE_STATUS = " test-file-status";
-    private final int TEST_TIMEOUT_SECS = 60;
+    private final int TEST_TIMEOUT_SECS = 300;
 
 
     @BeforeEach
     void init() {
         closeable = MockitoAnnotations.openMocks(this);
-        FTPSystem.setSystemTestingFlag(true);
+        FTPSystem.setSystemTesting(true);
     }
 
     @AfterEach
@@ -130,7 +125,6 @@ class FTPConnectionUnitTest {
         boolean result = ftpConnection.connect();
         assertFalse(result);
         verifyNoInteractions(ftpServer);
-        verifyNoInteractions(ftpClient);
     }
 
     @Test
@@ -227,7 +221,7 @@ class FTPConnectionUnitTest {
         verify(ftpServer).getUser();
         assertFalse(ftpConnection.isLoggedIn());
         verify(ftpServer, times(0)).getPassword();
-        verifyNoInteractions(ftpClient);
+        ;
 
     }
 
@@ -298,7 +292,7 @@ class FTPConnectionUnitTest {
         assertFalse(result);
         assertFalse(ftpConnection.isLoggedIn());
         assertTrue(ftpConnection.isConnected());
-        verifyNoInteractions(ftpClient);
+        ;
     }
 
     @Test
@@ -335,15 +329,13 @@ class FTPConnectionUnitTest {
 
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.logout());
         assertFalse(ftpConnection.isLoggedIn());
-        verifyNoInteractions(ftpClient);
+        ;
     }
 
     @Test
     void shouldChangeWorkingDirectorySuccessfully() throws IOException, FTPConnectionFailedException, FTPNotConnectedException, FTPCommandFailedException, FTPError, FTPRemotePathNotFoundException {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);
-        given(ftpLookup.remotePathExists(TEST_PATH, true))
-                .willReturn(true);
         given(ftpClient.changeWorkingDirectory(TEST_PATH))
                 .willReturn(true);
 
@@ -353,7 +345,6 @@ class FTPConnectionUnitTest {
         assertTrue(ftpConnection.isConnected());
         assertTrue(ftpConnection.isLoggedIn()); //this should not change the internal state
         verify(ftpClient).changeWorkingDirectory(TEST_PATH);
-        verify(ftpLookup).remotePathExists(TEST_PATH, true);
     }
 
     @Test
@@ -365,7 +356,7 @@ class FTPConnectionUnitTest {
         assertFalse(result);
         assertFalse(ftpConnection.isLoggedIn());
         assertTrue(ftpConnection.isConnected());
-        verifyNoInteractions(ftpClient);
+        ;
     }
 
     @Test
@@ -374,48 +365,31 @@ class FTPConnectionUnitTest {
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.changeWorkingDirectory(TEST_PATH));
         assertFalse(ftpConnection.isConnected());
         assertFalse(ftpConnection.isLoggedIn());
-        verifyNoInteractions(ftpClient);
+        ;
     }
 
     @Test
     void shouldThrowIfErrorOccursChangingDirectory() throws IOException, FTPError {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);
-        given(ftpLookup.remotePathExists(TEST_PATH, true))
-                .willReturn(true);
         doThrow(IOException.class).when(ftpClient).changeWorkingDirectory(TEST_PATH);
 
         assertThrows(FTPCommandFailedException.class, () -> ftpConnection.changeWorkingDirectory(TEST_PATH));
         assertTrue(ftpConnection.isConnected());
         assertTrue(ftpConnection.isLoggedIn());
         verify(ftpClient).changeWorkingDirectory(TEST_PATH);
-        verify(ftpLookup).remotePathExists(TEST_PATH, true);
     }
 
     @Test
-    void shouldThrowIfConnectionErrorOccursChangingDirectory() throws IOException, FTPError {
+    void shouldThrowIfConnectionErrorOccursChangingDirectory() throws IOException {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);
-        given(ftpLookup.remotePathExists(TEST_PATH, true))
-                .willReturn(true);
         doThrow(FTPConnectionClosedException.class).when(ftpClient).changeWorkingDirectory(TEST_PATH);
 
         assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.changeWorkingDirectory(TEST_PATH));
         assertFalse(ftpConnection.isConnected());
         assertFalse(ftpConnection.isLoggedIn());
         verify(ftpClient).changeWorkingDirectory(TEST_PATH);
-        verify(ftpLookup).remotePathExists(TEST_PATH, true);
-    }
-
-    @Test
-    void shouldThrowIfPathDoesNotExistOnChangingDirectory() throws IOException, FTPError {
-        ftpConnection.setConnected(true);
-        ftpConnection.setLoggedIn(true);
-        given(ftpLookup.remotePathExists(TEST_PATH, true))
-                .willReturn(false);
-
-        assertThrows(FTPRemotePathNotFoundException.class, () -> ftpConnection.changeWorkingDirectory(TEST_PATH));
-        verify(ftpLookup).remotePathExists(TEST_PATH, true);
     }
 
     @Test
@@ -442,7 +416,7 @@ class FTPConnectionUnitTest {
         assertFalse(result);
         assertFalse(ftpConnection.isLoggedIn());
         assertTrue(ftpConnection.isConnected());
-        verifyNoInteractions(ftpClient);
+        ;
     }
 
     @Test
@@ -451,7 +425,7 @@ class FTPConnectionUnitTest {
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.changeToParentDirectory());
         assertFalse(ftpConnection.isConnected());
         assertFalse(ftpConnection.isLoggedIn());
-        verifyNoInteractions(ftpClient);
+        ;
     }
 
     @Test
@@ -546,8 +520,6 @@ class FTPConnectionUnitTest {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);
         FTPFile testFile = getTestFTPFile();
-        given(ftpLookup.remotePathExists(TEST_FTP_FILE))
-                .willReturn(true);
         given(ftpLookup.getFTPFile(TEST_FTP_FILE))
                 .willReturn(testFile);
 
@@ -555,15 +527,12 @@ class FTPConnectionUnitTest {
 
         assertEquals(result, testFile);
         verify(ftpLookup).getFTPFile(TEST_FTP_FILE);
-        verify(ftpLookup).remotePathExists(TEST_FTP_FILE);
     }
 
     @Test
     void shouldReturnNullWithGetFTPFile() throws IOException, FTPConnectionFailedException, FTPNotConnectedException, FTPCommandFailedException, FTPRemotePathNotFoundException, FTPError {
         ftpConnection.setLoggedIn(true);
         ftpConnection.setConnected(true);
-        given(ftpLookup.remotePathExists(TEST_FTP_FILE))
-                .willReturn(true);
         given(ftpLookup.getFTPFile(TEST_FTP_FILE))
                 .willReturn(null);
 
@@ -571,7 +540,6 @@ class FTPConnectionUnitTest {
 
         assertNull(result);
         verify(ftpLookup).getFTPFile(TEST_FTP_FILE);
-        verify(ftpLookup).remotePathExists(TEST_FTP_FILE);
     }
 
     @Test
@@ -581,7 +549,7 @@ class FTPConnectionUnitTest {
 
         assertNull(result);
         assertFalse(ftpConnection.isLoggedIn());
-        verifyNoInteractions(ftpClient);
+        ;
     }
 
     @Test
@@ -596,42 +564,24 @@ class FTPConnectionUnitTest {
     void shouldThrowIfErrorOccursWithGetFTPFile() throws IOException, FTPError {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);
-        given(ftpLookup.remotePathExists(TEST_FTP_FILE))
-                .willReturn(true);
         doThrow(IOException.class).when(ftpLookup).getFTPFile(TEST_FTP_FILE);
 
         assertThrows(FTPCommandFailedException.class, () -> ftpConnection.getFTPFile(TEST_FTP_FILE));
         assertTrue(ftpConnection.isConnected());
         assertTrue(ftpConnection.isLoggedIn());
         verify(ftpLookup).getFTPFile(TEST_FTP_FILE);
-        verify(ftpLookup).remotePathExists(TEST_FTP_FILE);
     }
 
     @Test
     void shouldThrowIfConnectionErrorOccursWithGetFTPFile() throws IOException, FTPError {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);
-        given(ftpLookup.remotePathExists(TEST_FTP_FILE))
-                .willReturn(true);
         doThrow(FTPConnectionClosedException.class).when(ftpLookup).getFTPFile(TEST_FTP_FILE);
 
         assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.getFTPFile(TEST_FTP_FILE));
         assertFalse(ftpConnection.isConnected());
         assertFalse(ftpConnection.isLoggedIn());
         verify(ftpLookup).getFTPFile(TEST_FTP_FILE);
-        verify(ftpLookup).remotePathExists(TEST_FTP_FILE);
-    }
-
-    @Test
-    void shouldThrowIfPathDoesNotExistOnGetFTPFile() throws IOException, FTPError {
-        ftpConnection.setConnected(true);
-        ftpConnection.setLoggedIn(true);
-        given(ftpLookup.remotePathExists(TEST_PATH))
-                .willReturn(false);
-
-        assertThrows(FTPRemotePathNotFoundException.class, () -> ftpConnection.getFTPFile(TEST_PATH));
-        verify(ftpLookup).remotePathExists(TEST_PATH);
-        verifyNoInteractions(ftpClient);
     }
 
     @Test
@@ -729,7 +679,6 @@ class FTPConnectionUnitTest {
         ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.uploadFile(getTestFile(true), TEST_PATH));
         assertFalse(ftpConnection.isLoggedIn());
-        verifyNoInteractions(ftpClient);
         verifyNoInteractions(ftpLookup);
     }
 
@@ -746,7 +695,6 @@ class FTPConnectionUnitTest {
         FTPFile result = ftpConnection.uploadFile(testFile, TEST_PATH);
 
         assertNull(result);
-        verifyNoInteractions(ftpClient);
     }
 
     @Test
@@ -760,7 +708,6 @@ class FTPConnectionUnitTest {
         FTPFile result = ftpConnection.uploadFile(tempDir, TEST_PATH);
 
         assertNull(result);
-        verifyNoInteractions(ftpClient);
     }
 
     @Test
@@ -775,7 +722,6 @@ class FTPConnectionUnitTest {
         FTPFile result = ftpConnection.uploadFile(testFile, TEST_PATH);
 
         assertNull(result);
-        verifyNoInteractions(ftpClient);
         verify(ftpLookup).remotePathExists(TEST_PATH, true);
     }
 
@@ -790,7 +736,6 @@ class FTPConnectionUnitTest {
         FTPFile result = ftpConnection.uploadFile(testFile, TEST_PATH);
 
         assertNull(result);
-        verifyNoInteractions(ftpClient);
         verify(ftpLookup).remotePathExists(TEST_PATH, true);
     }
 
@@ -919,7 +864,6 @@ class FTPConnectionUnitTest {
         File result = ftpConnection.downloadFile(TEST_FTP_FILE, tempDir.getAbsolutePath());
 
         assertNull(result);
-        verifyNoInteractions(ftpClient);
         verify(ftpLookup).getFTPFile(TEST_FTP_FILE);
     }
 
@@ -934,7 +878,6 @@ class FTPConnectionUnitTest {
         File result = ftpConnection.downloadFile(TEST_FTP_FILE, tempDir.getAbsolutePath());
 
         assertNull(result);
-        verifyNoInteractions(ftpClient);
         verify(ftpLookup).remotePathExists(TEST_FTP_FILE, true);
     }
 
@@ -949,7 +892,6 @@ class FTPConnectionUnitTest {
         File result = ftpConnection.downloadFile(TEST_FTP_FILE, getTestFile(true).getAbsolutePath());
 
         assertNull(result);
-        verifyNoInteractions(ftpClient);
         verify(ftpLookup).remotePathExists(TEST_FTP_FILE, true);
     }
 
@@ -963,7 +905,6 @@ class FTPConnectionUnitTest {
         File result = ftpConnection.downloadFile(TEST_FTP_FILE, tempDir.getAbsolutePath());
 
         assertNull(result);
-        verifyNoInteractions(ftpClient);
         verify(ftpLookup).remotePathExists(TEST_FTP_FILE, true);
     }
 
@@ -972,7 +913,6 @@ class FTPConnectionUnitTest {
         ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.downloadFile(TEST_FTP_FILE, tempDir.getAbsolutePath()));
         assertFalse(ftpConnection.isLoggedIn());
-        verifyNoInteractions(ftpClient);
         verifyNoInteractions(ftpLookup);
     }
 
@@ -1083,7 +1023,6 @@ class FTPConnectionUnitTest {
         boolean result = ftpConnection.makeDirectory(TEST_DIR);
 
         assertFalse(result);
-        verifyNoInteractions(ftpClient);
         verify(ftpLookup).remotePathExists(TEST_DIR, true);
     }
 
@@ -1100,7 +1039,6 @@ class FTPConnectionUnitTest {
         boolean result = ftpConnection.makeDirectory(TEST_DIR);
 
         assertFalse(result);
-        verifyNoInteractions(ftpClient);
         verify(ftpLookup).remotePathExists(TEST_DIR, true);
         verify(ftpLookup).remotePathExists(TEST_DIR, false);
     }
@@ -1112,7 +1050,6 @@ class FTPConnectionUnitTest {
         boolean result = ftpConnection.makeDirectory(TEST_DIR);
 
         assertFalse(result);
-        verifyNoInteractions(ftpClient);
         verifyNoInteractions(ftpLookup);
     }
 
@@ -1122,7 +1059,6 @@ class FTPConnectionUnitTest {
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.makeDirectory(TEST_DIR));
         assertFalse(ftpConnection.isLoggedIn());
         verifyNoInteractions(ftpLookup);
-        verifyNoInteractions(ftpClient);
     }
 
     @Test
@@ -1184,7 +1120,6 @@ class FTPConnectionUnitTest {
         boolean result = ftpConnection.renameFile(TEST_PATH, TEST_FTP_FILE);
 
         assertFalse(result);
-        verifyNoInteractions(ftpClient);
     }
 
     @Test
@@ -1192,7 +1127,6 @@ class FTPConnectionUnitTest {
         ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.renameFile(TEST_PATH, TEST_FTP_FILE));
         assertFalse(ftpConnection.isLoggedIn());
-        verifyNoInteractions(ftpClient);
     }
 
     @Test
@@ -1240,7 +1174,6 @@ class FTPConnectionUnitTest {
         boolean result = ftpConnection.removeFile(TEST_FTP_FILE);
 
         assertFalse(result);
-        verifyNoInteractions(ftpClient);
     }
 
     @Test
@@ -1248,7 +1181,6 @@ class FTPConnectionUnitTest {
         ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.removeFile(TEST_FTP_FILE));
         assertFalse(ftpConnection.isLoggedIn());
-        verifyNoInteractions(ftpClient);
     }
 
     @Test
@@ -1298,7 +1230,6 @@ class FTPConnectionUnitTest {
         boolean result = ftpConnection.removeDirectory(TEST_PATH);
 
         assertFalse(result);
-        verifyNoInteractions(ftpClient);
     }
 
     @Test
@@ -1306,7 +1237,6 @@ class FTPConnectionUnitTest {
         ftpConnection.setLoggedIn(true);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.removeDirectory(TEST_PATH));
         assertFalse(ftpConnection.isLoggedIn());
-        verifyNoInteractions(ftpClient);
     }
 
     @Test
@@ -1688,7 +1618,7 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldSetTimeoutTimeSuccessfully() throws FTPConnectionFailedException {
+    void shouldSetTimeoutTimeSuccessfully() {
         int expectedMillis = TEST_TIMEOUT_SECS * 1000;
         int expectedSecs = TEST_TIMEOUT_SECS;
 
@@ -1697,25 +1627,19 @@ class FTPConnectionUnitTest {
         doCallRealMethod().when(ftpClient).getDefaultTimeout();
         doCallRealMethod().when(ftpClient).getControlKeepAliveTimeout();
 
-        ftpConnection.setTimeoutTime(expectedSecs);
+        ftpConnection.setTimeoutTime();
         assertEquals(ftpConnection.getFtpConnectionDetails().getTimeout(), expectedSecs);
         assertEquals(ftpClient.getControlKeepAliveTimeout(), expectedSecs);
-        verify(ftpClient).setDefaultTimeout(expectedMillis);
-        verify(ftpClient).setControlKeepAliveTimeout(expectedSecs);
+        verify(ftpClient, times(2)).setDefaultTimeout(expectedMillis); // once at construction, again on calling it
+        verify(ftpClient, times(2)).setControlKeepAliveTimeout(expectedSecs);
     }
 
     @Test
-    void shouldNotSetTimeOutIfConnected() throws FTPConnectionFailedException {
+    void shouldNotSetTimeOutIfConnected()  {
         ftpConnection.setConnected(true);
 
-        ftpConnection.setTimeoutTime(TEST_TIMEOUT_SECS);
-        verifyNoInteractions(ftpClient);
-    }
-
-    @Test
-    void shouldThrowIfFTPConnectionDetailsIsNull() {
-        ftpConnection.setFtpConnectionDetails(null);
-        assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.setTimeoutTime(TEST_TIMEOUT_SECS));
+        ftpConnection.setTimeoutTime();
+        ;
     }
 
     @Test
@@ -1771,7 +1695,7 @@ class FTPConnectionUnitTest {
         }
         assertFalse(ftpConnection.isConnected());
         assertFalse(ftpConnection.isLoggedIn());
-        verifyNoInteractions(ftpClient);
+        ;
 
         reset(ftpClient);
         /*
@@ -1790,7 +1714,7 @@ class FTPConnectionUnitTest {
             verify(ftpClient).disconnect();
             reset(ftpClient);
             ftpConnection.logout();
-            verifyNoInteractions(ftpClient);
+            ;
             assertFalse(ftpConnection.isConnected());
             assertFalse(ftpConnection.isLoggedIn());
         } catch (Exception ex) {
@@ -1855,5 +1779,103 @@ class FTPConnectionUnitTest {
 
         doThrow(IOException.class).when(ftpClient).setFileType(FTPClient.BINARY_FILE_TYPE);
         assertThrows(FTPCommandFailedException.class, () -> ftpConnection.setTextTransferMode(false));
+    }
+
+    private FTPServer getTestFTPServer() {
+        return new FTPServer().withServer(TEST_SERVER_HOST)
+                .withUser(TEST_SERVER_USER)
+                .withPassword(TEST_SERVER_PASSWORD)
+                .withPort(TEST_SERVER_PORT);
+    }
+
+    private FTPConnectionDetails getTestConnectionDetails() {
+        return new FTPConnectionDetails().withTimeout(TEST_TIMEOUT_SECS);
+    }
+
+    @Test
+    void shouldCreateSharedConnectionSuccessfully() {
+        FTPSystem.reset();
+        assertNull(FTPSystem.getConnection());
+
+        FTPConnection connection = FTPConnection.createSharedConnection(getTestFTPServer(), getTestConnectionDetails());
+
+        assertEquals(connection, FTPSystem.getConnection());
+    }
+
+    @Test
+    void shouldReturnSharedConnectionIfCreatedWithSameDetails() {
+        FTPSystem.reset();
+        assertNull(FTPSystem.getConnection());
+
+        FTPServer testServer = getTestFTPServer();
+        FTPConnectionDetails connectionDetails = getTestConnectionDetails();
+
+        FTPConnection connection = FTPConnection.createSharedConnection(testServer, connectionDetails);
+
+        assertEquals(connection, FTPSystem.getConnection());
+
+        FTPConnection connection1 = FTPConnection.createSharedConnection(testServer, connectionDetails);
+        assertEquals(connection1, FTPSystem.getConnection()); // should be the same
+        assertSame(connection, connection1); // should be exact same address
+    }
+
+    @Test
+    void shouldReturnNewConnectionIfDetailsChange() {
+        FTPSystem.reset();
+        assertNull(FTPSystem.getConnection());
+
+        FTPServer testServer = getTestFTPServer();
+        FTPConnectionDetails connectionDetails = getTestConnectionDetails();
+
+        FTPConnection connection = FTPConnection.createSharedConnection(testServer, connectionDetails);
+
+        assertEquals(connection, FTPSystem.getConnection());
+
+        FTPServer newServer = new FTPServer("newServer", "user", "pass", 22);
+        FTPConnection connection1 = FTPConnection.createSharedConnection(newServer, connectionDetails);
+
+        assertEquals(connection1, FTPSystem.getConnection());
+        assertNotEquals(connection, FTPSystem.getConnection());
+        assertNotSame(connection, connection1);
+    }
+
+    @Test
+    void shouldCreateSharedConnectionWithNullFTPServer() {
+        FTPSystem.reset();
+        assertNull(FTPSystem.getConnection());
+
+        FTPConnection connection = FTPConnection.createSharedConnection(null, null);
+
+        assertEquals(connection, FTPSystem.getConnection());
+        assertNotNull(connection.getFtpServer());
+        assertNotNull(connection.getFtpConnectionDetails());
+    }
+
+    @Test
+    void shouldCreateTempConnectionFromExisting() {
+        FTPSystem.reset();
+
+        FTPServer ftpServer = getTestFTPServer();
+        FTPConnectionDetails connectionDetails = getTestConnectionDetails();
+
+        FTPConnection connection = FTPConnection.createSharedConnection(ftpServer, connectionDetails);
+        assertEquals(connection, FTPSystem.getConnection());
+        FTPConnection connection1 = FTPConnection.createTemporaryConnection(connection);
+        assertNotSame(connection, connection1);
+        assertEquals(ftpServer, connection1.getFtpServer());
+        assertEquals(connectionDetails, connection1.getFtpConnectionDetails());
+    }
+
+    @Test
+    void shouldCreateTempConnectionFromDetails() {
+        FTPSystem.reset();
+
+        FTPServer ftpServer = getTestFTPServer();
+        FTPConnectionDetails connectionDetails = getTestConnectionDetails();
+
+        FTPConnection connection = FTPConnection.createTemporaryConnection(ftpServer, connectionDetails);
+        assertNull(FTPSystem.getConnection());
+        assertEquals(connection.getFtpServer(), ftpServer);
+        assertEquals(connection.getFtpConnectionDetails(), connectionDetails);
     }
 }

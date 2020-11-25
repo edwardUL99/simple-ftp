@@ -19,7 +19,9 @@ package com.simpleftp.ftp.tests;
 
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.connection.FTPConnectionDetails;
+import com.simpleftp.ftp.connection.FTPLookup;
 import com.simpleftp.ftp.connection.FTPServer;
+import lombok.AllArgsConstructor;
 import org.apache.commons.net.ftp.FTPClient;
 
 /**
@@ -33,8 +35,8 @@ public class FTPConnectionTestable extends FTPConnection {
         super();
     }
 
-    public FTPConnectionTestable(FTPClient ftpClient, FTPServer ftpServer, FTPConnectionDetails ftpConnectionDetails, boolean connected) {
-        super(ftpClient, ftpServer, ftpConnectionDetails);
+    public FTPConnectionTestable(FTPClient ftpClient, FTPServer ftpServer, FTPConnectionDetails ftpConnectionDetails, FTPLookup ftpLookup) {
+        super(ftpClient, ftpServer, ftpConnectionDetails, ftpLookup);
     }
 
     public void setConnected(boolean connected) {
