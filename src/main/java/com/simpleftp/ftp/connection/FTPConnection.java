@@ -1130,6 +1130,7 @@ public class FTPConnection {
      */
     public static FTPConnection createSharedConnection(FTPServer serverDetails, FTPConnectionDetails connectionDetails) {
         serverDetails = serverDetails == null ? new FTPServer():serverDetails;
+        connectionDetails = connectionDetails == null ? new FTPConnectionDetails():connectionDetails;
         if (!connectionMatches(serverDetails)) {
             return createConnection(serverDetails, connectionDetails);
         } else {

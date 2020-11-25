@@ -59,6 +59,13 @@ public class FTPSystem {
     }
 
     /**
+     * Resets the connection, i.e. sets it to null
+     */
+    public static void reset() {
+        connection = null;
+    }
+
+    /**
      * Returns whether debugging is enabled. This can be only enabled at startup with the property -Dsimpleftp.debug
      * @return true if debugging is enabled, false otherwise
      */

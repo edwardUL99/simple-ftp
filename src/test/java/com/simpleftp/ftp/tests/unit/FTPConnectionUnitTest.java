@@ -18,15 +18,10 @@
 package com.simpleftp.ftp.tests.unit;
 
 import com.simpleftp.ftp.FTPSystem;
-import com.simpleftp.ftp.connection.FTPLookup;
-import com.simpleftp.ftp.connection.FTPPathStats;
-import com.simpleftp.ftp.connection.FTPServer;
+import com.simpleftp.ftp.connection.*;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.ftp.tests.FTPConnectionTestable;
-import org.apache.commons.net.ftp.FTPClient;
-import org.apache.commons.net.ftp.FTPConnectionClosedException;
-import org.apache.commons.net.ftp.FTPFile;
-import org.apache.commons.net.ftp.FTPReply;
+import org.apache.commons.net.ftp.*;
 import org.apache.commons.net.io.CopyStreamException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -1784,5 +1779,103 @@ class FTPConnectionUnitTest {
 
         doThrow(IOException.class).when(ftpClient).setFileType(FTPClient.BINARY_FILE_TYPE);
         assertThrows(FTPCommandFailedException.class, () -> ftpConnection.setTextTransferMode(false));
+    }
+
+    private FTPServer getTestFTPServer() {
+        return new FTPServer().withServer(TEST_SERVER_HOST)
+                .withUser(TEST_SERVER_USER)
+                .withPassword(TEST_SERVER_PASSWORD)
+                .withPort(TEST_SERVER_PORT);
+    }
+
+    private FTPConnectionDetails getTestConnectionDetails() {
+        return new FTPConnectionDetails().withTimeout(TEST_TIMEOUT_SECS);
+    }
+
+    @Test
+    void shouldCreateSharedConnectionSuccessfully() {
+        FTPSystem.reset();
+        assertNull(FTPSystem.getConnection());
+
+        FTPConnection connection = FTPConnection.createSharedConnection(getTestFTPServer(), getTestConnectionDetails());
+
+        assertEquals(connection, FTPSystem.getConnection());
+    }
+
+    @Test
+    void shouldReturnSharedConnectionIfCreatedWithSameDetails() {
+        FTPSystem.reset();
+        assertNull(FTPSystem.getConnection());
+
+        FTPServer testServer = getTestFTPServer();
+        FTPConnectionDetails connectionDetails = getTestConnectionDetails();
+
+        FTPConnection connection = FTPConnection.createSharedConnection(testServer, connectionDetails);
+
+        assertEquals(connection, FTPSystem.getConnection());
+
+        FTPConnection connection1 = FTPConnection.createSharedConnection(testServer, connectionDetails);
+        assertEquals(connection1, FTPSystem.getConnection()); // should be the same
+        assertSame(connection, connection1); // should be exact same address
+    }
+
+    @Test
+    void shouldReturnNewConnectionIfDetailsChange() {
+        FTPSystem.reset();
+        assertNull(FTPSystem.getConnection());
+
+        FTPServer testServer = getTestFTPServer();
+        FTPConnectionDetails connectionDetails = getTestConnectionDetails();
+
+        FTPConnection connection = FTPConnection.createSharedConnection(testServer, connectionDetails);
+
+        assertEquals(connection, FTPSystem.getConnection());
+
+        FTPServer newServer = new FTPServer("newServer", "user", "pass", 22);
+        FTPConnection connection1 = FTPConnection.createSharedConnection(newServer, connectionDetails);
+
+        assertEquals(connection1, FTPSystem.getConnection());
+        assertNotEquals(connection, FTPSystem.getConnection());
+        assertNotSame(connection, connection1);
+    }
+
+    @Test
+    void shouldCreateSharedConnectionWithNullFTPServer() {
+        FTPSystem.reset();
+        assertNull(FTPSystem.getConnection());
+
+        FTPConnection connection = FTPConnection.createSharedConnection(null, null);
+
+        assertEquals(connection, FTPSystem.getConnection());
+        assertNotNull(connection.getFtpServer());
+        assertNotNull(connection.getFtpConnectionDetails());
+    }
+
+    @Test
+    void shouldCreateTempConnectionFromExisting() {
+        FTPSystem.reset();
+
+        FTPServer ftpServer = getTestFTPServer();
+        FTPConnectionDetails connectionDetails = getTestConnectionDetails();
+
+        FTPConnection connection = FTPConnection.createSharedConnection(ftpServer, connectionDetails);
+        assertEquals(connection, FTPSystem.getConnection());
+        FTPConnection connection1 = FTPConnection.createTemporaryConnection(connection);
+        assertNotSame(connection, connection1);
+        assertEquals(ftpServer, connection1.getFtpServer());
+        assertEquals(connectionDetails, connection1.getFtpConnectionDetails());
+    }
+
+    @Test
+    void shouldCreateTempConnectionFromDetails() {
+        FTPSystem.reset();
+
+        FTPServer ftpServer = getTestFTPServer();
+        FTPConnectionDetails connectionDetails = getTestConnectionDetails();
+
+        FTPConnection connection = FTPConnection.createTemporaryConnection(ftpServer, connectionDetails);
+        assertNull(FTPSystem.getConnection());
+        assertEquals(connection.getFtpServer(), ftpServer);
+        assertEquals(connection.getFtpConnectionDetails(), connectionDetails);
     }
 }
