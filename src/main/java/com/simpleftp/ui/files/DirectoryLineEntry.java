@@ -17,21 +17,21 @@
 
 package com.simpleftp.ui.files;
 
+import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
-import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.panels.FilePanel;
 
 /**
  * A line entry implementation for a Directory.
  */
-public class DirectoryLineEntry extends LineEntry {
+final class DirectoryLineEntry extends LineEntry {
 
     /**
      * Constructs Directory LineEntry
      * @param file the file that this entry represents. It is not this class' responsibility to ensure file is a directory
      * @param owningPanel the panel owning this entry, i.e. the panel it is on
      */
-    public DirectoryLineEntry(CommonFile file, FilePanel owningPanel) throws FTPException {
+    DirectoryLineEntry(CommonFile file, FilePanel owningPanel) throws FileSystemException {
         super("dir_icon.png", file, owningPanel);
     }
 }

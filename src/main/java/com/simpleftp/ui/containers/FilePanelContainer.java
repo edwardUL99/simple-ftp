@@ -17,17 +17,11 @@
 
 package com.simpleftp.ui.containers;
 
-import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.LocalFile;
-import com.simpleftp.filesystem.RemoteFile;
-import com.simpleftp.filesystem.paths.ResolvedPath;
+import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
-import com.simpleftp.filesystem.interfaces.FileSystem;
-import com.simpleftp.ftp.connection.FTPConnection;
-import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
-import com.simpleftp.ui.files.FileLineEntry;
 import com.simpleftp.ui.panels.FilePanel;
 import com.simpleftp.ui.files.LineEntry;
 import javafx.geometry.Insets;
@@ -40,8 +34,6 @@ import javafx.scene.layout.VBox;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -51,14 +43,18 @@ import java.util.HashMap;
  * While everything here could be implemented in a single FilePanel class, this helps provide some abstraction.
  * Keeps the responsibility of FilePanel to just that, listing the files, with options to refresh it or go up to the next level of files.
  * For other options there needs to be a class which will contain the panel and provide some options of controlling it
+ *
+ * A FilePanelContainer is abstract as the functionality differs depending on the file type. It can only be constructed with FilePanelContainer which returns the appropriate
+ * instance for the given file type.
+ * It can only be implemented inside the containers package as it does not make sense implementing a FilePanelContainer outside of it
  */
 @Log4j2
-public class FilePanelContainer extends VBox {
+public abstract class FilePanelContainer extends VBox {
     /**
      * The FilePanel this FilePanelContainer is connected tp
      */
     @Getter
-    private FilePanel filePanel;
+    protected FilePanel filePanel;
     /**
      * The HBox with combo box and buttons
      */
@@ -104,7 +100,7 @@ public class FilePanelContainer extends VBox {
      * Constructs a FilePanelContainer with the specified filePanel
      * @param filePanel the filePanel this container holds
      */
-    public FilePanelContainer(FilePanel filePanel) {
+    FilePanelContainer(FilePanel filePanel) {
         entryMappings = new HashMap<>();
         setStyle(UI.WHITE_BACKGROUND);
         setPadding(new Insets(UI.UNIVERSAL_PADDING));
@@ -311,225 +307,19 @@ public class FilePanelContainer extends VBox {
     }
 
     /**
-     * Handler for creating a local directory
-     * @param path the path for the directory
-     * @param directory true if to create a directory, false if file
-     */
-    private void createLocalFile(String path, boolean directory) {
-        boolean absolute;
-        String currentDirectory = filePanel.getCurrentWorkingDirectory();
-        try {
-            ResolvedPath resolvedPath = UI.resolveLocalPath(path, currentDirectory);
-            path = resolvedPath.getResolvedPath();
-            absolute = resolvedPath.isPathAlreadyAbsolute();
-        } catch (IOException ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); //this could keep happening, so show exception dialog
-            return;
-        }
-
-        String parentPath = UI.getParentPath(path);
-
-        boolean existsAsDir = new File(parentPath).isDirectory();
-
-        if (!existsAsDir) {
-            UI.doError("Directory does not exist", "Cannot create directory as path: " + parentPath + " does not exist");
-        } else {
-            LocalFile file = new LocalFile(path);
-            if (directory) {
-                if (file.mkdir()) {
-                    UI.doInfo("Directory Created", "The directory: " + path + " has been created successfully");
-                } else {
-                    UI.doError("Directory Not Created", "Failed to make directory with path: " + path);
-                }
-            } else {
-                try {
-                    if (file.createNewFile()) {
-                        UI.doInfo("File Created", "The file: " + path + " has been created successfully");
-                    } else {
-                        UI.doError("File Not Created", "Failed to make file with path: " + path);
-                    }
-                } catch (IOException ex) {
-                    UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
-                }
-            }
-
-            boolean parentPathMatchesPanelsPath = currentDirectory.equals(parentPath);
-            if (!absolute && parentPathMatchesPanelsPath) {
-                filePanel.refresh(); // only need to refresh if the path was relative (as the directory would be created in the current folder) or if absolute and the prent path doesnt match current path. The path identified by the absolute will be refreshed when its navigated to
-            } else if (parentPathMatchesPanelsPath) {
-                filePanel.refresh();
-            }
-        }
-    }
-
-    /**
-     * Handler for creating a remote directory
-     * @param path the path for the directory
-     * @param directory true if directory, false if file
-     */
-    private void createRemoteFile(String path, boolean directory) {
-        try {
-            CommonFile file = filePanel.getDirectory();
-            String currentPath = file.getFilePath();
-            FTPConnection connection = filePanel.getFileSystem().getFTPConnection();
-
-            ResolvedPath resolvedPath = UI.resolveRemotePath(path, currentPath, false, connection);
-            path = resolvedPath.getResolvedPath();
-            boolean absolute = resolvedPath.isPathAlreadyAbsolute();
-
-            String parentPath = UI.getParentPath(path);
-            boolean existsAsDir = connection.remotePathExists(parentPath, true);
-
-            if (!existsAsDir) {
-                UI.doError("Directory does not exist", "Cannot create directory as path: " + parentPath + " does not exist");
-            } else {
-                if (directory) {
-                    if (connection.makeDirectory(path)) {
-                        UI.doInfo("Directory Created", "The directory: " + path + " has been created successfully");
-                    } else {
-                        String reply = connection.getReplyString();
-                        if (reply.trim().startsWith("2")) {
-                            reply = "Path is either a file or already a directory"; // this was a successful reply, so that call must have been checking remotePathExists in FTPConnection.makeDirectory
-                        }
-                        UI.doError("Directory Not Created", "Failed to make directory with path: " + path + " with error: " + reply);
-                    }
-                } else {
-                    // need to make a local file first and then upload
-                    if (!connection.remotePathExists(path, false)) {
-                        String fileName = new File(path).getName();
-                        LocalFile localFile = new LocalFile(UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + fileName);
-                        if (localFile.exists())
-                            localFile.delete(); // it's in a temp directory, so can be deleted
-
-                        if (localFile.createNewFile() && connection.uploadFile(localFile, parentPath) != null) {
-                            UI.doInfo("File Created", "The file: " + path + " has been created successfully");
-                        } else {
-                            String reply = connection.getReplyString();
-                            if (reply.trim().startsWith("2")) {
-                                reply = "Path is either a directory or already a file"; // this was a successful reply, so that call must have been checking remotePathExists in FTPConnection.makeDirectory
-                            }
-                            UI.doError("File Not Created", "Failed to make file with path: " + path + " with reply: " + reply);
-                        }
-
-                        localFile.delete();
-                    } else {
-                        UI.doError("File Already Exists", "File with path: " + path + " already exists");
-                    }
-                }
-
-                boolean parentPathMatchesPanelsPath = currentPath.equals(parentPath);
-                if (!absolute && (parentPathMatchesPanelsPath || UI.isFileSymbolicLink(file))) {
-                    filePanel.refresh(); // only need to refresh if the path was relative (as the directory would be created in the current folder) or if absolute and the prent path doesnt match current path. The path identified by the absolute will be refreshed when its navigated to
-                } else if (parentPathMatchesPanelsPath) {
-                    filePanel.refresh();
-                }
-            }
-        } catch (FTPException ex) {
-            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-        } catch (IOException ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
-        }
-    }
-
-    /**
      * The handler for creating a new directory
      */
-    private void createNewDirectory() {
-        String path = UI.doPathDialog(UI.PathAction.CREATE, true);
-
-        if (path != null) {
-            if (filePanel.getDirectory() instanceof LocalFile) {
-                createLocalFile(path, true);
-            } else {
-                createRemoteFile(path, true);
-            }
-        }
-    }
+    abstract void createNewDirectory();
 
     /**
      * The handler to create a new empty file
      */
-    private void createNewFile() {
-        String path = UI.doPathDialog(UI.PathAction.CREATE, false);
-
-        if (path != null) {
-            if (filePanel.getDirectory() instanceof LocalFile) {
-                createLocalFile(path, false);
-            } else {
-                createRemoteFile(path, false);
-            }
-        }
-    }
-
-    /**
-     * Takes the given path and attempts to go the the location in the local file system identified by it.
-     * @param path the path to go to
-     */
-    private void goToLocalPath(String path) throws FileSystemException, FTPException {
-        try {
-            ResolvedPath resolvedPath = UI.resolveLocalPath(path, filePanel.getCurrentWorkingDirectory());
-            path = resolvedPath.getResolvedPath();
-
-            LocalFile file = new LocalFile(new File(path).getAbsoluteFile().getPath());
-
-            if (file.exists() && file.isDirectory()) {
-                filePanel.setDirectory(file);
-                filePanel.refresh();
-            } else if (file.exists()) {
-                filePanel.openLineEntry(new FileLineEntry(file, filePanel));
-            } else {
-                UI.doError("Path does not exist", "The path: " + path + " does not exist");
-            }
-        } catch (IOException ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); // if it fails here, it'll keep failing, show exception
-        }
-    }
-
-    /**
-     * Takes the given path and attempts to go the the location in the remote file system identified by it
-     * @param path the path to go to
-     */
-    private void goToRemotePath(String path) throws FileSystemException {
-        FileSystem fileSystem = filePanel.getFileSystem();
-        FTPConnection connection = fileSystem.getFTPConnection();
-
-        try {
-            ResolvedPath resolvedPath = UI.resolveRemotePath(path, filePanel.getCurrentWorkingDirectory(), true, fileSystem.getFTPConnection());
-            path = resolvedPath.getResolvedPath();
-
-            if (connection.remotePathExists(path, true)) {
-                CommonFile file = fileSystem.getFile(path);
-                filePanel.setDirectory(file);
-                filePanel.refresh();
-            } else if (connection.remotePathExists(path, false)) {
-                filePanel.openLineEntry(new FileLineEntry(new RemoteFile(path), filePanel));
-            } else {
-                UI.doError("Path does not exist", "The path: " + path + " does not exist or it is not a directory");
-            }
-        } catch (FTPException ex) {
-            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-        }
-    }
+    abstract void createNewFile();
 
     /**
      * The handler for the goto button
      */
-    private void gotoPath() {
-        String path = UI.doPathDialog(UI.PathAction.GOTO, true); // directory is irrelevant here for GOTO, but pass to compile
-
-        if (path != null) {
-            try {
-                if (filePanel.getDirectory() instanceof LocalFile) {
-                    goToLocalPath(path);
-                } else {
-                    goToRemotePath(path);
-                }
-
-            } catch (FileSystemException | FTPException ex) {
-                UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
-            }
-        }
-    }
+    abstract void gotoPath();
 
     /**
      * Refreshes the file names displayed in the ComboBox
@@ -565,11 +355,12 @@ public class FilePanelContainer extends VBox {
      */
     public void delete() {
         LineEntry lineEntry = getLineEntryFromComboBox();
-        CommonFile file = lineEntry.getFile();
-        String fileName = file.getName();
 
-        if (!UI.isFileOpened(file.getFilePath())) {
-            if (lineEntry != null) {
+        if (lineEntry != null) {
+            CommonFile file = lineEntry.getFile();
+            String fileName = file.getName();
+
+            if (!UI.isFileOpened(file.getFilePath())) {
                 if (UI.doConfirmation("Confirm file deletion", "Confirm deletion of " + fileName)) {
                     if (filePanel.deleteEntry(lineEntry)) {
                         UI.doInfo("File deleted successfully", "File " + fileName + " deleted");
@@ -580,9 +371,9 @@ public class FilePanelContainer extends VBox {
                         UI.doError("File not deleted", "File " + fileName + " wasn't deleted. FTP Reply: " + filePanel.getFileSystem().getFTPConnection().getReplyString());
                     }
                 }
+            } else {
+                UI.doError("File Open", "File " + fileName + " is currently opened, file can't be deleted");
             }
-        } else {
-            UI.doError("File Open", "File " + fileName + " is currently opened, file can't be deleted");
         }
     }
 
@@ -646,5 +437,23 @@ public class FilePanelContainer extends VBox {
             comboBox.getItems().remove(name);
             comboBox.setValue("");
         }
+    }
+
+    /**
+     * Creates a new FilePanelContainer instance based on the file panel provided
+     * @param filePanel the file panel to be contained by this
+     * @return the appropriate FilePanelContainerInstance
+     * @throws NullPointerException if panel is null
+     */
+    public static FilePanelContainer newInstance(FilePanel filePanel) {
+        if (filePanel == null)
+            throw new NullPointerException("The provided FilePanel is null");
+
+        boolean local = filePanel.getDirectory() instanceof LocalFile; // Because of the FilePanel.checkFileType method, it guarantees that the type will always match the type of panel
+
+        if (local)
+            return new LocalFilePanelContainer(filePanel);
+        else
+            return new RemoteFilePanelContainer(filePanel);
     }
 }

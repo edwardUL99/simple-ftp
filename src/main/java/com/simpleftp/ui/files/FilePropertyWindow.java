@@ -66,9 +66,6 @@ public class FilePropertyWindow extends VBox {
         initNamePanel();
         Separator separator = new Separator();
         separator.setOrientation(Orientation.HORIZONTAL);
-        /**
-         * The properties panel containing all the properties and toggles (to change size unit)
-         */
         PropertiesPanel propertiesPanel = new PropertiesPanel(this);
 
         getChildren().addAll(namePanel, separator, propertiesPanel);
@@ -173,11 +170,11 @@ public class FilePropertyWindow extends VBox {
             sizeLabel = new Label("Size:");
 
             try {
-                permissions.setText("Permissions:\t\t\t\t\t" + lineEntry.calculatePermissionsString());
+                permissions.setText("Permissions:\t\t\t\t\t" + file.getPermissions());
                 String[] modificationSize = lineEntry.getModificationTimeAndSize().split(" ");
-                String modificationTimeStr = "";
+                StringBuilder modificationTimeStr = new StringBuilder();
                 for (int i = 1; i < modificationSize.length; i++) {
-                    modificationTimeStr += modificationSize[i] + " ";
+                    modificationTimeStr.append(modificationSize[i]).append(" ");
                 }
                 modificationTime.setText("Modification Time:\t\t\t\t" + modificationTimeStr);
                 sizeLabel.setText("Size:\t\t\t\t\t\t\t" + modificationSize[0] + "B");

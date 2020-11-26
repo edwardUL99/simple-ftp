@@ -17,6 +17,7 @@
 
 package com.simpleftp.ftp.connection;
 
+import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.exceptions.*;
 import lombok.*;
@@ -471,6 +472,13 @@ public class FTPConnection {
         }
     }
 
+    /**
+     * Writes the specified file locally to remote path
+     * @param file the local file
+     * @param path the path to store the file on
+     * @return the FTPFile representing the uploaded file
+     * @throws IOException if an error occurs
+     */
     private FTPFile writeLocalFileToRemote(File file, String path) throws IOException {
         String name = file.getName();
         String remoteFileName;
@@ -502,7 +510,7 @@ public class FTPConnection {
      * @throws FTPError if an error occurs when uploading files
      * @throws FTPCommandFailedException if the upload failed
      */
-    public FTPFile uploadFile(File file, String path) throws FTPNotConnectedException,
+    public FTPFile uploadFile(LocalFile file, String path) throws FTPNotConnectedException,
                                                              FTPConnectionFailedException,
                                                              FTPError,
                                                              FTPCommandFailedException {
@@ -551,9 +559,15 @@ public class FTPConnection {
                                                                     FTPConnectionFailedException,
                                                                     FTPError,
                                                                     FTPCommandFailedException {
-        return uploadFile(new File(localPath), path);
+        return uploadFile(new LocalFile(localPath), path);
     }
 
+    /**
+     * Gets the basename of the file, i.e. name without path
+     * @param file the file to get the name of
+     * @return the name of the file
+     * @throws FTPError if an unknown error occurs
+     */
     private String getFileBasename(FTPFile file) throws FTPError {
         String name = file.getName();
 
@@ -572,6 +586,13 @@ public class FTPConnection {
         }
     }
 
+    /**
+     * Adds the name of the file to the local directory path
+     * @param localPath the name of the directory the file will be stored in locally
+     * @param file the file to store locally
+     * @return the path to the local file that will be created
+     * @throws FTPError if an error occurs
+     */
     private String addFileNameToLocalPath(String localPath, FTPFile file) throws FTPError {
         String separator = System.getProperty("file.separator");
         if (!localPath.endsWith(separator))
@@ -579,14 +600,21 @@ public class FTPConnection {
         return localPath + getFileBasename(file);
     }
 
-    private File writeRemoteFileToLocal(String remotePath, String localPath) throws IOException {
+    /**
+     * Writes a remote file to the local path specified
+     * @param remotePath the path of the remote file to write locally
+     * @param localPath the path where to store the file locally
+     * @return the file representing the written local file
+     * @throws IOException if any FTP or IO exception occurs
+     */
+    private LocalFile writeRemoteFileToLocal(String remotePath, String localPath) throws IOException {
         FileOutputStream fileOutputStream = new FileOutputStream(new File(localPath));
 
         boolean retrieved = ftpClient.retrieveFile(remotePath, fileOutputStream);
 
         if (retrieved) {
             logDebug("Retrieved file successfully from server");
-            return new File(localPath); // the File object representing the file that was written to
+            return new LocalFile(localPath); // the File object representing the file that was written to
         } else {
             logDebug("Did not retrieve the file successfully from server");
             return null;
@@ -606,7 +634,7 @@ public class FTPConnection {
      * @throws FTPError if an error occurs determining if remotePath exists
      * @throws FTPCommandFailedException if an error occurs sending the command
      */
-    public File downloadFile(String remotePath, String localPath) throws FTPNotConnectedException,
+    public LocalFile downloadFile(String remotePath, String localPath) throws FTPNotConnectedException,
                                                                     FTPConnectionFailedException,
                                                                     FTPError,
                                                                     FTPCommandFailedException {
@@ -616,7 +644,7 @@ public class FTPConnection {
             throw new FTPNotConnectedException("FTPConnection is not connected to the server, cannot download file", FTPNotConnectedException.ActionType.DOWNLOAD);
         }
 
-        File local = new File(localPath);
+        LocalFile local = new LocalFile(localPath);
         try {
             if (ftpLookup.remotePathExists(remotePath, true) || !local.isDirectory() || !loggedIn) {
                 logDebug("Either remote path {} or local path {} does not exist or remote path is a directory or the user is not logged in", remotePath, localPath);

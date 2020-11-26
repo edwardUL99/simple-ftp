@@ -17,6 +17,7 @@
 
 package com.simpleftp.ftp.tests.integration;
 
+import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPPathStats;
 import com.simpleftp.ftp.connection.FTPServer;
@@ -160,7 +161,7 @@ public class FTPConnectionIntegrationTest {
         assertTrue(ftpConnection.connect());
         assertTrue(ftpConnection.login());
 
-        File file = new File("test.txt");
+        LocalFile file = new LocalFile("test.txt");
         file.createNewFile();
 
         FTPFile uploaded = ftpConnection.uploadFile(file, TEST_PATH);

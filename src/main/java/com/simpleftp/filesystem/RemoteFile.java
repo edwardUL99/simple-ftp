@@ -28,6 +28,8 @@ import lombok.Getter;
 import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.File;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 
 /**
@@ -74,14 +76,11 @@ public class RemoteFile implements CommonFile {
      * @param fileName the name of the file (absolute path preferred)
      * @param ftpConnection the connection to use
      * @param ftpFile the FTPFile to initialise this RemoteFile with. Leave null to force a lookup on FTP Server with fileName as path. This file may not exist. Assumed it does exist if you have the file
-     * @throws FileSystemException
+     * @throws FileSystemException if the connection is not connected and logged in
      */
     public RemoteFile(String fileName, FTPConnection ftpConnection, FTPFile ftpFile) throws FileSystemException {
         absolutePath = fileName;
         this.connection = ftpConnection;
-        if (this.connection == null) {
-            throw new FileSystemException("Could not configure the FTP Server, did you set the System properties ftp-server ftp-user ftp-pass and ftp-port?");
-        }
 
         validateConnection(this.connection);
         initialiseFTPFile(ftpFile);
@@ -294,6 +293,115 @@ public class RemoteFile implements CommonFile {
             RemoteFile remoteFile = (RemoteFile)obj;
 
             return this.getFilePath().equals(remoteFile.getFilePath());
+        }
+    }
+
+    /**
+     * Calculates the permissions for a remote file
+     * @return the permissions
+     */
+    private String calculateRemotePermissions() {
+        String permissions = "";
+        FTPFile file = getFtpFile();
+
+        if (file.isSymbolicLink()) {
+            permissions += "l";
+        } else if (file.isDirectory()) {
+            permissions += "d";
+        } else {
+            permissions += "-";
+        }
+
+        if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.READ_PERMISSION)) {
+            permissions += "r";
+        } else {
+            permissions += "-";
+        }
+
+        if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.WRITE_PERMISSION)) {
+            permissions += "w";
+        } else {
+            permissions += "-";
+        }
+
+        if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
+            permissions += "x";
+        } else {
+            permissions += "-";
+        }
+
+        if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.READ_PERMISSION)) {
+            permissions += "r";
+        } else {
+            permissions += "-";
+        }
+
+        if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.WRITE_PERMISSION)) {
+            permissions += "w";
+        } else {
+            permissions += "-";
+        }
+
+        if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
+            permissions += "x";
+        } else {
+            permissions += "-";
+        }
+
+        if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.READ_PERMISSION)) {
+            permissions += "r";
+        } else {
+            permissions += "-";
+        }
+
+        if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.WRITE_PERMISSION)) {
+            permissions += "w";
+        } else {
+            permissions += "-";
+        }
+
+        if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
+            permissions += "x";
+        } else {
+            permissions += "-";
+        }
+
+        return permissions;
+    }
+
+    /**
+     * Gets the permissions as a string in the unix form of ls command. For Non-posix systems, this just displays the permissions for the user running the program
+     *
+     * @return the permissions as a string
+     */
+    @Override
+    public String getPermissions() {
+        return calculateRemotePermissions();
+    }
+
+    /**
+     * Gets the modification time as a formatted String in the form of Month Day Hour:Minute, e.g Jan 01 12:50
+     *
+     * @return the formatted modification time String
+     * @throws FileSystemException if an error occurs
+     */
+    @Override
+    public String getModificationTime() throws FileSystemException {
+        try {
+            String modificationTime;
+            FTPFile ftpFile = getFtpFile();
+            String filePath = getFilePath();
+            String fileModTime = connection.getModificationTime(filePath);
+            if (fileModTime != null) {
+                LocalDateTime dateTime = LocalDateTime.parse(fileModTime, DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy"));
+                modificationTime = dateTime.format(DateTimeFormatter.ofPattern(UI.FILE_DATETIME_FORMAT));
+            } else {
+                modificationTime = ftpFile.isValid() ? FileSystemUtils.parseCalendarToFormattedDate(ftpFile.getTimestamp()):null;
+            }
+
+            return modificationTime;
+        } catch (FTPException ex) {
+            throw new FileSystemException("An error occurred retrieving file modification time", ex);
         }
     }
 }
