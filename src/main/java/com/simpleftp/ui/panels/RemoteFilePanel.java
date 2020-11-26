@@ -18,6 +18,7 @@
 package com.simpleftp.ui.panels;
 
 import com.simpleftp.filesystem.RemoteFile;
+import com.simpleftp.filesystem.RemoteFileSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.FTPSystem;
@@ -40,6 +41,16 @@ final class RemoteFilePanel extends FilePanel {
      */
     RemoteFilePanel(RemoteFile directory) throws FileSystemException {
         super(directory);
+    }
+
+    /**
+     * Initialises the file system for use with this FilePanel
+     *
+     * @throws FileSystemException if an error occurs initialising it
+     */
+    @Override
+    void initFileSystem() throws FileSystemException {
+        fileSystem = new RemoteFileSystem();
     }
 
     /**

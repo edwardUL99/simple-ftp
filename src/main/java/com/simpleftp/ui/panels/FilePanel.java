@@ -143,6 +143,7 @@ public abstract class FilePanel extends VBox {
         initButtons();
         initStatusPanel();
         initEntriesBox();
+        initFileSystem();
         initDirectory(directory);
         initEmptyFolderPane();
     }
@@ -225,19 +226,16 @@ public abstract class FilePanel extends VBox {
     }
 
     /**
+     * Initialises the file system for use with this FilePanel
+     * @throws FileSystemException if an error occurs initialising it
+     */
+    abstract void initFileSystem() throws FileSystemException;
+
+    /**
      * Initialises the directory that this FilePanel is set up to view
      * @param directory the directory to set as initial directory
-     * @throws IllegalArgumentException if the directory is not in fact a directory
      */
-    private void initDirectory(CommonFile directory) throws IllegalArgumentException, FileSystemException {
-
-        if (directory instanceof RemoteFile) {
-            fileSystem = new RemoteFileSystem(); // it is expected that when you have a FilePanel created, at this stage you already have a connection established and logged in
-            // the login process should call FTPConnection.createSharedConnection
-        } else {
-            fileSystem = new LocalFileSystem();
-        }
-
+    private void initDirectory(CommonFile directory) throws FileSystemException {
         setDirectory(directory);
         refresh();
 
