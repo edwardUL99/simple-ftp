@@ -100,7 +100,7 @@ public abstract class FilePanelContainer extends VBox {
      * Constructs a FilePanelContainer with the specified filePanel
      * @param filePanel the filePanel this container holds
      */
-    protected FilePanelContainer(FilePanel filePanel) {
+    FilePanelContainer(FilePanel filePanel) {
         entryMappings = new HashMap<>();
         setStyle(UI.WHITE_BACKGROUND);
         setPadding(new Insets(UI.UNIVERSAL_PADDING));

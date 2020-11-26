@@ -107,7 +107,7 @@ public class LocalFile extends File implements CommonFile {
         if (path.getFileSystem().supportedFileAttributeViews().contains("posix")) {
             try {
                 Set<PosixFilePermission> permissionsSet = Files.getPosixFilePermissions(path);
-                String[] permissionsStringArr= new String[9]; // first 3 indices, owner rwx, next 3, group, last 3 others
+                String[] permissionsStringArr = new String[9]; // first 3 indices, owner rwx, next 3, group, last 3 others
                 for (int i = 0; i < 9; i++)
                     permissionsStringArr[i] = "-";
 

@@ -88,7 +88,7 @@ final class LocalFilePanelContainer extends FilePanelContainer {
         }
 
         String parentPath = UI.getParentPath(path);
-        boolean existsAsDir = new File(parentPath).isDirectory();
+        boolean existsAsDir = new LocalFile(parentPath).isDirectory();
 
         if (!existsAsDir) {
             UI.doError("Directory does not exist", "Cannot create directory as path: " + parentPath + " does not exist");
@@ -139,7 +139,7 @@ final class LocalFilePanelContainer extends FilePanelContainer {
             ResolvedPath resolvedPath = UI.resolveLocalPath(path, filePanel.getCurrentWorkingDirectory());
             path = resolvedPath.getResolvedPath();
 
-            LocalFile file = new LocalFile(new File(path).getAbsoluteFile().getPath());
+            LocalFile file = new LocalFile(path);
 
             if (file.exists() && file.isDirectory()) {
                 filePanel.setDirectory(file);

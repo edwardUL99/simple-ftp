@@ -136,7 +136,7 @@ public abstract class FilePanel extends VBox {
      * @param directory the directory object. Can be Local or Remote file
      * @throws FileSystemException if the directory is not in fact a directory
      */
-    protected FilePanel(CommonFile directory) throws FileSystemException {
+    FilePanel(CommonFile directory) throws FileSystemException {
         setStyle(UI.WHITE_BACKGROUND);
         lineEntries = new ArrayList<>();
 
