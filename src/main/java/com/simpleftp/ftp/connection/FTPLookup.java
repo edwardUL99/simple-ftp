@@ -50,6 +50,12 @@ public class FTPLookup {
             log.debug(message, options);
     }
 
+    /**
+     * Retrieves the specified FTPFile from the server
+     * @param path the path of the file
+     * @return the retrieved file, null if not found
+     * @throws IOException if any FTP or IO Exception occurs
+     */
     private FTPFile retrieveFTPFile(String path) throws IOException {
         if (ftpClient.hasFeature("MLST")) {
             // this is the preferred command as it supports more precise timestamps and other features
@@ -85,6 +91,12 @@ public class FTPLookup {
         return retrieveFTPFile(path);
     }
 
+    /**
+     * Retrieves a list of files for the specified path
+     * @param path the path to list
+     * @return the array of files
+     * @throws IOException if any FTP or IO exception occurs
+     */
     private FTPFile[] retrieveFilesListing(String path) throws IOException {
         if (ftpClient.hasFeature("MLSD")) {
             logDebug("Using MLSD to list files in path {}", path);

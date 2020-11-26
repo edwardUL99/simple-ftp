@@ -19,7 +19,6 @@ package com.simpleftp.ftp;
 
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.connection.FTPServer;
-import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.security.PasswordEncryption;
 import lombok.Getter;
 import lombok.Setter;

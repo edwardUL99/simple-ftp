@@ -63,6 +63,20 @@ public interface CommonFile {
     long getSize() throws FileSystemException;
 
     /**
+     * Gets the permissions as a string in the unix form of ls command. For Non-posix systems, this just displays the permissions for the user running the program
+     * @return the permissions as a string
+     * @throws FileSystemException if an error occurs
+     */
+    String getPermissions() throws FileSystemException;
+
+    /**
+     * Gets the modification time as a formatted String in the form of Month Day Hour:Minute, e.g Jan 01 12:50
+     * @return the formatted modification time String
+     * @throws FileSystemException if an error occurs
+     */
+    String getModificationTime() throws FileSystemException;
+
+    /**
      * Returns the hashcode for this object
      * @return the hash code
      */
