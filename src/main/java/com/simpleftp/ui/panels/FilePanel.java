@@ -56,19 +56,19 @@ The conditions for determining if an exception or error dialog show up may have 
  */
 public abstract class FilePanel extends VBox {
     /**
-     * The status panel which contains all the buttons and current directory label
+     * The status panel which contains all the buttons and current symbolicLink label
      */
     private HBox statusPanel;
     /**
-     * The label outlining current directory
+     * The label outlining current symbolicLink
      */
     private Label currentDirectoryLabel;
     /**
-     * The label showing the path to the current directory
+     * The label showing the path to the current symbolicLink
      */
     private Label currentDirectory;
     /**
-     * A tool tip for displaying the current directory when mouse is hovered over currentDirectory in case it is abbreviated
+     * A tool tip for displaying the current symbolicLink when mouse is hovered over currentDirectory in case it is abbreviated
      */
     private Tooltip currentDirectoryTooltip;
     /**
@@ -76,7 +76,7 @@ public abstract class FilePanel extends VBox {
      */
     private Button refresh;
     /**
-     * Button for moving up to the parent directory
+     * Button for moving up to the parent symbolicLink
      */
     private Button up;
     /**
@@ -84,7 +84,7 @@ public abstract class FilePanel extends VBox {
      */
     private ArrayList<LineEntry> lineEntries;
     /**
-     * The directory that this FilePanel is currently listing
+     * The symbolicLink that this FilePanel is currently listing
      */
     @Getter
     protected CommonFile directory;
@@ -130,9 +130,9 @@ public abstract class FilePanel extends VBox {
     private String fileMaskRegex;
 
     /**
-     * Constructs a FilePanel object with the specified directory
-     * @param directory the directory object. Can be Local or Remote file
-     * @throws FileSystemException if the directory is not in fact a directory
+     * Constructs a FilePanel object with the specified symbolicLink
+     * @param directory the symbolicLink object. Can be Local or Remote file
+     * @throws FileSystemException if the symbolicLink is not in fact a symbolicLink
      */
     FilePanel(CommonFile directory) throws FileSystemException {
         setStyle(UI.WHITE_BACKGROUND);
@@ -198,7 +198,7 @@ public abstract class FilePanel extends VBox {
     }
 
     /**
-     * Intialises the status panel which contains the buttons and current directory
+     * Intialises the status panel which contains the buttons and current symbolicLink
      */
     private void initStatusPanel() {
         statusPanel = new HBox();
@@ -230,8 +230,8 @@ public abstract class FilePanel extends VBox {
     abstract void initFileSystem() throws FileSystemException;
 
     /**
-     * Initialises the directory that this FilePanel is set up to view
-     * @param directory the directory to set as initial directory
+     * Initialises the symbolicLink that this FilePanel is set up to view
+     * @param directory the symbolicLink to set as initial symbolicLink
      */
     private void initDirectory(CommonFile directory) throws FileSystemException {
         setDirectory(directory);
@@ -253,8 +253,8 @@ public abstract class FilePanel extends VBox {
     }
 
     /**
-     * Sets the text of the current directory text in the status panel and abbreviates it if it is too long
-     * @param currentDirectory the directory to change the text to
+     * Sets the text of the current symbolicLink text in the status panel and abbreviates it if it is too long
+     * @param currentDirectory the symbolicLink to change the text to
      */
     private void setCurrDirText(String currentDirectory) {
         if (currentDirectory.length() >= MAX_FILE_PATH_LENGTH) {
@@ -278,29 +278,29 @@ public abstract class FilePanel extends VBox {
     }
 
     /**
-     * Checks if you are at the root directory
-     * @return true if at the root directory
+     * Checks if you are at the root symbolicLink
+     * @return true if at the root symbolicLink
      */
     public boolean isAtRootDirectory() {
         return new LocalFile(directory.getFilePath()).getParent() == null;
     }
 
     /**
-     * Controls going up to parent directory
+     * Controls going up to parent symbolicLink
      */
     public abstract void up();
 
     /**
-     * Checks the directory passed in to see if the type matches the dfile type this FilePanel is for.
+     * Checks the symbolicLink passed in to see if the type matches the dfile type this FilePanel is for.
      * setDirectory calls this
-     * @param directory the directory to check
-     * @throws IllegalArgumentException if the type of directory is different to the type of the current one
+     * @param directory the symbolicLink to check
+     * @throws IllegalArgumentException if the type of symbolicLink is different to the type of the current one
      */
     abstract void checkFileType(CommonFile directory) throws IllegalArgumentException;
 
     /**
-     * Returns the path of the current working directory
-     * @return the current working directory path
+     * Returns the path of the current working symbolicLink
+     * @return the current working symbolicLink path
      */
     public String getCurrentWorkingDirectory() {
         return directory.getFilePath();
@@ -317,28 +317,28 @@ public abstract class FilePanel extends VBox {
     }
 
     /**
-     * Changes directory but doesn't check the type of the directory or if it is a directory.
-     * This is used internally as it is called by doubleClickDirectoryEntry. Since, you knew it was a directory to create a directory entry, you don't need to check it again.
+     * Changes symbolicLink but doesn't check the type of the symbolicLink or if it is a symbolicLink.
+     * This is used internally as it is called by doubleClickDirectoryEntry. Since, you knew it was a symbolicLink to create a symbolicLink entry, you don't need to check it again.
      * The types will also always stay the same. The public method setDirectory is a wrapper for this, doing validation checks and then calling this.
      * While, internally these checks should be enforced, it can't be guaranteed an external class calling it would have stuck to them.
-     * @param directory the directory to set
+     * @param directory the symbolicLink to set
      */
      void setDirectoryUnchecked(CommonFile directory) {
         if (this.directory != null)
-            UI.closeFile(getCurrentWorkingDirectory()); // after successfully leaving this directory to the new one, close it
+            UI.closeFile(getCurrentWorkingDirectory()); // after successfully leaving this symbolicLink to the new one, close it
         this.directory = directory;
         String path = directory.getFilePath();
-        UI.openFile(path); // open the new directory
+        UI.openFile(path); // open the new symbolicLink
 
         setCurrDirText(path);
     }
 
     /**
-     * Changes directory. Refresh should be called after this action
-     * @param directory the directory to change to, local, or remote
-     * @throws FileSystemException if the directory is not a directory
-     * @throws IllegalArgumentException if type of the directory is different to the type that was initially passed in.
-     *              You're not allowed pass in RemoteFile to constructor and then suddenly set directory to a LocalFile or it's not a directory
+     * Changes symbolicLink. Refresh should be called after this action
+     * @param directory the symbolicLink to change to, local, or remote
+     * @throws FileSystemException if the symbolicLink is not a symbolicLink
+     * @throws IllegalArgumentException if type of the symbolicLink is different to the type that was initially passed in.
+     *              You're not allowed pass in RemoteFile to constructor and then suddenly set symbolicLink to a LocalFile or it's not a symbolicLink
      */
     public void setDirectory(CommonFile directory) throws FileSystemException, IllegalArgumentException {
         checkFileType(directory);
@@ -346,32 +346,32 @@ public abstract class FilePanel extends VBox {
         if (directory.isADirectory()) {
             setDirectoryUnchecked(directory);
         } else {
-            throw new IllegalArgumentException("The directory for a FilePanel must be in fact a directory, not a file");
+            throw new IllegalArgumentException("The symbolicLink for a FilePanel must be in fact a symbolicLink, not a file");
         }
     }
 
     /**
-     * Gets the target of the directory symbolic link. It is assumed you have already checked if the file is a symbolic link before calling this method
-     * @param directory the directory to get target of
+     * Gets the target of the symbolicLink symbolic link. It is assumed you have already checked if the file is a symbolic link before calling this method
+     * @param directory the symbolicLink to get target of
      * @return the target of the symbolic link
-     * @throws IOException if directory is a local file and the directory provided is not a symbolic link
+     * @throws IOException if symbolicLink is a local file and the symbolicLink provided is not a symbolic link
      */
     abstract String getSymLinkTargetPath(CommonFile directory) throws IOException, FileSystemException, FTPException;
 
     /**
-     * This method is for changing to a directory that is a symbolic link and indicates to follow it to the destination.
+     * This method is for changing to a symbolicLink that is a symbolic link and indicates to follow it to the destination.
      * setDirectory called on symbolic link follows it symbolically, represents it as a folder of the parent
-     * @param directory the directory to change to
+     * @param symbolicLink the symbolic link to change to
      * @throws FileSystemException if an error occurs
-     * @throws IllegalArgumentException if the directory is not in fact a directory and is not a symbolic link
+     * @throws IllegalArgumentException if the symbolicLink is not in fact a symbolicLink and is not a symbolic link
      */
-    private void setDirectorySymbolicLink(CommonFile directory) throws FileSystemException, IllegalArgumentException {
-        checkFileType(directory);
-        checkSymbolicLink(directory);
+    private void setSymbolicLinkTargetDir(CommonFile symbolicLink) throws FileSystemException, IllegalArgumentException {
+        checkFileType(symbolicLink);
+        checkSymbolicLink(symbolicLink);
 
         try {
-            String path = getSymLinkTargetPath(directory);
-            if (directory.isNormalFile())
+            String path = getSymLinkTargetPath(symbolicLink);
+            if (symbolicLink.isNormalFile())
             {
                 // go to the parent folder of the file
                 path = UI.getParentPath(path);
@@ -388,14 +388,14 @@ public abstract class FilePanel extends VBox {
     }
 
     /**
-     * Opens the given symbolic link. If it is a directory, it goes to the target directory. If it is a file, it goes to the parent of the target file
+     * Opens the given symbolic link. If it is a symbolicLink, it goes to the target symbolicLink. If it is a file, it goes to the parent of the target file
      * @param symbolicLink the symbolic link to open
      * @throws FileSystemException if an error occurs
      * @throws IllegalArgumentException if the file is not a symbolic link
      */
     public void openSymbolicLink(CommonFile symbolicLink) throws FileSystemException, IllegalArgumentException {
         checkSymbolicLink(symbolicLink);
-        setDirectorySymbolicLink(symbolicLink);
+        setSymbolicLinkTargetDir(symbolicLink);
     }
 
     /**
@@ -521,8 +521,8 @@ public abstract class FilePanel extends VBox {
     }
 
     /**
-     * Handles double click of the specified directory entry
-     * @param lineEntry the directory entry to double click
+     * Handles double click of the specified symbolicLink entry
+     * @param lineEntry the symbolicLink entry to double click
      */
     private void doubleClickDirectoryEntry(final LineEntry lineEntry) {
         CommonFile file = lineEntry.getFile();
@@ -602,7 +602,7 @@ public abstract class FilePanel extends VBox {
 
     /**
      * "Opens" the specified lineEntry. This is the equivalent to double clicking it
-     * If it is a directory, it will change the directory this file panel is in
+     * If it is a symbolicLink, it will change the symbolicLink this file panel is in
      * @param lineEntry the line entry to open
      */
     public void openLineEntry(final LineEntry lineEntry) {
@@ -696,10 +696,10 @@ public abstract class FilePanel extends VBox {
     }
 
     /**
-     * Creates an instance of FilePanel based on the given directory
-     * @param directory the directory to initialise with
+     * Creates an instance of FilePanel based on the given symbolicLink
+     * @param directory the symbolicLink to initialise with
      * @return the constructed file panel
-     * @throws NullPointerException if directory is null
+     * @throws NullPointerException if symbolicLink is null
      */
     public static FilePanel newInstance(CommonFile directory) throws FileSystemException {
         if (directory == null)
