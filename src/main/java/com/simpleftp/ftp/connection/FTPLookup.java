@@ -17,6 +17,7 @@
 
 package com.simpleftp.ftp.connection;
 
+import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.exceptions.FTPError;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 
 /**
  * The responsibility of this class is to provided lookup features for info on the server.
@@ -50,6 +52,13 @@ public class FTPLookup {
             log.debug(message, options);
     }
 
+    private String getParentPath(String path) {
+        String parent = new LocalFile(path).getParent();
+        parent = parent == null ? "/":parent;
+
+        return parent;
+    }
+
     /**
      * Retrieves the specified FTPFile from the server
      * @param path the path of the file
@@ -67,11 +76,22 @@ public class FTPLookup {
             FTPFile[] files = ftpClient.listFiles(path);
 
             if (files != null && files.length > 0) {
-                logDebug("File retrieved successfully from server");
-                FTPFile file = files[0];
-                if (file.getName().equals("."))
-                    // this is a directory you're listing and thus . is the same as path
-                    file.setName(path);
+                FTPFile file;
+
+                if (files.length > 1 && !path.equals("/")) {
+                    files = ftpClient.listFiles(getParentPath(path));
+
+                    file = Arrays.stream(files)
+                            .filter(e -> e.getName().equals(new File(path).getName()))
+                            .findFirst()
+                            .orElse(null);
+                } else {
+                    file = files[0];
+                }
+
+                if (file != null)
+                    logDebug("File retrieved successfully from server");
+
                 return file;
             } else {
                 logDebug("File cannot be retrieved from server");

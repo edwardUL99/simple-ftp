@@ -346,7 +346,7 @@ public abstract class FilePanel extends VBox {
         if (directory.isADirectory()) {
             setDirectoryUnchecked(directory);
         } else {
-            throw new IllegalArgumentException("The symbolicLink for a FilePanel must be in fact a symbolicLink, not a file");
+            throw new IllegalArgumentException("The directory for a FilePanel must be in fact a directory, not a file");
         }
     }
 

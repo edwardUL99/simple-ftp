@@ -95,7 +95,7 @@ public interface CommonFile {
     void refresh() throws FileSystemException;
 
     /**
-     * Checks if this file is a symbolic link
+     * Checks if this file is a symbolic link. To determine what type of file the symbolic link points to, call isANormalFile or isADirectory
      * @return true if it is a symbolic link
      */
     boolean isSymbolicLink();

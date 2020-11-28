@@ -219,7 +219,7 @@ public class LocalFile extends File implements CommonFile {
     }
 
     /**
-     * Checks if this file is a symbolic link
+     * Checks if this file is a symbolic link. To determine what type of file the symbolic link points to, call isANormalFile or isADirectory
      *
      * @return true if it is a symbolic link
      */

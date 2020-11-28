@@ -128,14 +128,10 @@ public class RemoteFile implements CommonFile {
         String name = file.getName();
 
         if (name.equals(".") || name.equals("..")) {
-            String parentPath = UI.getParentPath(absolutePath);
-            if (new File(absolutePath).getParent() == null) {
+            String parentPath = new LocalFile(absolutePath).getParent();
+            if (parentPath == null) {
                 // we're at root
-                FTPFile root = new FTPFile();
-                root.setName(absolutePath);
-                root.setSize(4096); // default directory size
-
-                return root;
+                return file;
             }
 
             FTPFile[] files = connection.listFiles(parentPath);
@@ -426,7 +422,7 @@ public class RemoteFile implements CommonFile {
     }
 
     /**
-     * Checks if this file is a symbolic link
+     * Checks if this file is a symbolic link. To determine what type of file the symbolic link points to, call isANormalFile or isADirectory
      *
      * @return true if it is a symbolic link
      */
