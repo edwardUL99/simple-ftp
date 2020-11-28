@@ -32,6 +32,7 @@ import com.simpleftp.ui.panels.FilePanel;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * This class represents a FilePanelContainer storing a FilePanel for remote files
@@ -49,17 +50,21 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
      * Creates a remote directory on the server
      * @param path the path for the directory
      * @param connection the connection to create it with
-     * @throws FTPException if an error occurss
+     * @return true if it succeeds false if not
+     * @throws FTPException if an error occurs
      */
-    private void createRemoteDirectory(String path, FTPConnection connection) throws FTPException {
+    private boolean createRemoteDirectory(String path, FTPConnection connection) throws FTPException {
         if (connection.makeDirectory(path)) {
             UI.doInfo("Directory Created", "The directory: " + path + " has been created successfully");
+            return true;
         } else {
             String reply = connection.getReplyString();
             if (reply.trim().startsWith("2")) {
                 reply = "Path is either a file or already a directory"; // this was a successful reply, so that call must have been checking remotePathExists in FTPConnection.makeDirectory
             }
             UI.doError("Directory Not Created", "Failed to make directory with path: " + path + " with error: " + reply);
+
+            return false;
         }
     }
 
@@ -67,10 +72,11 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
      * Creates a normal file on the remote server
      * @param path the path to create
      * @param connection the connection to create the file with
+     * @return true if succeeds, false if not
      * @throws FTPException if a FTP error occurs
      * @throws IOException if a local error occurs
      */
-    private void createRemoteNormalFile(String path, FTPConnection connection) throws FTPException, IOException {
+    private boolean createRemoteNormalFile(String path, FTPConnection connection) throws FTPException, IOException {
         String parentPath = UI.getParentPath(path);
         // need to make a local file first and then upload
         if (!connection.remotePathExists(path, false)) {
@@ -81,17 +87,23 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
 
             if (localFile.createNewFile() && connection.uploadFile(localFile, parentPath) != null) {
                 UI.doInfo("File Created", "The file: " + path + " has been created successfully");
+                localFile.delete();
+
+                return true;
             } else {
                 String reply = connection.getReplyString();
                 if (reply.trim().startsWith("2")) {
                     reply = "Path is either a directory or already a file"; // this was a successful reply, so that call must have been checking remotePathExists in FTPConnection.makeDirectory
                 }
                 UI.doError("File Not Created", "Failed to make file with path: " + path + " with reply: " + reply);
+
+                return false;
             }
 
-            localFile.delete();
         } else {
             UI.doError("File Already Exists", "File with path: " + path + " already exists");
+
+            return false;
         }
     }
 
@@ -99,8 +111,9 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
      * Handler for creating a remote directory
      * @param path the path for the directory
      * @param directory true if directory, false if file
+     * @return true if it succeeds, false if not
      */
-    private void createRemoteFile(String path, boolean directory) {
+    private boolean createRemoteFile(String path, boolean directory) {
         try {
             CommonFile file = filePanel.getDirectory();
             String currentPath = file.getFilePath();
@@ -115,25 +128,34 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
 
             if (!existsAsDir) {
                 UI.doError("Directory does not exist", "Cannot create directory as path: " + parentPath + " does not exist");
+                return false;
             } else {
+                boolean succeeded;
                 if (directory) {
-                    createRemoteDirectory(path, connection);
+                    succeeded = createRemoteDirectory(path, connection);
                 } else {
-                     createRemoteNormalFile(path, connection);
+                    succeeded = createRemoteNormalFile(path, connection);
                 }
 
+                if (!succeeded)
+                    return false;
+
                 boolean parentPathMatchesPanelsPath = currentPath.equals(parentPath);
-                if (!absolute && (parentPathMatchesPanelsPath || UI.isFileSymbolicLink(file))) {
+                if (!absolute && (parentPathMatchesPanelsPath || file.isSymbolicLink())) {
                     filePanel.refresh(); // only need to refresh if the path was relative (as the directory would be created in the current folder) or if absolute and the prent path doesnt match current path. The path identified by the absolute will be refreshed when its navigated to
                 } else if (parentPathMatchesPanelsPath) {
                     filePanel.refresh();
                 }
+
+                return true;
             }
         } catch (FTPException ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         } catch (IOException ex) {
             UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
         }
+
+        return false;
     }
 
     /**
@@ -141,7 +163,7 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
      */
     @Override
     void createNewDirectory() {
-        String path = UI.doPathDialog(UI.PathAction.CREATE, true);
+        String path = UI.doCreateDialog(true, null);
 
         if (path != null)
             createRemoteFile(path, true);
@@ -152,10 +174,23 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
      */
     @Override
     void createNewFile() {
-        String path = UI.doPathDialog(UI.PathAction.CREATE, false);
+        AtomicBoolean openCreatedFile = new AtomicBoolean(false);
+        String path = UI.doCreateDialog(false, () -> openCreatedFile.set(true));
+        try {
+            path = UI.resolveRemotePath(path, filePanel.getCurrentWorkingDirectory(), false, filePanel.getFileSystem().getFTPConnection()).getResolvedPath();
 
-        if (path != null)
-            createRemoteFile(path, false);
+            if (path != null) {
+                if (createRemoteFile(path, false) && openCreatedFile.get()) {
+                    try {
+                        filePanel.openLineEntry(LineEntry.newInstance(new RemoteFile(path), filePanel));
+                    } catch (FileSystemException ex) {
+                        UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+                    }
+                }
+            }
+        } catch (FTPException ex) {
+            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+        }
     }
 
     /**
@@ -191,7 +226,7 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
      */
     @Override
     void gotoPath() {
-        String path = UI.doPathDialog(UI.PathAction.GOTO, true); // directory is irrelevant here for GOTO, but pass to compile
+        String path = UI.doPathDialog();
 
         if (path != null) {
             try {

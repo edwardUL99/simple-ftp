@@ -25,8 +25,8 @@ import com.simpleftp.ui.UI;
 import com.simpleftp.ui.files.LineEntry;
 import com.simpleftp.ui.panels.FilePanel;
 
-import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * This class represents a FilePanelContainer storing a FilePanel for remote files
@@ -43,39 +43,47 @@ final class LocalFilePanelContainer extends FilePanelContainer {
     /**
      * Creates a local directory
      * @param path the specified path
+     * @return true if it succeeds, false if not
      */
-    private void createLocalDirectory(String path) {
+    private boolean createLocalDirectory(String path) {
         LocalFile file = new LocalFile(path);
         if (file.mkdir()) {
             UI.doInfo("Directory Created", "The directory: " + path + " has been created successfully");
+            return true;
         } else {
             UI.doError("Directory Not Created", "Failed to make directory with path: " + path);
+            return false;
         }
     }
 
     /**
      * Creates a local file
      * @param path the specified path
+     * @return true if it succeeds, false if not
      */
-    private void createLocalNormalFile(String path) {
+    private boolean createLocalNormalFile(String path) {
         try {
             LocalFile file = new LocalFile(path);
             if (file.createNewFile()) {
                 UI.doInfo("File Created", "The file: " + path + " has been created successfully");
+                return true;
             } else {
                 UI.doError("File Not Created", "Failed to make file with path: " + path);
             }
         } catch (IOException ex) {
             UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
         }
+
+        return false;
     }
 
     /**
      * Handler for creating a local directory
      * @param path the path for the directory
      * @param directory true if to create a directory, false if file
+     * @return true if it succeeds, false if not
      */
-    private void createLocalFile(String path, boolean directory) {
+    private boolean createLocalFile(String path, boolean directory) {
         boolean absolute;
         String currentDirectory = filePanel.getCurrentWorkingDirectory();
         try {
@@ -84,7 +92,7 @@ final class LocalFilePanelContainer extends FilePanelContainer {
             absolute = resolvedPath.isPathAlreadyAbsolute();
         } catch (IOException ex) {
             UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); //this could keep happening, so show exception dialog
-            return;
+            return false;
         }
 
         String parentPath = UI.getParentPath(path);
@@ -92,12 +100,17 @@ final class LocalFilePanelContainer extends FilePanelContainer {
 
         if (!existsAsDir) {
             UI.doError("Directory does not exist", "Cannot create directory as path: " + parentPath + " does not exist");
+            return false;
         } else {
+            boolean succeeds;
             if (directory) {
-                createLocalDirectory(path);
+                succeeds = createLocalDirectory(path);
             } else {
-                createLocalNormalFile(path);
+                succeeds = createLocalNormalFile(path);
             }
+
+            if (!succeeds)
+                return false;
 
             boolean parentPathMatchesPanelsPath = currentDirectory.equals(parentPath);
             if (!absolute && parentPathMatchesPanelsPath) {
@@ -105,6 +118,8 @@ final class LocalFilePanelContainer extends FilePanelContainer {
             } else if (parentPathMatchesPanelsPath) {
                 filePanel.refresh();
             }
+
+            return true;
         }
     }
 
@@ -113,7 +128,7 @@ final class LocalFilePanelContainer extends FilePanelContainer {
      */
     @Override
     void createNewDirectory() {
-        String path = UI.doPathDialog(UI.PathAction.CREATE, true);
+        String path = UI.doCreateDialog(true, null);
 
         if (path != null)
             createLocalFile(path, true);
@@ -124,10 +139,18 @@ final class LocalFilePanelContainer extends FilePanelContainer {
      */
     @Override
     void createNewFile() {
-        String path = UI.doPathDialog(UI.PathAction.CREATE, false);
+        AtomicBoolean openCreatedFile = new AtomicBoolean(false);
+        String path = UI.doCreateDialog(true, () -> openCreatedFile.set(true));
+        try {
+            path = UI.resolveLocalPath(path, filePanel.getCurrentWorkingDirectory()).getResolvedPath();
 
-        if (path != null)
-            createLocalFile(path, false);
+            if (path != null) {
+                if (createLocalFile(path, false) && openCreatedFile.get())
+                    filePanel.openLineEntry(LineEntry.newInstance(new LocalFile(path), filePanel));
+            }
+        } catch (IOException ex) {
+            UI.doError("Create file error", "Failed to resolve path " + path + " when creating file");
+        }
     }
 
     /**
@@ -161,7 +184,7 @@ final class LocalFilePanelContainer extends FilePanelContainer {
      */
     @Override
     void gotoPath() {
-        String path = UI.doPathDialog(UI.PathAction.GOTO, true); // directory is irrelevant here for GOTO, but pass to compile
+        String path = UI.doPathDialog();
 
         if (path != null) {
             try {

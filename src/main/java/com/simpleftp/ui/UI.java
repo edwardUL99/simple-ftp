@@ -19,7 +19,6 @@ package com.simpleftp.ui;
 
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.paths.PathResolverFactory;
-import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.paths.ResolvedPath;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.exceptions.PathResolverException;
@@ -29,19 +28,24 @@ import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.dialogs.*;
+import com.simpleftp.ui.dialogs.interfaces.DialogActionHandler;
 import com.simpleftp.ui.editor.FileEditorWindow;
 import com.simpleftp.ui.panels.FilePanel;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.geometry.Insets;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCode;
 import org.apache.tika.Tika;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * This class provides static util methods and constants for UI
@@ -165,14 +169,6 @@ public final class UI {
      * The separator for file paths
      */
     public static final String PATH_SEPARATOR = System.getProperty("file.separator");
-
-    /**
-     * An enum to determine which path dialog to open
-     */
-    public enum PathAction {
-        GOTO, // the dialog is for going to the directory/file
-        CREATE // the dialog is for creating the directory/file
-    }
 
     /**
      * List of background UI tasks running
@@ -303,19 +299,37 @@ public final class UI {
 
     /**
      * Opens a path dialog and returns the path
-     * @param action the action to open path dialog as
-     * @param directory true to create a directory, false to create a file. If action == GOTO, this boolean can be any value
      * @return the path entered, can be null
      */
-    public static String doPathDialog(PathAction action, boolean directory) {
-        ChangePathDialog pathDialog;
-        if (action == PathAction.GOTO) {
-            pathDialog = new ChangePathDialog();
-        } else {
-            pathDialog = new CreatePathDialog(directory);
-        }
+    public static String doPathDialog() {
+        ChangePathDialog pathDialog = new ChangePathDialog();
 
         return pathDialog.showAndGetPath();
+    }
+
+    /**
+     * Opens a create file dialog.
+     * @param directory true if creating a directory, false if not
+     * @param altEnterHandler the handler to perform when Alt + Enter is pressed, can be null
+     * @return the created path
+     */
+    public static String doCreateDialog(boolean directory, DialogActionHandler altEnterHandler) {
+        CreatePathDialog createPathDialog = new CreatePathDialog(directory);
+        if (altEnterHandler != null) {
+            AtomicBoolean altPressed = new AtomicBoolean(false);
+            Button okButton = createPathDialog.lookupButton(ButtonType.OK);
+            okButton.setTooltip(new Tooltip("Press Alt + Enter to open created file"));
+            createPathDialog.getDialogPane().setOnKeyPressed(e -> {
+                altPressed.set(e.isAltDown());
+                if (e.getCode() == KeyCode.ENTER && altPressed.get()) {
+                    okButton.fire();
+                    altEnterHandler.doAction();
+                }
+            });
+            okButton.setOnKeyReleased(e -> altPressed.set(!(e.getCode() == KeyCode.CONTROL)));
+        }
+
+        return createPathDialog.showAndGetPath();
     }
 
     /**
@@ -435,24 +449,6 @@ public final class UI {
     }
 
     /**
-     * The UI supports symbolic links. It regularly needs to check if a CommonFile is a symbolic link.
-     * This method provides one place to check this
-     * @param file the file to check
-     * @return true if symbolic link, false if not
-     */
-    public static boolean isFileSymbolicLink(CommonFile file) {
-        boolean symbolic;
-
-        if (file instanceof LocalFile) {
-            symbolic = Files.isSymbolicLink(((LocalFile)file).toPath());
-        } else {
-            symbolic = ((RemoteFile)file).getFtpFile().isSymbolicLink();
-        }
-
-        return symbolic;
-    }
-
-    /**
      * Attempts to get the type of the specified file
      * @param file the file to query
      * @return the file type
@@ -474,7 +470,7 @@ public final class UI {
             return type.contains("xml") || type.contains("text")
                     || (type.contains("application") && !type.contains("octet-stream")
                     && !type.contains("executable") && !type.contains("java-vm")
-                    && !type.contains("sharedlib")) || file.length() == 0;
+                    && !type.contains("sharedlib")) && !type.contains("lib") || file.length() == 0;
         } catch (IOException ex) {
             return false;
         }

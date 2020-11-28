@@ -17,12 +17,16 @@
 
 package com.simpleftp.ui.dialogs;
 
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+
 /**
  * Dialog for specifying a path for a directory to create
  */
 public class CreatePathDialog extends ChangePathDialog {
     /**
      * Constructs the dialog
+     * @param directory true if to create a directory, false for a file
      */
     public CreatePathDialog(boolean directory) {
         String fileTypeUpper = directory ? "Directory":"File";
@@ -30,5 +34,14 @@ public class CreatePathDialog extends ChangePathDialog {
         setTitle("Create " + fileTypeUpper);
         setHeaderText("Create new " + fileTypeLower);
         setContentText("Enter the path of the new " + fileTypeLower + ": ");
+    }
+
+    /**
+     * Looks up the button by type and returns it
+     * @param buttonType the type of the button
+     * @return the button if found
+     */
+    public Button lookupButton(ButtonType buttonType) {
+        return (Button)getDialogPane().lookupButton(buttonType);
     }
 }

@@ -188,7 +188,7 @@ public class RemoteFile implements CommonFile {
         try { // exists should always check up to date info
             String path = absolutePath;
             boolean oldExists = exists;
-            exists = connection.remotePathExists(path, true) || connection.remotePathExists(path, false);
+            exists = connection.remotePathExists(path);
 
             if (!oldExists && exists) {
                 // it didn't exist before, but does not, update the file
@@ -403,5 +403,49 @@ public class RemoteFile implements CommonFile {
         } catch (FTPException ex) {
             throw new FileSystemException("An error occurred retrieving file modification time", ex);
         }
+    }
+
+    /**
+     * Refreshes the file if the file implementation caches certain info. E.g a remote file may rather than making multiple calls to the server
+     */
+    @Override
+    public void refresh() throws FileSystemException {
+        try {
+            FTPFile updatedFile = connection.getFTPFile(absolutePath);
+
+            if (updatedFile != null) {
+                exists = true;
+                initialiseFTPFile(updatedFile);
+            } else {
+                exists = false;
+                ftpFile = null;
+            }
+        } catch (FTPException ex) {
+            throw new FileSystemException("Failed to refresh the file");
+        }
+    }
+
+    /**
+     * Checks if this file is a symbolic link
+     *
+     * @return true if it is a symbolic link
+     */
+    @Override
+    public boolean isSymbolicLink() {
+        return ftpFile != null && ftpFile.isSymbolicLink();
+    }
+
+    /**
+     * Gets the target of the symbolic link
+     *
+     * @return the symbolic link target, null if not symbolic link
+     */
+    @Override
+    public String getSymbolicLinkTarget() {
+        if (ftpFile.isSymbolicLink()) {
+            return ftpFile.getLink();
+        }
+
+        return null;
     }
 }

@@ -208,4 +208,38 @@ public class LocalFile extends File implements CommonFile {
 
         return new SimpleDateFormat(FileSystemUtils.FILE_DATETIME_FORMAT).format(lastModified);
     }
+
+    /**
+     * Refreshes the file if the file implementation caches certain info. E.g a remote file may rather than making multiple calls to the server
+     * No-op for a LocalFile
+     */
+    @Override
+    public void refresh() {
+        // no-op for LocalFile
+    }
+
+    /**
+     * Checks if this file is a symbolic link
+     *
+     * @return true if it is a symbolic link
+     */
+    @Override
+    public boolean isSymbolicLink() {
+        return Files.isSymbolicLink(toPath());
+    }
+
+    /**
+     * Gets the target of the symbolic link. This may not be absolute or canonicalized so may need to be passed through a PathResolver
+     *
+     * @return the symbolic link target, null if not symbolic link
+     * @throws FileSystemException if an error occurs
+     */
+    @Override
+    public String getSymbolicLinkTarget() throws FileSystemException {
+        try {
+            return Files.readSymbolicLink(toPath()).toString();
+        } catch (IOException ex) {
+            throw new FileSystemException("Failed to read symbolic link target");
+        }
+    }
 }

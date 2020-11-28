@@ -19,7 +19,6 @@ package com.simpleftp.ui.containers;
 
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.ftp.FTPSystem;
-import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.panels.FilePanel;
@@ -181,8 +180,10 @@ public abstract class FilePanelContainer extends VBox {
      * Initialises the symbolic link button
      */
     private void initSymLinkButton() {
-        symLinkDestButton = new Button("Go to Target");
-        symLinkDestButton.setTooltip(new Tooltip("The selected directory is a symbolic link. Click to go directly to the directory it points to"));
+        symLinkDestButton = new Button();
+        symLinkDestButton.setMnemonicParsing(true);
+        symLinkDestButton.setText("Go to _Target");
+        symLinkDestButton.setTooltip(new Tooltip("The selected file is a symbolic link. Click to go directly to the target directory"));
         symLinkDestButton.setOnAction(e -> goToSymLinkTarget());
         symLinkDestButton.managedProperty().bind(symLinkDestButton.visibleProperty()); // if hidden, re-arrange toolbar. But for best effects, keep the button as the last button so ToolBar doesn't keep chopping and changing
         symLinkDestButton.setVisible(false);
@@ -281,7 +282,7 @@ public abstract class FilePanelContainer extends VBox {
         LineEntry lineEntry = getLineEntryFromComboBox(); // the line entry in question
         if (lineEntry != null) {
             try {
-                filePanel.setDirectorySymbolicLink(lineEntry.getFile());
+                filePanel.openSymbolicLink(lineEntry.getFile());
             } catch (Exception ex) {
                 UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
             }
@@ -295,12 +296,7 @@ public abstract class FilePanelContainer extends VBox {
         LineEntry lineEntry = getLineEntryFromComboBox(); // the line entry in question
         if (lineEntry != null) {
             CommonFile file = lineEntry.getFile();
-
-            try {
-                symLinkDestButton.setVisible(UI.isFileSymbolicLink(file) && file.isADirectory());
-            } catch (FileSystemException ex) {
-                UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-            }
+            symLinkDestButton.setVisible(file.isSymbolicLink());
         } else {
             symLinkDestButton.setVisible(false);
         }

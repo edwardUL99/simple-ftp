@@ -217,8 +217,8 @@ final class RemoteFilePanel extends FilePanel {
      * @return the target of the symbolic link
      */
     @Override
-    String getSymLinkTargetPath(CommonFile directory) throws FTPException {
-        String path = ((RemoteFile)directory).getFtpFile().getLink();
+    String getSymLinkTargetPath(CommonFile directory) throws FTPException, FileSystemException {
+        String path = directory.getSymbolicLinkTarget();
 
         return UI.resolveRemotePath(path, getCurrentWorkingDirectory(), true, this.fileSystem.getFTPConnection()).getResolvedPath();
     }

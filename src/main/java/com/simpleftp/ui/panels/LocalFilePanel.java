@@ -19,17 +19,14 @@ package com.simpleftp.ui.panels;
 
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.LocalFileSystem;
-import com.simpleftp.filesystem.RemoteFileSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.FTPSystem;
-import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.files.LineEntry;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -98,8 +95,8 @@ final class LocalFilePanel extends FilePanel {
      * @throws IOException if directory is a local file and the directory provided is not a symbolic link
      */
     @Override
-    String getSymLinkTargetPath(CommonFile directory) throws IOException, FTPException {
-        String path = Files.readSymbolicLink(((LocalFile)directory).toPath()).toString();
+    String getSymLinkTargetPath(CommonFile directory) throws FileSystemException, IOException {
+        String path = directory.getSymbolicLinkTarget();
         if (path.startsWith(".") || path.startsWith("..")) {
             String currentPath = this.directory.getFilePath();
             if (currentPath.equals(UI.PATH_SEPARATOR))

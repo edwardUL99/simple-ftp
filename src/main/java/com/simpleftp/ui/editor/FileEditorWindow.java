@@ -17,10 +17,12 @@
 
 package com.simpleftp.ui.editor;
 
+import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
+import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.panels.FilePanel;
 import javafx.scene.Scene;
@@ -60,7 +62,7 @@ public class FileEditorWindow extends VBox {
     /**
      * The ScrollPane for the editor
      */
-    private final VirtualizedScrollPane editorScrollPane;
+    private final VirtualizedScrollPane<StyleClassedTextArea> editorScrollPane;
     /**
      * The stage that will show this window
      */
@@ -106,7 +108,7 @@ public class FileEditorWindow extends VBox {
                 }
             }
         };
-        editorScrollPane = new VirtualizedScrollPane(editor);
+        editorScrollPane = new VirtualizedScrollPane<>(editor);
         buttonBar = new HBox();
         VBox.setVgrow(editorScrollPane, Priority.ALWAYS);
         getChildren().addAll(buttonBar, editorScrollPane);
@@ -141,8 +143,8 @@ public class FileEditorWindow extends VBox {
      */
     private void reset() {
         if (!saved) {
-            double hPos = (Double)editorScrollPane.estimatedScrollXProperty().getValue();
-            double vPos = (Double)editorScrollPane.estimatedScrollYProperty().getValue();
+            double hPos = editorScrollPane.estimatedScrollXProperty().getValue();
+            double vPos = editorScrollPane.estimatedScrollYProperty().getValue();
             setEditorText(originalText);
             removeStarFromStageTitle();
             saved = true;
@@ -173,6 +175,31 @@ public class FileEditorWindow extends VBox {
     }
 
     /**
+     * Gets the path of where to save the file to. If this file is a symbolic link, it is the target path, as uplaoading to the parent path of the link will break the link
+     * @return the path where to save the file
+     */
+    private String getSaveFilePath() throws Exception {
+        // the default option if it is an unknown file type
+        if (file.isSymbolicLink()) {
+            String targetPath = file.getSymbolicLinkTarget();
+
+            /* we made FilePanel and FilePanelContainer abstract to avoid this situation as if a new type of file is implemented, you only have to extend and create a type for that file, implementing abstract methods.
+             * However here, you can only logically define symbolic links in a local file system or remote on the server. In a different file type for representing a different file that is not on the local or remote machine, symbolic links don't make sense
+             * Since, this is such a small method, we can just change this method if absolutely necessary. WOuld be a bit extreme to make several different types of FileEditorWindow for one method. If you end up having more methods like this, do extract into sub-classes like FilePanel and FilePanelContainer
+             */
+            if (file instanceof LocalFile) {
+                return UI.resolveLocalPath(targetPath, creatingPanel.getCurrentWorkingDirectory()).getResolvedPath();
+            } else if (file instanceof RemoteFile) {
+                FTPConnection connection = creatingPanel.getFileSystem().getFTPConnection();
+                return UI.resolveRemotePath(targetPath, creatingPanel.getCurrentWorkingDirectory(), true, connection).getResolvedPath();
+            }
+
+        }
+
+        return file.getFilePath();
+    }
+
+    /**
      * Saves the file if edited
      */
     private boolean save() {
@@ -180,7 +207,8 @@ public class FileEditorWindow extends VBox {
             try {
                 String text = editor.getText();
                 FileSaver saver = new FileSaver(this);
-                saver.saveFile(file.getFilePath(), text);
+                String filePath = getSaveFilePath();
+                saver.saveFile(filePath, text);
                 removeStarFromStageTitle();
                 saved = true;
                 editor.requestFocus();

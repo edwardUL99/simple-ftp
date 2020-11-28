@@ -136,7 +136,7 @@ class FileStringDownloader extends Service<String> {
                 LocalFile downloaded = new LocalFile(UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + remoteFile.getName());
                 new LocalFileSystem(readingConnection).addFile(remoteFile, downloaded.getParentFile().getAbsolutePath()); // download the file
                 String ret = fileToString(downloaded);
-                downloaded.delete();
+                downloaded.deleteOnExit();
 
                 return ret;
             } catch (Exception ex) {

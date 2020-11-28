@@ -17,8 +17,12 @@
 
 package com.simpleftp.ui.files;
 
+import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
+import com.simpleftp.ftp.FTPSystem;
+import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
+import com.simpleftp.ui.panels.FilePanel;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -107,7 +111,9 @@ public class FilePropertyWindow extends VBox {
      * Shows this FilePropertyWindow
      */
     public void show() {
-        Scene scene = new Scene(this, UI.PROPERTIES_WINDOW_WIDTH, UI.PROPERTIES_WINDOW_HEIGHT);
+        boolean symLink = lineEntry.file.isSymbolicLink();
+        int height = symLink ? UI.PROPERTIES_WINDOW_HEIGHT + 30:UI.PROPERTIES_WINDOW_HEIGHT;
+        Scene scene = new Scene(this, UI.PROPERTIES_WINDOW_WIDTH, height);
         Stage stage = new Stage();
         stage.setTitle(lineEntry.file.getName() + " Properties");
         stage.setResizable(false);
@@ -143,46 +149,121 @@ public class FilePropertyWindow extends VBox {
         }
 
         /**
-         * Initialises the text for the properties
+         * Checks if the file path is within MAX_PATH_LENGTH and if not, abbreviates it
+         * @param filePath the file path to abbreviate
+         * @return the file path if under the size limit, abbreviated if over
          */
-        private void initPropertiesText() {
-            LineEntry lineEntry = propertyWindow.lineEntry;
-            CommonFile file = lineEntry.file;
-            HBox pathBox = new HBox();
-            Label pathTitle = new Label("Full Path:\t\t\t\t\t\t");
-            String filePath = file.getFilePath();
-
-            Tooltip pathTooltip = null;
+        private String abbreviateFilePath(String filePath) {
             if (filePath.length() > MAX_PATH_LENGTH) {
-                pathTooltip = new Tooltip(filePath);
                 filePath = filePath.substring(0, MAX_PATH_LENGTH - 3) + "...";
             }
 
+            return filePath;
+        }
+
+        /**
+         * Initialises the text for the properties
+         */
+        private void initPropertiesText() {
+            initFilePathText();
+            initFileType();
+            initSymLinkTarget();
+            initFileStats();
+        }
+
+        /**
+         * Initialises the file path text
+         */
+        private void initFilePathText() {
+            HBox pathBox = new HBox();
+            Label pathTitle = new Label("Full Path:\t\t\t\t\t\t");
+            String filePath = lineEntry.getFilePath();
+
+            Tooltip pathTooltip = new Tooltip(filePath);
+            filePath = abbreviateFilePath(filePath);
 
             Label pathLabel = new Label(filePath);
-            if (pathTooltip != null)
-                pathLabel.setTooltip(pathTooltip);
+            pathLabel.setTooltip(pathTooltip);
             pathBox.getChildren().addAll(pathTitle, pathLabel);
+            getChildren().add(pathBox);
+        }
 
-            Label type = new Label("File Type:\t\t\t\t\t\t" + (lineEntry instanceof FileLineEntry ? "File":"Directory"));
+        /**
+         * Initialises the file type property
+         */
+        private void initFileType() {
+            String fileType;
+            CommonFile file = lineEntry.file;
+
+            try {
+                if (file.isSymbolicLink()) {
+                    fileType = "Symbolic Link";
+                } else if (file.isADirectory()) {
+                    fileType = "Directory";
+                } else if (file.isNormalFile()) {
+                    fileType = "File";
+                } else {
+                    fileType = "Unknown Type";
+                }
+            } catch (FileSystemException ex) {
+                if (FTPSystem.isDebugEnabled())
+                    ex.printStackTrace();
+                fileType = "Unknown Type";
+            }
+
+            Label type = new Label("File Type:\t\t\t\t\t\t" + fileType);
+            getChildren().add(type);
+        }
+
+        /**
+         * Initialises the text displaying the Symbolic link target. This is a no-op of the file is not a symbolic link
+         */
+        private void initSymLinkTarget() {
+            CommonFile file = lineEntry.file;
+            if (file.isSymbolicLink()) {
+                HBox symPathBox = new HBox();
+                Label pathTitle = new Label("Target:\t\t\t\t\t\t");
+
+                String target;
+
+                try {
+                    target = file.getSymbolicLinkTarget();
+                    FilePanel panel = lineEntry.getOwningPanel();
+                    target = UI.resolveRemotePath(target, panel.getCurrentWorkingDirectory(), true, panel.getFileSystem().getFTPConnection()).getResolvedPath(); // the FTPSystem connection should be the one that's shared between file systems
+                } catch (FileSystemException | FTPException ex) {
+                    target = "Could not be determined";
+                }
+
+                Tooltip pathTooltip = new Tooltip(target);
+                target = abbreviateFilePath(target);
+
+                Label pathLabel = new Label(target);
+                pathLabel.setTooltip(pathTooltip);
+                symPathBox.getChildren().addAll(pathTitle, pathLabel);
+                getChildren().add(symPathBox);
+            }
+        }
+
+        /**
+         * Initialises the size, permissions and modification time
+         */
+        private void initFileStats() {
             Label permissions = new Label("Permissions:");
             Label modificationTime = new Label("Modification Time:");
             sizeLabel = new Label("Size:");
 
             try {
+                CommonFile file = lineEntry.file;
                 permissions.setText("Permissions:\t\t\t\t\t" + file.getPermissions());
-                String[] modificationSize = lineEntry.getModificationTimeAndSize().split(" ");
-                StringBuilder modificationTimeStr = new StringBuilder();
-                for (int i = 1; i < modificationSize.length; i++) {
-                    modificationTimeStr.append(modificationSize[i]).append(" ");
-                }
-                modificationTime.setText("Modification Time:\t\t\t\t" + modificationTimeStr);
-                sizeLabel.setText("Size:\t\t\t\t\t\t\t" + modificationSize[0] + "B");
+                modificationTime.setText("Modification Time:\t\t\t\t" + file.getModificationTime());
+                initFileSize();
+                sizeLabel.setText("Size:\t\t\t\t\t\t\t" + fileSize + "B");
             } catch (Exception ex) {
-                ex.printStackTrace();
+                if (FTPSystem.isDebugEnabled())
+                    ex.printStackTrace();
             }
 
-            getChildren().addAll(pathBox, type, permissions, modificationTime, sizeLabel);
+            getChildren().addAll(permissions, modificationTime, sizeLabel);
         }
 
         /**
@@ -199,7 +280,6 @@ public class FilePropertyWindow extends VBox {
          * @param sizeUnit the size unit to change to
          */
         private void setSizeUnits(SizeUnit sizeUnit) throws Exception {
-            initFileSize();
             String sizeStr;
 
             try {
@@ -224,9 +304,10 @@ public class FilePropertyWindow extends VBox {
                     sizeStr = String.format("%.4f", size);
                 }
 
-                if (sizeStr.endsWith(".00")) {
-                    sizeStr = sizeStr.substring(0, sizeStr.indexOf("."));
-                }
+                if (sizeStr.equals("0.0000"))
+                    sizeLabel.setTooltip(new Tooltip("File size is too small to be displayed in 4 decimal places"));
+                else
+                    sizeLabel.setTooltip(null);
 
                 sizeLabel.setText("Size:\t\t\t\t\t\t\t" + sizeStr + unit);
             } catch (NumberFormatException nf) {

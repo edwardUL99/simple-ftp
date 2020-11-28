@@ -122,15 +122,24 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     }
 
     /**
-     * Retrieves the modification time and size string of the file. Note that if ftpConnection.getModificationTime fails, the file.getTimestamp is used even if it is not very accurate
+     * Retrieves the modification time string of the file. Note that if ftpConnection.getModificationTime fails, the file.getTimestamp is used even if it is not very accurate
      * @return modification time or Cannot be determined
      */
-    public String getModificationTimeAndSize() throws FileSystemException {
+    public String getModificationTime() throws FileSystemException {
         String modificationTime = file.getModificationTime();
         if (modificationTime == null)
             modificationTime = "Cannot be determined";
 
-        return file.getSize() + " " + modificationTime;
+        return modificationTime;
+    }
+
+    /**
+     * Gets the size of the file behing this LineEntry
+     * @return the file size in bytes
+     * @throws FileSystemException if an error occurs and size cannot be retreieved
+     */
+    public long getSize() throws FileSystemException {
+        return file.getSize();
     }
 
     /**
@@ -152,7 +161,12 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
 
         String permissions = file.getPermissions();
         permissions = permissions == null ? "N/A":permissions;
-        paddedName.append("\t\t").append(getModificationTimeAndSize()).append(" ").append(permissions);
+        paddedName.append("\t\t")
+                .append(getSize())
+                .append(" ")
+                .append(getModificationTime())
+                .append(" ")
+                .append(permissions);
 
         return paddedName.toString().trim();
     }

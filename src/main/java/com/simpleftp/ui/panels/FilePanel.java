@@ -19,9 +19,7 @@ package com.simpleftp.ui.panels;
 
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.LocalFile;
-import com.simpleftp.filesystem.LocalFileSystem;
 import com.simpleftp.filesystem.RemoteFile;
-import com.simpleftp.filesystem.RemoteFileSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.filesystem.interfaces.FileSystem;
@@ -314,7 +312,7 @@ public abstract class FilePanel extends VBox {
      * @throws IllegalArgumentException if it is not a symbolic link
      */
     private void checkSymbolicLink(CommonFile symbolicLink) throws IllegalArgumentException {
-        if (!UI.isFileSymbolicLink(symbolicLink))
+        if (!symbolicLink.isSymbolicLink())
             throw new IllegalArgumentException("The file provided is not a symbolic link");
     }
 
@@ -358,7 +356,7 @@ public abstract class FilePanel extends VBox {
      * @return the target of the symbolic link
      * @throws IOException if directory is a local file and the directory provided is not a symbolic link
      */
-    abstract String getSymLinkTargetPath(CommonFile directory) throws IOException, FTPException;
+    abstract String getSymLinkTargetPath(CommonFile directory) throws IOException, FileSystemException, FTPException;
 
     /**
      * This method is for changing to a directory that is a symbolic link and indicates to follow it to the destination.
@@ -367,12 +365,18 @@ public abstract class FilePanel extends VBox {
      * @throws FileSystemException if an error occurs
      * @throws IllegalArgumentException if the directory is not in fact a directory and is not a symbolic link
      */
-    public void setDirectorySymbolicLink(CommonFile directory) throws FileSystemException, IllegalArgumentException {
+    private void setDirectorySymbolicLink(CommonFile directory) throws FileSystemException, IllegalArgumentException {
         checkFileType(directory);
         checkSymbolicLink(directory);
 
         try {
             String path = getSymLinkTargetPath(directory);
+            if (directory.isNormalFile())
+            {
+                // go to the parent folder of the file
+                path = UI.getParentPath(path);
+            }
+
             CommonFile targetFile = fileSystem.getFile(path);
             setDirectory(targetFile); // need to use the checked setDirectory as this is a public method
             refresh();
@@ -381,6 +385,17 @@ public abstract class FilePanel extends VBox {
         } catch (FTPException ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
+    }
+
+    /**
+     * Opens the given symbolic link. If it is a directory, it goes to the target directory. If it is a file, it goes to the parent of the target file
+     * @param symbolicLink the symbolic link to open
+     * @throws FileSystemException if an error occurs
+     * @throws IllegalArgumentException if the file is not a symbolic link
+     */
+    public void openSymbolicLink(CommonFile symbolicLink) throws FileSystemException, IllegalArgumentException {
+        checkSymbolicLink(symbolicLink);
+        setDirectorySymbolicLink(symbolicLink);
     }
 
     /**
@@ -552,6 +567,9 @@ public abstract class FilePanel extends VBox {
             String filePath = lineEntry.getFilePath();
             if (!UI.isFileOpened(filePath)) {
                 CommonFile file = lineEntry.getFile();
+                file.refresh(); // update the existence information if this is a RemoteFile as the status may have changed after this file was loaded
+                            // RemoteFile sorts of "caches" the file retrieved from the remote server to update performance rather than retrieving the info from the server every time. But this info may not be up to date
+                           // Calling refresh updates the cache of the file if RemoteFile
                 if (file.isNormalFile()) {
                     try {
                         doubleClickFileEntry(lineEntry);

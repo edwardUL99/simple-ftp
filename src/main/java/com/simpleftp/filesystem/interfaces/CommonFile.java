@@ -88,4 +88,22 @@ public interface CommonFile {
      * @return true if equals, false if not
      */
     boolean equals(Object obj);
+
+    /**
+     * Refreshes the file if the file implementation caches certain info. E.g a remote file may rather than making multiple calls to the server
+     */
+    void refresh() throws FileSystemException;
+
+    /**
+     * Checks if this file is a symbolic link
+     * @return true if it is a symbolic link
+     */
+    boolean isSymbolicLink();
+
+    /**
+     * Gets the target of the symbolic link. This may not be absolute or canonicalized so may need to be passed through a PathResolver
+     * @return the symbolic link target, null if not symbolic link
+     * @throws FileSystemException if an error occurs
+     */
+    String getSymbolicLinkTarget() throws FileSystemException;
 }
