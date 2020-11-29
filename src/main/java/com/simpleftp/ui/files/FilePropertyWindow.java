@@ -227,10 +227,8 @@ public class FilePropertyWindow extends VBox {
                 String target;
 
                 try {
-                    target = file.getSymbolicLinkTarget();
-                    FilePanel panel = lineEntry.getOwningPanel();
-                    target = UI.resolveRemotePath(target, panel.getCurrentWorkingDirectory(), true, panel.getFileSystem().getFTPConnection()).getResolvedPath(); // the FTPSystem connection should be the one that's shared between file systems
-                } catch (FileSystemException | FTPException ex) {
+                    target = lineEntry.getSymbolicLinkTarget();
+                } catch (Exception ex) {
                     target = "Could not be determined";
                 }
 
@@ -255,7 +253,7 @@ public class FilePropertyWindow extends VBox {
             try {
                 CommonFile file = lineEntry.file;
                 permissions.setText("Permissions:\t\t\t\t\t" + file.getPermissions());
-                modificationTime.setText("Modification Time:\t\t\t\t" + file.getModificationTime());
+                modificationTime.setText("Modification Time:\t\t\t\t" + lineEntry.getModificationTime());
                 initFileSize();
                 sizeLabel.setText("Size:\t\t\t\t\t\t\t" + fileSize + "B");
             } catch (Exception ex) {
@@ -271,7 +269,7 @@ public class FilePropertyWindow extends VBox {
          */
         private void initFileSize() throws Exception {
             if (fileSize == null) {
-                fileSize = lineEntry.file.getSize();
+                fileSize = lineEntry.getSize();
             }
         }
 

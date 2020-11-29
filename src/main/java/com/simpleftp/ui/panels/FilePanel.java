@@ -351,14 +351,6 @@ public abstract class FilePanel extends VBox {
     }
 
     /**
-     * Gets the target of the symbolicLink symbolic link. It is assumed you have already checked if the file is a symbolic link before calling this method
-     * @param directory the symbolicLink to get target of
-     * @return the target of the symbolic link
-     * @throws IOException if symbolicLink is a local file and the symbolicLink provided is not a symbolic link
-     */
-    abstract String getSymLinkTargetPath(CommonFile directory) throws IOException, FileSystemException, FTPException;
-
-    /**
      * This method is for changing to a symbolicLink that is a symbolic link and indicates to follow it to the destination.
      * setDirectory called on symbolic link follows it symbolically, represents it as a folder of the parent
      * @param symbolicLink the symbolic link to change to
@@ -367,24 +359,17 @@ public abstract class FilePanel extends VBox {
      */
     private void setSymbolicLinkTargetDir(CommonFile symbolicLink) throws FileSystemException, IllegalArgumentException {
         checkFileType(symbolicLink);
-        checkSymbolicLink(symbolicLink);
 
-        try {
-            String path = getSymLinkTargetPath(symbolicLink);
-            if (symbolicLink.isNormalFile())
-            {
-                // go to the parent folder of the file
-                path = UI.getParentPath(path);
-            }
-
-            CommonFile targetFile = fileSystem.getFile(path);
-            setDirectory(targetFile); // need to use the checked setDirectory as this is a public method
-            refresh();
-        } catch (IOException ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); // treat this as an exception dialog because this shouldn't happen
-        } catch (FTPException ex) {
-            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+        String path = symbolicLink.getSymbolicLinkTarget();
+        if (symbolicLink.isNormalFile())
+        {
+            // go to the parent folder of the file
+            path = UI.getParentPath(path);
         }
+
+        CommonFile targetFile = fileSystem.getFile(path);
+        setDirectory(targetFile); // need to use the checked setDirectory as this is a public method
+        refresh();
     }
 
     /**

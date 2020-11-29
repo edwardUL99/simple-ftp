@@ -101,7 +101,7 @@ public interface CommonFile {
     boolean isSymbolicLink();
 
     /**
-     * Gets the target of the symbolic link. This may not be absolute or canonicalized so may need to be passed through a PathResolver
+     * Gets the target of the symbolic link. This target path is canonicalized based on the parent directory of the symbolic link (i.e. parent path of the symbolic link)
      * @return the symbolic link target, null if not symbolic link
      * @throws FileSystemException if an error occurs
      */

@@ -17,9 +17,13 @@
 
 package com.simpleftp.ui.files;
 
+import com.simpleftp.filesystem.LocalFile;
+import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.FTPSystem;
+import com.simpleftp.ftp.connection.FTPConnection;
+import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.panels.FilePanel;
 import javafx.geometry.Pos;
@@ -33,6 +37,9 @@ import javafx.scene.text.Text;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.net.ftp.FTP;
+
+import java.io.File;
 
 /**
  * This is an abstract class representing a line entry on the panel.
@@ -64,6 +71,18 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     @Getter
     @Setter
     private FilePanel owningPanel;
+    /**
+     * Stores the retrieved file size so you are not making constant calls to the FTPConnection for opening property window etc
+     */
+    private Long fileSize;
+    /**
+     * Stores the retrieved modification time so you are not making constant calls to the FTPConnection
+     */
+    private String modificationTime;
+    /**
+     * If this file is a symbolic link, store the target on initial resolving, to cache it so we don't have to keep resolving the path
+     */
+    private String symLinkTarget;
 
     /**
      * Creates a base LineEntry with the specified image URL (which is assumed to be in the jar), file and panel
@@ -126,9 +145,11 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
      * @return modification time or Cannot be determined
      */
     public String getModificationTime() throws FileSystemException {
-        String modificationTime = file.getModificationTime();
-        if (modificationTime == null)
-            modificationTime = "Cannot be determined";
+        if (modificationTime == null) {
+            modificationTime = file.getModificationTime();
+            if (modificationTime == null)
+                modificationTime = "Cannot be determined";
+        }
 
         return modificationTime;
     }
@@ -136,10 +157,14 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     /**
      * Gets the size of the file behing this LineEntry
      * @return the file size in bytes
-     * @throws FileSystemException if an error occurs and size cannot be retreieved
+     * @throws FileSystemException if an error occurs and size cannot be retrieved
      */
     public long getSize() throws FileSystemException {
-        return file.getSize();
+        if (fileSize == null) {
+            fileSize = file.getSize();
+        }
+
+        return fileSize;
     }
 
     /**
@@ -177,6 +202,37 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
      */
     public String getFilePath() {
         return file.getFilePath();
+    }
+
+    /**
+     * Resolves an existing path to an absolute one, using the file panel's current working directory. How resolution is done depends on the file type, hence why it is abstract
+     * @param path the path to resolve
+     * @return the resolved path, null if can't be resolved
+     * @throws Exception if any error occurs
+     */
+    private String resolvePath(String path) throws Exception {
+        // again, here we aren't creating Remote or Local Line Entry as we can only logically support symbolic links with a local or remote file system, not some abstract logical one we may define later
+        // the notion of symbolic links are only supported logically on real operation systems and some FTP servers
+        if (file instanceof LocalFile) {
+            return UI.resolveLocalPath(path, owningPanel.getCurrentWorkingDirectory()).getResolvedPath();
+        } else if (file instanceof RemoteFile) {
+            return UI.resolveRemotePath(path, owningPanel.getCurrentWorkingDirectory(), true, owningPanel.getFileSystem().getFTPConnection()).getResolvedPath();
+        }
+
+        return null;
+    }
+
+    /**
+     * If this LineEntry represents a file that is a symbolic link, this method gets and caches the target path for use by other classes
+     * @return the target path
+     * @throws Exception if an error occurs resolving it
+     */
+    public String getSymbolicLinkTarget() throws Exception {
+        if (symLinkTarget == null && file.isSymbolicLink()) {
+            symLinkTarget = file.getSymbolicLinkTarget();//resolvePath(file.getSymbolicLinkTarget());
+        }
+
+        return symLinkTarget;
     }
 
     @Override

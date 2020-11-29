@@ -17,6 +17,8 @@
 
 package com.simpleftp.filesystem;
 
+import com.simpleftp.filesystem.exceptions.PathResolverException;
+import com.simpleftp.filesystem.paths.PathResolverFactory;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
@@ -255,20 +257,21 @@ public class RemoteFile implements CommonFile {
     public long getSize() throws FileSystemException {
         if (!exists) {
             return -1;
-        } else if (ftpFile.isValid()) {
+        } else if (ftpFile.isValid() && !ftpFile.isSymbolicLink()) {
             return ftpFile.getSize();
         } else {
             try {
-                String size = connection.getFileSize(absolutePath);
+                String path = ftpFile.isSymbolicLink() ? getSymbolicLinkTarget():absolutePath;
+                String size = connection.getFileSize(path);
                 if (size != null) {
                     return Long.parseLong(size);
+                } else {
+                    return connection.getFTPFile(path).getSize();
                 }
             } catch (FTPException | NumberFormatException ex) {
                 throw new FileSystemException("An error occurred retrieving size of file", ex);
             }
         }
-
-        return -1;
     }
 
 
@@ -437,9 +440,22 @@ public class RemoteFile implements CommonFile {
      * @return the symbolic link target, null if not symbolic link
      */
     @Override
-    public String getSymbolicLinkTarget() {
+    public String getSymbolicLinkTarget() throws FileSystemException {
         if (ftpFile.isSymbolicLink()) {
-            return ftpFile.getLink();
+            String path = ftpFile.getLink();
+
+            String parent = new File(absolutePath).getParent();
+            parent = parent == null ? "/":parent;
+
+            try {
+                return PathResolverFactory.newInstance()
+                        .setRemote(parent, connection, true)
+                        .build()
+                        .resolvePath(path)
+                        .getResolvedPath();
+            } catch (PathResolverException ex) {
+                throw new FileSystemException("An error occurred resolving symbolic link target", ex);
+            }
         }
 
         return null;

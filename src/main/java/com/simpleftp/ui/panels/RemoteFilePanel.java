@@ -209,17 +209,4 @@ final class RemoteFilePanel extends FilePanel {
             }
         }
     }
-
-    /**
-     * Gets the target of the directory symbolic link. It is assumed you have already checked if the file is a symbolic link before calling this method
-     *
-     * @param directory the directory to get target of
-     * @return the target of the symbolic link
-     */
-    @Override
-    String getSymLinkTargetPath(CommonFile directory) throws FTPException, FileSystemException {
-        String path = directory.getSymbolicLinkTarget();
-
-        return UI.resolveRemotePath(path, getCurrentWorkingDirectory(), true, this.fileSystem.getFTPConnection()).getResolvedPath();
-    }
 }

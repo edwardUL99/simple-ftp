@@ -22,6 +22,7 @@ import com.simpleftp.filesystem.exceptions.PathResolverException;
 import com.simpleftp.filesystem.paths.interfaces.PathResolver;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
+import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.ui.UI;
 
 import java.io.File;
@@ -111,7 +112,9 @@ public class RemotePathResolver implements PathResolver {
             isFile = connection.remotePathExists(path, false);
 
         String workingDir = isFile ? UI.getParentPath(path):path;
-        connection.changeWorkingDirectory(workingDir); // allow the connection to resolve the . or .. by physically following the links
+        if (!connection.changeWorkingDirectory(workingDir)) { // allow the connection to resolve the . or .. by physically following the links
+            throw new FTPRemotePathNotFoundException("The path " + workingDir + " does not exist", workingDir);
+        }
         path = connection.getWorkingDirectory();
         connection.changeWorkingDirectory(currWorkingDir); // change back
         boolean appendFileName = false;

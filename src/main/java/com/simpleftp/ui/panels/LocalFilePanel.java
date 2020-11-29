@@ -88,28 +88,6 @@ final class LocalFilePanel extends FilePanel {
     }
 
     /**
-     * Gets the target of the directory symbolic link. It is assumed you have already checked if the file is a symbolic link before calling this method
-     *
-     * @param directory the directory to get target of
-     * @return the target of the symbolic link
-     * @throws IOException if directory is a local file and the directory provided is not a symbolic link
-     */
-    @Override
-    String getSymLinkTargetPath(CommonFile directory) throws FileSystemException, IOException {
-        String path = directory.getSymbolicLinkTarget();
-        if (path.startsWith(".") || path.startsWith("..")) {
-            String currentPath = this.directory.getFilePath();
-            if (currentPath.equals(UI.PATH_SEPARATOR))
-                currentPath = "";
-            else if (currentPath.endsWith(UI.PATH_SEPARATOR))
-                currentPath = currentPath.substring(0, currentPath.length() - 1);
-            path = currentPath + UI.PATH_SEPARATOR + path;
-        }
-
-        return UI.resolveLocalPath(path, getCurrentWorkingDirectory()).getResolvedPath();
-    }
-
-    /**
      * Renames the specified local file
      * @param localFile the file to rename
      */

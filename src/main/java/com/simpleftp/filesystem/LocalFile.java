@@ -18,7 +18,9 @@
 package com.simpleftp.filesystem;
 
 import com.simpleftp.filesystem.exceptions.FileSystemException;
+import com.simpleftp.filesystem.exceptions.PathResolverException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
+import com.simpleftp.filesystem.paths.PathResolverFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -93,8 +95,25 @@ public class LocalFile extends File implements CommonFile {
      * @return size in bytes of the file
      */
     @Override
-    public long getSize() {
-        return length();
+    public long getSize() throws FileSystemException {
+        if (!isSymbolicLink()) {
+            return length();
+        } else {
+            try {
+                String parent = getParent();
+                String windowsParent;
+                parent = parent == null ? ((windowsParent = System.getProperty("SystemDrive")) != null ? windowsParent:"/"):parent; // if windows, find the root
+
+                String canonicalPath = PathResolverFactory.newInstance()
+                        .setLocal(parent) // a symbolic link may be relative to the directory it's inside
+                        .build()
+                        .resolvePath(getSymbolicLinkTarget())
+                        .getResolvedPath();
+                return new LocalFile(canonicalPath).getSize();
+            } catch (PathResolverException ex) {
+                throw new FileSystemException("Failed to retrieve size of file", ex);
+            }
+        }
     }
 
     /**
@@ -229,17 +248,30 @@ public class LocalFile extends File implements CommonFile {
     }
 
     /**
-     * Gets the target of the symbolic link. This may not be absolute or canonicalized so may need to be passed through a PathResolver
+     * Gets the target of the symbolic link.
      *
      * @return the symbolic link target, null if not symbolic link
      * @throws FileSystemException if an error occurs
      */
     @Override
     public String getSymbolicLinkTarget() throws FileSystemException {
-        try {
-            return Files.readSymbolicLink(toPath()).toString();
-        } catch (IOException ex) {
-            throw new FileSystemException("Failed to read symbolic link target");
+        if (isSymbolicLink()) {
+            try {
+                String path = Files.readSymbolicLink(toPath()).toString();
+                String parent = getParent();
+                String windowsParent;
+                parent = parent == null ? ((windowsParent = System.getProperty("SystemDrive")) != null ? windowsParent : "/") : parent; // if windows, find the root
+
+                return PathResolverFactory.newInstance()
+                        .setLocal(parent) // a symbolic link may be relative to the directory it's inside
+                        .build()
+                        .resolvePath(path)
+                        .getResolvedPath();
+            } catch (IOException | PathResolverException ex) {
+                throw new FileSystemException("Failed to read symbolic link target");
+            }
+        } else {
+            return null;
         }
     }
 }
