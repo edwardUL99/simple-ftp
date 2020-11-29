@@ -79,21 +79,15 @@ final class LocalFilePanelContainer extends FilePanelContainer {
 
     /**
      * Handler for creating a local directory
-     * @param path the path for the directory
+     * @param resolvedPath the resolved path for the file
      * @param directory true if to create a directory, false if file
      * @return true if it succeeds, false if not
      */
-    private boolean createLocalFile(String path, boolean directory) {
+    private boolean createLocalFile(ResolvedPath resolvedPath, boolean directory) {
         boolean absolute;
         String currentDirectory = filePanel.getCurrentWorkingDirectory();
-        try {
-            ResolvedPath resolvedPath = UI.resolveLocalPath(path, currentDirectory);
-            path = resolvedPath.getResolvedPath();
-            absolute = resolvedPath.isPathAlreadyAbsolute();
-        } catch (IOException ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); //this could keep happening, so show exception dialog
-            return false;
-        }
+        String path = resolvedPath.getResolvedPath();
+        absolute = resolvedPath.isPathAlreadyAbsolute();
 
         String parentPath = UI.getParentPath(path);
         boolean existsAsDir = new LocalFile(parentPath).isDirectory();
@@ -130,8 +124,14 @@ final class LocalFilePanelContainer extends FilePanelContainer {
     void createNewDirectory() {
         String path = UI.doCreateDialog(true, null);
 
-        if (path != null)
-            createLocalFile(path, true);
+        try {
+            if (path != null) {
+                ResolvedPath resolvedPath = UI.resolveLocalPath(path, filePanel.getCurrentWorkingDirectory());
+                createLocalFile(resolvedPath, true);
+            }
+        } catch (IOException ex) {
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); //this could keep happening, so show exception dialog
+        }
     }
 
     /**
@@ -142,10 +142,9 @@ final class LocalFilePanelContainer extends FilePanelContainer {
         AtomicBoolean openCreatedFile = new AtomicBoolean(false);
         String path = UI.doCreateDialog(true, () -> openCreatedFile.set(true));
         try {
-            path = UI.resolveLocalPath(path, filePanel.getCurrentWorkingDirectory()).getResolvedPath();
-
             if (path != null) {
-                if (createLocalFile(path, false) && openCreatedFile.get())
+                ResolvedPath resolvedPath = UI.resolveLocalPath(path, filePanel.getCurrentWorkingDirectory());
+                if (createLocalFile(resolvedPath, false) && openCreatedFile.get())
                     filePanel.openLineEntry(LineEntry.newInstance(new LocalFile(path), filePanel));
             }
         } catch (IOException ex) {
