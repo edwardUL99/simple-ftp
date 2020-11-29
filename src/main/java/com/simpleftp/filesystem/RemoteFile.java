@@ -451,8 +451,7 @@ public class RemoteFile implements CommonFile {
                 return PathResolverFactory.newInstance()
                         .setRemote(parent, connection, true)
                         .build()
-                        .resolvePath(path)
-                        .getResolvedPath();
+                        .resolvePath(path);
             } catch (PathResolverException ex) {
                 throw new FileSystemException("An error occurred resolving symbolic link target", ex);
             }

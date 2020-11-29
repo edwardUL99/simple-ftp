@@ -19,7 +19,6 @@ package com.simpleftp.ui.containers;
 
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
-import com.simpleftp.filesystem.paths.ResolvedPath;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.files.LineEntry;
@@ -83,13 +82,10 @@ final class LocalFilePanelContainer extends FilePanelContainer {
      * @param directory true if to create a directory, false if file
      * @return true if it succeeds, false if not
      */
-    private boolean createLocalFile(ResolvedPath resolvedPath, boolean directory) {
-        boolean absolute;
+    private boolean createLocalFile(String resolvedPath, boolean directory) {
         String currentDirectory = filePanel.getCurrentWorkingDirectory();
-        String path = resolvedPath.getResolvedPath();
-        absolute = resolvedPath.isPathAlreadyAbsolute();
 
-        String parentPath = UI.getParentPath(path);
+        String parentPath = UI.getParentPath(resolvedPath);
         boolean existsAsDir = new LocalFile(parentPath).isDirectory();
 
         if (!existsAsDir) {
@@ -98,19 +94,17 @@ final class LocalFilePanelContainer extends FilePanelContainer {
         } else {
             boolean succeeds;
             if (directory) {
-                succeeds = createLocalDirectory(path);
+                succeeds = createLocalDirectory(resolvedPath);
             } else {
-                succeeds = createLocalNormalFile(path);
+                succeeds = createLocalNormalFile(resolvedPath);
             }
 
             if (!succeeds)
                 return false;
 
             boolean parentPathMatchesPanelsPath = currentDirectory.equals(parentPath);
-            if (!absolute && parentPathMatchesPanelsPath) {
-                filePanel.refresh(); // only need to refresh if the path was relative (as the directory would be created in the current folder) or if absolute and the prent path doesnt match current path. The path identified by the absolute will be refreshed when its navigated to
-            } else if (parentPathMatchesPanelsPath) {
-                filePanel.refresh();
+            if (parentPathMatchesPanelsPath) {
+                filePanel.refresh(); // only need to refresh if the path the file is created in matches the cwd
             }
 
             return true;
@@ -126,7 +120,7 @@ final class LocalFilePanelContainer extends FilePanelContainer {
 
         try {
             if (path != null) {
-                ResolvedPath resolvedPath = UI.resolveLocalPath(path, filePanel.getCurrentWorkingDirectory());
+                String resolvedPath = UI.resolveLocalPath(path, filePanel.getCurrentWorkingDirectory());
                 createLocalFile(resolvedPath, true);
             }
         } catch (IOException ex) {
@@ -143,7 +137,7 @@ final class LocalFilePanelContainer extends FilePanelContainer {
         String path = UI.doCreateDialog(true, () -> openCreatedFile.set(true));
         try {
             if (path != null) {
-                ResolvedPath resolvedPath = UI.resolveLocalPath(path, filePanel.getCurrentWorkingDirectory());
+                String resolvedPath = UI.resolveLocalPath(path, filePanel.getCurrentWorkingDirectory());
                 if (createLocalFile(resolvedPath, false) && openCreatedFile.get())
                     filePanel.openLineEntry(LineEntry.newInstance(new LocalFile(path), filePanel));
             }
@@ -158,8 +152,7 @@ final class LocalFilePanelContainer extends FilePanelContainer {
      */
     private void goToLocalPath(String path) throws FileSystemException {
         try {
-            ResolvedPath resolvedPath = UI.resolveLocalPath(path, filePanel.getCurrentWorkingDirectory());
-            path = resolvedPath.getResolvedPath();
+            path = UI.resolveLocalPath(path, filePanel.getCurrentWorkingDirectory());
 
             LocalFile file = new LocalFile(path);
 

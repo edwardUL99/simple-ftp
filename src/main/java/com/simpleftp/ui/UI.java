@@ -19,7 +19,6 @@ package com.simpleftp.ui;
 
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.paths.PathResolverFactory;
-import com.simpleftp.filesystem.paths.ResolvedPath;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.exceptions.PathResolverException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
@@ -483,7 +482,7 @@ public final class UI {
      * @return the resolved path
      * @throws IOException if it fails to be resolved
      */
-    public static ResolvedPath resolveLocalPath(String localPath, String currWorkingDir) throws IOException {
+    public static String resolveLocalPath(String localPath, String currWorkingDir) throws IOException {
         PathResolverFactory resolverFactory = PathResolverFactory.newInstance();
         PathResolver pathResolver = resolverFactory.setLocal(currWorkingDir).build();
         try {
@@ -502,7 +501,7 @@ public final class UI {
      * @return the resolved path
      * @throws FTPException if it fails to be resolved
      */
-    public static ResolvedPath resolveRemotePath(String remotePath, String currWorkingDir, boolean pathExists, FTPConnection connection) throws FTPException {
+    public static String resolveRemotePath(String remotePath, String currWorkingDir, boolean pathExists, FTPConnection connection) throws FTPException {
         PathResolverFactory resolverFactory = PathResolverFactory.newInstance();
         PathResolver pathResolver = resolverFactory.setRemote(currWorkingDir, connection, pathExists).build();
         try {

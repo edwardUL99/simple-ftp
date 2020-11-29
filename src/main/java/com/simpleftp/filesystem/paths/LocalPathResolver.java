@@ -72,12 +72,14 @@ public class LocalPathResolver implements PathResolver {
     /**
      * Resolves the specified path to an absolute, canonicalized path
      * @param path the path to resolve
-     * @return the ResolvedPath object
+     * @return the resolved path
      * @throws PathResolverException if an IOException occurs
      */
     @Override
-    public ResolvedPath resolvePath(String path) throws PathResolverException {
+    public String resolvePath(String path) throws PathResolverException {
         LocalFile file = new LocalFile(path);
+        if (path.startsWith("./"))
+            path = path.substring(2); // if it starts with ./, remove it and make the method look at this as a file starting in pwd
         boolean absolute = file.isAbsolute();
         if (!absolute)
             path = addPwdToPath(path);
@@ -88,7 +90,7 @@ public class LocalPathResolver implements PathResolver {
                 path = file.getCanonicalPath();
             }
 
-            return new ResolvedPath(path, absolute);
+            return path;
         } catch (IOException ex) {
             throw new PathResolverException(ex);
         }

@@ -107,8 +107,7 @@ public class LocalFile extends File implements CommonFile {
                 String canonicalPath = PathResolverFactory.newInstance()
                         .setLocal(parent) // a symbolic link may be relative to the directory it's inside
                         .build()
-                        .resolvePath(getSymbolicLinkTarget())
-                        .getResolvedPath();
+                        .resolvePath(getSymbolicLinkTarget());
                 return new LocalFile(canonicalPath).getSize();
             } catch (PathResolverException ex) {
                 throw new FileSystemException("Failed to retrieve size of file", ex);
@@ -265,8 +264,7 @@ public class LocalFile extends File implements CommonFile {
                 return PathResolverFactory.newInstance()
                         .setLocal(parent) // a symbolic link may be relative to the directory it's inside
                         .build()
-                        .resolvePath(path)
-                        .getResolvedPath();
+                        .resolvePath(path);
             } catch (IOException | PathResolverException ex) {
                 throw new FileSystemException("Failed to read symbolic link target");
             }

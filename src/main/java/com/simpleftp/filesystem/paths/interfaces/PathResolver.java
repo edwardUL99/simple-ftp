@@ -17,7 +17,6 @@
 
 package com.simpleftp.filesystem.paths.interfaces;
 
-import com.simpleftp.filesystem.paths.ResolvedPath;
 import com.simpleftp.filesystem.exceptions.PathResolverException;
 
 /**
@@ -36,8 +35,8 @@ public interface PathResolver {
     /**
      * Resolves the specified path to an absolute, canonicalized path
      * @param path the path to resolve
-     * @return the ResolvedPath object
+     * @return the resolved path string
      * @throws PathResolverException if an IOException or FTPException occurs
      */
-    ResolvedPath resolvePath(String path) throws PathResolverException;
+    String resolvePath(String path) throws PathResolverException;
 }

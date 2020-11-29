@@ -22,7 +22,6 @@ import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.filesystem.interfaces.FileSystem;
-import com.simpleftp.filesystem.paths.ResolvedPath;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
@@ -113,16 +112,13 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
      * @param directory true if directory, false if file
      * @return true if it succeeds, false if not
      */
-    private boolean createRemoteFile(ResolvedPath resolvedPath, boolean directory) {
+    private boolean createRemoteFile(String resolvedPath, boolean directory) {
         try {
             CommonFile file = filePanel.getDirectory();
             String currentPath = file.getFilePath();
             FTPConnection connection = filePanel.getFileSystem().getFTPConnection();
 
-            String path = resolvedPath.getResolvedPath();
-            boolean absolute = resolvedPath.isPathAlreadyAbsolute();
-
-            String parentPath = UI.getParentPath(path);
+            String parentPath = UI.getParentPath(resolvedPath);
             boolean existsAsDir = connection.remotePathExists(parentPath, true);
 
             if (!existsAsDir) {
@@ -131,22 +127,21 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
             } else {
                 boolean succeeded;
                 if (directory) {
-                    succeeded = createRemoteDirectory(path, connection);
+                    succeeded = createRemoteDirectory(resolvedPath, connection);
                 } else {
-                    succeeded = createRemoteNormalFile(path, connection);
+                    succeeded = createRemoteNormalFile(resolvedPath, connection);
                 }
 
                 if (!succeeded)
                     return false;
 
                 boolean parentPathMatchesPanelsPath = currentPath.equals(parentPath);
-                if (!absolute && (parentPathMatchesPanelsPath || file.isSymbolicLink())) {
-                    filePanel.refresh(); // only need to refresh if the path was relative (as the directory would be created in the current folder) or if absolute and the prent path doesnt match current path. The path identified by the absolute will be refreshed when its navigated to
-                } else if (parentPathMatchesPanelsPath) {
-                    filePanel.refresh();
+
+                if (parentPathMatchesPanelsPath) {
+                    filePanel.refresh(); // only need to refresh if the path the file is created in matches the cwd
                 }
 
-                return true;
+               return true;
             }
         } catch (FTPException ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
@@ -165,7 +160,7 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
         String path = UI.doCreateDialog(true, null);
         try {
             if (path != null) {
-                ResolvedPath resolvedPath = UI.resolveRemotePath(path, filePanel.getCurrentWorkingDirectory(), false, filePanel.getFileSystem().getFTPConnection());
+                String resolvedPath = UI.resolveRemotePath(path, filePanel.getCurrentWorkingDirectory(), false, filePanel.getFileSystem().getFTPConnection());
                 createRemoteFile(resolvedPath, true);
             }
         } catch (FTPException ex) {
@@ -182,7 +177,7 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
         String path = UI.doCreateDialog(false, () -> openCreatedFile.set(true));
         try {
             if (path != null) {
-                ResolvedPath resolvedPath = UI.resolveRemotePath(path, filePanel.getCurrentWorkingDirectory(), false, filePanel.getFileSystem().getFTPConnection());
+                String resolvedPath = UI.resolveRemotePath(path, filePanel.getCurrentWorkingDirectory(), false, filePanel.getFileSystem().getFTPConnection());
                 if (createRemoteFile(resolvedPath, false) && openCreatedFile.get()) {
                     try {
                         filePanel.openLineEntry(LineEntry.newInstance(new RemoteFile(path), filePanel));
@@ -205,8 +200,7 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
         FTPConnection connection = fileSystem.getFTPConnection();
 
         try {
-            ResolvedPath resolvedPath = UI.resolveRemotePath(path, filePanel.getCurrentWorkingDirectory(), true, fileSystem.getFTPConnection());
-            path = resolvedPath.getResolvedPath();
+            path = UI.resolveRemotePath(path, filePanel.getCurrentWorkingDirectory(), true, fileSystem.getFTPConnection());;
 
             if (connection.remotePathExists(path, true)) {
                 CommonFile file = fileSystem.getFile(path);

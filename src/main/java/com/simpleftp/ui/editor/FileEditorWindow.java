@@ -188,10 +188,10 @@ public class FileEditorWindow extends VBox {
              * Since, this is such a small method, we can just change this method if absolutely necessary. WOuld be a bit extreme to make several different types of FileEditorWindow for one method. If you end up having more methods like this, do extract into sub-classes like FilePanel and FilePanelContainer
              */
             if (file instanceof LocalFile) {
-                return UI.resolveLocalPath(targetPath, creatingPanel.getCurrentWorkingDirectory()).getResolvedPath();
+                return UI.resolveLocalPath(targetPath, creatingPanel.getCurrentWorkingDirectory());
             } else if (file instanceof RemoteFile) {
                 FTPConnection connection = creatingPanel.getFileSystem().getFTPConnection();
-                return UI.resolveRemotePath(targetPath, creatingPanel.getCurrentWorkingDirectory(), true, connection).getResolvedPath();
+                return UI.resolveRemotePath(targetPath, creatingPanel.getCurrentWorkingDirectory(), true, connection);
             }
 
         }

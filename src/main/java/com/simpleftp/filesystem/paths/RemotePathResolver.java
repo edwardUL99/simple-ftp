@@ -142,11 +142,11 @@ public class RemotePathResolver implements PathResolver {
      * Resolves the specified path to an absolute, canonicalized path
      *
      * @param path           the path to resolve
-     * @return the ResolvedPath object
+     * @return the resolved path
      * @throws PathResolverException if a FTPException occurs
      */
     @Override
-    public ResolvedPath resolvePath(String path) throws PathResolverException {
+    public String resolvePath(String path) throws PathResolverException {
         if (path.startsWith("./"))
             path = path.substring(2); // if it starts with ./, remove it and make the method look at this as a file starting in pwd
         boolean absolute = isPathAbsolute(path);
@@ -159,7 +159,7 @@ public class RemotePathResolver implements PathResolver {
                 path = canonicalizeRemotePath(path);
             }
 
-            return new ResolvedPath(path, absolute);
+            return path;
         } catch (FTPException ex) {
             throw new PathResolverException(ex);
         }

@@ -205,24 +205,6 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     }
 
     /**
-     * Resolves an existing path to an absolute one, using the file panel's current working directory. How resolution is done depends on the file type, hence why it is abstract
-     * @param path the path to resolve
-     * @return the resolved path, null if can't be resolved
-     * @throws Exception if any error occurs
-     */
-    private String resolvePath(String path) throws Exception {
-        // again, here we aren't creating Remote or Local Line Entry as we can only logically support symbolic links with a local or remote file system, not some abstract logical one we may define later
-        // the notion of symbolic links are only supported logically on real operation systems and some FTP servers
-        if (file instanceof LocalFile) {
-            return UI.resolveLocalPath(path, owningPanel.getCurrentWorkingDirectory()).getResolvedPath();
-        } else if (file instanceof RemoteFile) {
-            return UI.resolveRemotePath(path, owningPanel.getCurrentWorkingDirectory(), true, owningPanel.getFileSystem().getFTPConnection()).getResolvedPath();
-        }
-
-        return null;
-    }
-
-    /**
      * If this LineEntry represents a file that is a symbolic link, this method gets and caches the target path for use by other classes
      * @return the target path
      * @throws Exception if an error occurs resolving it
