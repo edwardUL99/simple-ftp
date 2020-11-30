@@ -50,4 +50,21 @@ public final class FileSystemUtils {
         LocalDateTime localDateTime = LocalDateTime.of(year, month, day, hour, minute);
         return localDateTime.format(DateTimeFormatter.ofPattern(FILE_DATETIME_FORMAT));
     }
+
+    /**
+     * Constructs a path by prepending current working directory onto the given path separated with the specified separator
+     * @param currentWorkingDir the working directory to prepend
+     * @param path the path to prepend to
+     * @param pathSeparator the separator used for the paths
+     * @return the constructed path
+     */
+    public static String addPwdToPath(String currentWorkingDir, String path, String pathSeparator) {
+        if (currentWorkingDir.endsWith(pathSeparator)) {
+            path = currentWorkingDir + path;
+        } else {
+            path = currentWorkingDir + pathSeparator + path;
+        }
+
+        return path;
+    }
 }

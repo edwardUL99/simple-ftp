@@ -102,7 +102,7 @@ public class LocalFile extends File implements CommonFile {
             try {
                 String parent = getParent();
                 String windowsParent;
-                parent = parent == null ? ((windowsParent = System.getProperty("SystemDrive")) != null ? windowsParent:"/"):parent; // if windows, find the root
+                parent = parent == null ? ((windowsParent = System.getenv("SystemDrive")) != null ? windowsParent:"/"):parent; // if windows, find the root
 
                 String canonicalPath = PathResolverFactory.newInstance()
                         .setLocal(parent) // a symbolic link may be relative to the directory it's inside
@@ -259,7 +259,7 @@ public class LocalFile extends File implements CommonFile {
                 String path = Files.readSymbolicLink(toPath()).toString();
                 String parent = getParent();
                 String windowsParent;
-                parent = parent == null ? ((windowsParent = System.getProperty("SystemDrive")) != null ? windowsParent : "/") : parent; // if windows, find the root
+                parent = parent == null ? ((windowsParent = System.getenv("SystemDrive")) != null ? windowsParent : "/") : parent; // if windows, find the root
 
                 return PathResolverFactory.newInstance()
                         .setLocal(parent) // a symbolic link may be relative to the directory it's inside

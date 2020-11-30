@@ -17,6 +17,7 @@
 
 package com.simpleftp.filesystem.paths;
 
+import com.simpleftp.filesystem.FileSystemUtils;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.exceptions.PathResolverException;
 import com.simpleftp.filesystem.paths.interfaces.PathResolver;
@@ -84,21 +85,6 @@ public class RemotePathResolver implements PathResolver {
     }
 
     /**
-     * Adds the current working directory to the path.
-     * @param path the path to be prepended
-     * @return the full path
-     */
-    private String addPwdToPath(String path) {
-        if (currWorkingDir.endsWith("/")) {
-            path = currWorkingDir + path;
-        } else {
-            path = currWorkingDir + "/" + path;
-        }
-
-        return path;
-    }
-
-    /**
      * Converts the remote path to a canonical version. It is assumed the path is not canonical before hand.
      * @param path the path to convert
      * @return the absolute path version of path
@@ -147,11 +133,9 @@ public class RemotePathResolver implements PathResolver {
      */
     @Override
     public String resolvePath(String path) throws PathResolverException {
-        if (path.startsWith("./"))
-            path = path.substring(2); // if it starts with ./, remove it and make the method look at this as a file starting in pwd
         boolean absolute = isPathAbsolute(path);
         if (!absolute)
-            path = addPwdToPath(path);
+            path = FileSystemUtils.addPwdToPath(currWorkingDir, path, "/");
         boolean canonical = isPathCanonical(path);
 
         try {

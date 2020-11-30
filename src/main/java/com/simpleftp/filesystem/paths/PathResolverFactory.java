@@ -17,6 +17,7 @@
 
 package com.simpleftp.filesystem.paths;
 
+import com.simpleftp.filesystem.exceptions.PathResolverConfigurationException;
 import com.simpleftp.filesystem.paths.interfaces.PathResolver;
 import com.simpleftp.ftp.connection.FTPConnection;
 
@@ -33,13 +34,29 @@ public class PathResolverFactory {
      */
     private boolean pathExists;
     /**
-     * True if building a local path resolver, false if remote
+     * The type of resolver to build
      */
-    private boolean local;
+    private ResolverType resolverType;
     /**
      * The current working directory
      */
     private String currWorkingDir;
+    /**
+     * The path separator to use if using a symbolic path resolver
+     */
+    private String pathSeparator;
+    /**
+     * The path root if required when using a symbolic path resolver
+     */
+    private String root;
+    /**
+     * An enum used to identify which type of resolver to build
+     */
+    private enum ResolverType {
+        LOCAL,
+        REMOTE,
+        SYMBOLIC
+    }
 
     /**
      * Don't allow instantiation using constructor
@@ -58,9 +75,12 @@ public class PathResolverFactory {
      * Sets this factory to build a local path resolver with the specified current working directory
      * @param currWorkingDir the current working directory
      * @return the instance of the factory for chaining
+     * @throws PathResolverConfigurationException if the currWorkingDir is null or empty
      */
     public PathResolverFactory setLocal(String currWorkingDir) {
-        this.local = true;
+        this.resolverType = ResolverType.LOCAL;
+        if (currWorkingDir == null || currWorkingDir.isEmpty())
+            throw new PathResolverConfigurationException("The working directory cannot be null");
         this.currWorkingDir = currWorkingDir;
         return this;
     }
@@ -71,9 +91,15 @@ public class PathResolverFactory {
      * @param connection the connection to use for resolving paths, expected to be connected and logged in and not null
      * @param pathExists true if the path already exists, false if it is to be created
      * @return this instance for chaining
+     * @throws PathResolverConfigurationException if currWorkingDir is null or empty or connection is null or not connected and logged in
      */
     public PathResolverFactory setRemote(String currWorkingDir, FTPConnection connection, boolean pathExists) {
-        this.local = false;
+        this.resolverType = ResolverType.REMOTE;
+        if (currWorkingDir == null || currWorkingDir.isEmpty())
+            throw new PathResolverConfigurationException("The working directory cannot be null");
+
+        if (connection == null || (!connection.isConnected() && !connection.isLoggedIn()))
+            throw new PathResolverConfigurationException("The provided connection must be connected and logged in, in order to be able to resolve paths");
         this.currWorkingDir = currWorkingDir;
         this.connection = connection;
         this.pathExists = pathExists;
@@ -81,15 +107,33 @@ public class PathResolverFactory {
     }
 
     /**
+     * Sets this factory to build a SymbolicPathResolverFactory
+     * @param pathSeparator the path separator to use
+     * @param root the root to use if required, null if not. E.g. may need to add on C:\
+     * @return this instance for chaining
+     * @throws PathResolverConfigurationException if pathSeparator is null or empty
+     */
+    public PathResolverFactory setSymbolic(String pathSeparator, String root) {
+        this.resolverType = ResolverType.SYMBOLIC;
+        if (pathSeparator == null || pathSeparator.isEmpty())
+            throw new PathResolverConfigurationException("The provided path separator cannot be null or empty");
+        this.pathSeparator = pathSeparator;
+        this.root = root;
+        return this;
+    }
+
+    /**
      * Builds the PathResolver object
      * @return the resolved path object
+     * @throws PathResolverConfigurationException if a configuration exception occurs
      */
-    public PathResolver build() {
-        if (local) {
-            return new LocalPathResolver(currWorkingDir);
-        } else {
-            return new RemotePathResolver(connection, currWorkingDir, pathExists);
-        }
+    public PathResolver build() throws PathResolverConfigurationException {
+       switch (resolverType) {
+           case LOCAL: return new LocalPathResolver(currWorkingDir);
+           case REMOTE: return new RemotePathResolver(connection, currWorkingDir, pathExists);
+           case SYMBOLIC: return new SymbolicPathResolver(pathSeparator, root);
+           default: throw new PathResolverConfigurationException("Undefined PathResolver type provided");
+       }
     }
 
 }
