@@ -17,6 +17,7 @@
 
 package com.simpleftp.ui.containers;
 
+import com.simpleftp.filesystem.FileSystemUtils;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
@@ -200,7 +201,22 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
         FTPConnection connection = fileSystem.getFTPConnection();
 
         try {
-            path = UI.resolveRemotePath(path, filePanel.getCurrentWorkingDirectory(), true, fileSystem.getFTPConnection());;
+            String currWorkingDir = filePanel.getCurrentWorkingDirectory();
+            boolean canonicalize = true;
+            path = !path.startsWith("/") ? FileSystemUtils.addPwdToPath(currWorkingDir, path, "/"):path;
+            if (new RemoteFile(path, connection, null).isSymbolicLink()) {
+                boolean goToPath = UI.doSymbolicPathDialog(path);
+
+                if (goToPath) {
+                    canonicalize = false;
+                    path = UI.resolveSymbolicPath(path, UI.PATH_SEPARATOR, null);
+                    if (path == null)
+                        return; // this is a rare case. UI.resolveSymbolicPath would have shown an error dialog
+                }
+            }
+
+            if (canonicalize)
+                path = UI.resolveRemotePath(path, currWorkingDir, true, fileSystem.getFTPConnection());;
 
             if (connection.remotePathExists(path, true)) {
                 CommonFile file = fileSystem.getFile(path);

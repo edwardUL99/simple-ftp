@@ -17,6 +17,7 @@
 
 package com.simpleftp.filesystem.paths;
 
+import com.simpleftp.filesystem.FileSystemUtils;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.exceptions.PathResolverException;
 import com.simpleftp.filesystem.paths.interfaces.PathResolver;
@@ -42,29 +43,14 @@ public class LocalPathResolver implements PathResolver {
     }
 
     /**
-     * Adds the current working directory to the path.
-     * @param path the path to be prepended
-     * @return the full path
-     */
-    private String addPwdToPath(String path) {
-        if (currWorkingDir.endsWith(UI.PATH_SEPARATOR)) {
-            path = currWorkingDir + path;
-        } else {
-            path = currWorkingDir + UI.PATH_SEPARATOR + path; // the current working directory should be an absolute path
-        }
-
-        return path;
-    }
-
-    /**
      * Checks if the path is canonical
      * @param path the path to check
      * @return true if canonical
      */
     private boolean isPathCanonical(String path) {
         String fileName = new LocalFile(path).getName();
-        return !path.contains("/..") && !path.contains("../")
-                && !path.contains("/.") && !path.contains("./")
+        return !(path.contains("/..") || path.contains("\\..")) && !(path.contains("../") || path.contains("..\\"))
+                && !(path.contains("/.") || path.contains("\\.")) && !(path.contains("./") || path.contains(".\\"))
                 && !path.equals("..") && !path.equals(".")
                 && !fileName.equals(".") && !fileName.equals("..");
     }
@@ -78,11 +64,9 @@ public class LocalPathResolver implements PathResolver {
     @Override
     public String resolvePath(String path) throws PathResolverException {
         LocalFile file = new LocalFile(path);
-        if (path.startsWith("./"))
-            path = path.substring(2); // if it starts with ./, remove it and make the method look at this as a file starting in pwd
         boolean absolute = file.isAbsolute();
         if (!absolute)
-            path = addPwdToPath(path);
+            path = FileSystemUtils.addPwdToPath(currWorkingDir, path, UI.PATH_SEPARATOR);
 
         try {
             if (!isPathCanonical(path)) {

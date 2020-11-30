@@ -17,6 +17,7 @@
 
 package com.simpleftp.ui.containers;
 
+import com.simpleftp.filesystem.FileSystemUtils;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.ftp.FTPSystem;
@@ -152,9 +153,29 @@ final class LocalFilePanelContainer extends FilePanelContainer {
      */
     private void goToLocalPath(String path) throws FileSystemException {
         try {
-            path = UI.resolveLocalPath(path, filePanel.getCurrentWorkingDirectory());
-
+            boolean canonicalize = true;
+            String currWorkingDir = filePanel.getCurrentWorkingDirectory();
             LocalFile file = new LocalFile(path);
+            boolean absolute = file.isAbsolute();
+            path = !absolute ? FileSystemUtils.addPwdToPath(currWorkingDir, path, UI.PATH_SEPARATOR):path;
+            file = !absolute ? new LocalFile(path):file;
+
+            if (file.isSymbolicLink()) {
+                boolean goToPath = UI.doSymbolicPathDialog(path);
+
+                if (goToPath) {
+                    canonicalize = false;
+                    String windowsRoot;
+                    String root = ((windowsRoot = System.getenv("SystemDrive")) != null) ? windowsRoot:null;
+                    path = UI.resolveSymbolicPath(path, UI.PATH_SEPARATOR, root);
+                    if (path == null)
+                        return; // this is a rare case. UI.resolveSymbolicPath would have shown an error dialog
+                }
+            }
+
+            if (canonicalize)
+                path = UI.resolveLocalPath(path, currWorkingDir);
+            file = new LocalFile(path);
 
             if (file.exists() && file.isDirectory()) {
                 filePanel.setDirectory(file);

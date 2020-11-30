@@ -23,6 +23,7 @@ import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.exceptions.PathResolverException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.filesystem.paths.interfaces.PathResolver;
+import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
@@ -435,6 +436,16 @@ public final class UI {
     }
 
     /**
+     * SHows the dialog that the specified path is a symbolic link
+     * @param path the path to the symbolic link
+     * @return true if the user wants to go to the path, false if they want to go to the target
+     */
+    public static boolean doSymbolicPathDialog(String path) {
+        SymbolicPathDialog symbolicPathDialog = new SymbolicPathDialog(path);
+        return symbolicPathDialog.showAndGetChoice();
+    }
+
+    /**
      * Retrieves the parent of the provided path
      * @param filePath the path to get the parent of
      * @return the parent path
@@ -442,7 +453,7 @@ public final class UI {
     public static String getParentPath(String filePath) {
         String parentPath = new File(filePath).getParent();
         String windowsParent;
-        parentPath = parentPath == null ? ((windowsParent = System.getProperty("SystemDrive")) != null ? windowsParent:"/"):parentPath; // if windows, find the root
+        parentPath = parentPath == null ? ((windowsParent = System.getenv("SystemDrive")) != null ? windowsParent:"/"):parentPath; // if windows, find the root
 
         return parentPath;
     }
@@ -509,6 +520,25 @@ public final class UI {
         } catch (PathResolverException ex) {
             throw (FTPException)ex.getWrappedException();
         }
+    }
+
+    /**
+     * Resolves a symbolic path
+     * @param path the path to resolve. Expected to be absolute
+     * @param pathSeparator the path separator to use
+     * @param root the root of the path if it is not path separator, instead leave null
+     * @return the resolved path, null if an unexpected exception occurs
+     */
+    public static String resolveSymbolicPath(String path, String pathSeparator, String root) {
+        PathResolverFactory resolverFactory = PathResolverFactory.newInstance();
+        PathResolver pathResolver = resolverFactory.setSymbolic(pathSeparator, root).build();
+        try {
+            return pathResolver.resolvePath(path);
+        } catch (PathResolverException ex) {
+            UI.doException(ex, ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); // show exception dialog as this shouldn't happen for symbolic resolving
+        }
+
+        return null;
     }
 
     /**
