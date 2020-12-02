@@ -26,6 +26,7 @@ import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
+import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.files.LineEntry;
 import com.simpleftp.ui.panels.FilePanel;
@@ -202,21 +203,22 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
 
         try {
             String currWorkingDir = filePanel.getCurrentWorkingDirectory();
-            boolean canonicalize = true;
             path = !path.startsWith("/") ? FileSystemUtils.addPwdToPath(currWorkingDir, path, "/"):path;
-            if (new RemoteFile(path, connection, null).isSymbolicLink()) {
-                boolean goToPath = UI.doSymbolicPathDialog(path);
+            String symbolicPath = UI.resolveSymbolicPath(path, UI.PATH_SEPARATOR, null); // do symbolic path, first, in case it doesn't exist. Local file resolves .. for the not found dialog, this would do the same here
+            if (symbolicPath == null)
+                return; // this is a rare case. UI.resolveSymbolicPath would have shown an error dialog
 
-                if (goToPath) {
-                    canonicalize = false;
-                    path = UI.resolveSymbolicPath(path, UI.PATH_SEPARATOR, null);
-                    if (path == null)
-                        return; // this is a rare case. UI.resolveSymbolicPath would have shown an error dialog
-                }
-            }
+            RemoteFile remoteFile = new RemoteFile(symbolicPath, connection, null);
+
+            if (!remoteFile.exists())
+                throw new FTPRemotePathNotFoundException("The path " + symbolicPath + " does not exist", symbolicPath);
+
+            boolean canonicalize = !remoteFile.isSymbolicLink() || !UI.doSymbolicPathDialog(symbolicPath);
 
             if (canonicalize)
-                path = UI.resolveRemotePath(path, currWorkingDir, true, fileSystem.getFTPConnection());;
+                path = UI.resolveRemotePath(path, currWorkingDir, true, fileSystem.getFTPConnection());
+            else
+                path = symbolicPath;
 
             if (connection.remotePathExists(path, true)) {
                 CommonFile file = fileSystem.getFile(path);

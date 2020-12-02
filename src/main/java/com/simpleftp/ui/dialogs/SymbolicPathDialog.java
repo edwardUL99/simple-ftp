@@ -37,7 +37,7 @@ public class SymbolicPathDialog extends Alert {
         super(AlertType.CONFIRMATION);
         setTitle("Symbolic Link");
         setHeaderText("Symbolic Link Path");
-        setContentText("The path " + path + " entered represents a symbolic link. Do you want to go to the path or the target of the link?");
+        setContentText("The path " + path + " represents a symbolic link. Do you want to go to the path or the target of the link?");
         getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
         getButtonTypes().clear();
         getButtonTypes().addAll(new ButtonType("Target Path", ButtonBar.ButtonData.CANCEL_CLOSE), new ButtonType("Specified Path", ButtonBar.ButtonData.OK_DONE));

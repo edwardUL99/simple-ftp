@@ -21,6 +21,7 @@ import com.simpleftp.filesystem.FileSystemUtils;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.ftp.FTPSystem;
+import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.files.LineEntry;
 import com.simpleftp.ui.panels.FilePanel;
@@ -153,31 +154,31 @@ final class LocalFilePanelContainer extends FilePanelContainer {
      */
     private void goToLocalPath(String path) throws FileSystemException {
         try {
-            boolean canonicalize = true;
             String currWorkingDir = filePanel.getCurrentWorkingDirectory();
             LocalFile file = new LocalFile(path);
             boolean absolute = file.isAbsolute();
             path = !absolute ? FileSystemUtils.addPwdToPath(currWorkingDir, path, UI.PATH_SEPARATOR):path;
-            file = !absolute ? new LocalFile(path):file;
 
-            if (file.isSymbolicLink()) {
-                boolean goToPath = UI.doSymbolicPathDialog(path);
+            String windowsRoot;
+            String root = ((windowsRoot = System.getenv("SystemDrive")) != null) ? windowsRoot:null;
+            String symbolicPath = UI.resolveSymbolicPath(path, UI.PATH_SEPARATOR, root);
+            if (symbolicPath == null)
+                return; // this is a rare case. UI.resolveSymbolicPath would have shown an error dialog
 
-                if (goToPath) {
-                    canonicalize = false;
-                    String windowsRoot;
-                    String root = ((windowsRoot = System.getenv("SystemDrive")) != null) ? windowsRoot:null;
-                    path = UI.resolveSymbolicPath(path, UI.PATH_SEPARATOR, root);
-                    if (path == null)
-                        return; // this is a rare case. UI.resolveSymbolicPath would have shown an error dialog
-                }
-            }
+            file = !absolute ? new LocalFile(symbolicPath):file;
+
+            if (!file.exists())
+                throw new LocalPathNotFoundException("The path " + symbolicPath + " does not exist", symbolicPath);
+
+            boolean canonicalize = !file.isSymbolicLink() || !UI.doSymbolicPathDialog(symbolicPath);
 
             if (canonicalize)
                 path = UI.resolveLocalPath(path, currWorkingDir);
+            else
+                path = symbolicPath;
             file = new LocalFile(path);
 
-            if (file.exists() && file.isDirectory()) {
+            if (file.isDirectory()) {
                 filePanel.setDirectory(file);
                 filePanel.refresh();
             } else if (file.exists()) {
@@ -187,6 +188,8 @@ final class LocalFilePanelContainer extends FilePanelContainer {
             } else {
                 UI.doError("Path does not exist", "The path: " + path + " does not exist");
             }
+        } catch (LocalPathNotFoundException ex) {
+            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         } catch (IOException ex) {
             UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); // if it fails here, it'll keep failing, show exception
         }
