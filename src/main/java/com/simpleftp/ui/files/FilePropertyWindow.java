@@ -20,9 +20,7 @@ package com.simpleftp.ui.files;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.FTPSystem;
-import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
-import com.simpleftp.ui.panels.FilePanel;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -70,7 +68,7 @@ public class FilePropertyWindow extends VBox {
         initNamePanel();
         Separator separator = new Separator();
         separator.setOrientation(Orientation.HORIZONTAL);
-        PropertiesPanel propertiesPanel = new PropertiesPanel(this);
+        PropertiesPanel propertiesPanel = new PropertiesPanel();
 
         getChildren().addAll(namePanel, separator, propertiesPanel);
     }
@@ -123,10 +121,6 @@ public class FilePropertyWindow extends VBox {
 
     private class PropertiesPanel extends VBox {
         /**
-         * The property window this properties panel is a part of
-         */
-        private final FilePropertyWindow propertyWindow;
-        /**
          * The dynamic label where the size units can change
          */
         private Label sizeLabel; // need to have this as an instance variable for the toggle buttons to access it
@@ -137,10 +131,8 @@ public class FilePropertyWindow extends VBox {
 
         /**
          * Creates a properties panel
-         * @param propertyWindow the window this panel is a part of
          */
-        public PropertiesPanel(FilePropertyWindow propertyWindow) {
-            this.propertyWindow = propertyWindow;
+        public PropertiesPanel() {
             setSpacing(20);
             setPadding(UI.PROPERTIES_WINDOW_INSETS);
             setStyle(UI.WHITE_BACKGROUND);

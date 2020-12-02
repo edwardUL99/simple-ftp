@@ -103,7 +103,7 @@ public class RemoteFile implements CommonFile {
      * Initialises the FTPFile object
      * @param ftpFile the file to initialise with. Leave null if you want to force a lookup on the FTPServer using the filename provided
      */
-    private void initialiseFTPFile(FTPFile ftpFile) throws FileSystemException{
+    private void initialiseFTPFile(FTPFile ftpFile) throws FileSystemException {
        try {
            if (ftpFile == null) {
                this.ftpFile = this.connection.getFTPFile(absolutePath);
@@ -395,7 +395,7 @@ public class RemoteFile implements CommonFile {
                 LocalDateTime dateTime = LocalDateTime.parse(fileModTime, DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy"));
                 modificationTime = dateTime.format(DateTimeFormatter.ofPattern(UI.FILE_DATETIME_FORMAT));
             } else {
-                modificationTime = ftpFile.isValid() ? FileSystemUtils.parseCalendarToFormattedDate(ftpFile.getTimestamp()):null;
+                modificationTime = ftpFile.isValid() ? FileUtils.parseCalendarToFormattedDate(ftpFile.getTimestamp()):null;
             }
 
             return modificationTime;

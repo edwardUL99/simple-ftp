@@ -17,7 +17,7 @@
 
 package com.simpleftp.ui.containers;
 
-import com.simpleftp.filesystem.FileSystemUtils;
+import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.ftp.FTPSystem;
@@ -157,7 +157,7 @@ final class LocalFilePanelContainer extends FilePanelContainer {
             String currWorkingDir = filePanel.getCurrentWorkingDirectory();
             LocalFile file = new LocalFile(path);
             boolean absolute = file.isAbsolute();
-            path = !absolute ? FileSystemUtils.addPwdToPath(currWorkingDir, path, UI.PATH_SEPARATOR):path;
+            path = !absolute ? FileUtils.addPwdToPath(currWorkingDir, path, UI.PATH_SEPARATOR):path;
 
             String windowsRoot;
             String root = ((windowsRoot = System.getenv("SystemDrive")) != null) ? windowsRoot:null;
@@ -173,7 +173,7 @@ final class LocalFilePanelContainer extends FilePanelContainer {
             boolean canonicalize = !file.isSymbolicLink() || !UI.doSymbolicPathDialog(symbolicPath);
 
             if (canonicalize)
-                path = UI.resolveLocalPath(path, currWorkingDir);
+                path = UI.resolveLocalPath(symbolicPath, currWorkingDir);
             else
                 path = symbolicPath;
             file = new LocalFile(path);

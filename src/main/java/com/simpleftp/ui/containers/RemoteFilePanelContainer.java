@@ -17,7 +17,7 @@
 
 package com.simpleftp.ui.containers;
 
-import com.simpleftp.filesystem.FileSystemUtils;
+import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
@@ -203,7 +203,7 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
 
         try {
             String currWorkingDir = filePanel.getCurrentWorkingDirectory();
-            path = !path.startsWith("/") ? FileSystemUtils.addPwdToPath(currWorkingDir, path, "/"):path;
+            path = !path.startsWith("/") ? FileUtils.addPwdToPath(currWorkingDir, path, "/"):path;
             String symbolicPath = UI.resolveSymbolicPath(path, UI.PATH_SEPARATOR, null); // do symbolic path, first, in case it doesn't exist. Local file resolves .. for the not found dialog, this would do the same here
             if (symbolicPath == null)
                 return; // this is a rare case. UI.resolveSymbolicPath would have shown an error dialog
@@ -216,16 +216,18 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
             boolean canonicalize = !remoteFile.isSymbolicLink() || !UI.doSymbolicPathDialog(symbolicPath);
 
             if (canonicalize)
-                path = UI.resolveRemotePath(path, currWorkingDir, true, fileSystem.getFTPConnection());
+                path = UI.resolveRemotePath(symbolicPath, currWorkingDir, true, fileSystem.getFTPConnection());
             else
                 path = symbolicPath;
 
-            if (connection.remotePathExists(path, true)) {
-                CommonFile file = fileSystem.getFile(path);
-                filePanel.setDirectory(file);
+            if (!path.equals(symbolicPath))
+                remoteFile = new RemoteFile(path);
+
+            if (remoteFile.isADirectory()) {
+                filePanel.setDirectory(remoteFile);
                 filePanel.refresh();
-            } else if (connection.remotePathExists(path, false)) {
-                LineEntry lineEntry = LineEntry.newInstance(new RemoteFile(path), filePanel);
+            } else if (remoteFile.isNormalFile()) {
+                LineEntry lineEntry = LineEntry.newInstance(remoteFile, filePanel);
                 if (lineEntry != null)
                     filePanel.openLineEntry(lineEntry);
             } else {

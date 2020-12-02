@@ -17,8 +17,10 @@
 
 package com.simpleftp.filesystem.paths;
 
-import com.simpleftp.filesystem.FileSystemUtils;
+import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.LocalFile;
+import com.simpleftp.filesystem.RemoteFile;
+import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.exceptions.PathResolverException;
 import com.simpleftp.filesystem.paths.interfaces.PathResolver;
 import com.simpleftp.ftp.connection.FTPConnection;
@@ -135,15 +137,17 @@ public class RemotePathResolver implements PathResolver {
     public String resolvePath(String path) throws PathResolverException {
         boolean absolute = isPathAbsolute(path);
         if (!absolute)
-            path = FileSystemUtils.addPwdToPath(currWorkingDir, path, "/");
+            path = FileUtils.addPwdToPath(currWorkingDir, path, "/");
         boolean canonical = isPathCanonical(path);
 
         try {
-            if (!canonical) {
-                path = canonicalizeRemotePath(path);
+            if (!canonical || new RemoteFile(path, connection, null).isSymbolicLink()) {
+                path = canonicalizeRemotePath(path); // if the path doesn't contain . or .. but is a symbolic link, it's not canonical
             }
 
             return path;
+        } catch (FileSystemException ex) {
+            throw new PathResolverException((Exception)ex.getCause());
         } catch (FTPException ex) {
             throw new PathResolverException(ex);
         }

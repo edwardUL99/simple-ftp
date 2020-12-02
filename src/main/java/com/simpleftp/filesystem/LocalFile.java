@@ -224,7 +224,7 @@ public class LocalFile extends File implements CommonFile {
     public String getModificationTime() {
         long lastModified = lastModified();
 
-        return new SimpleDateFormat(FileSystemUtils.FILE_DATETIME_FORMAT).format(lastModified);
+        return new SimpleDateFormat(FileUtils.FILE_DATETIME_FORMAT).format(lastModified);
     }
 
     /**

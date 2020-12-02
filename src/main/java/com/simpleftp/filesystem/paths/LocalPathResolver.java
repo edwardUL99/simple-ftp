@@ -17,7 +17,7 @@
 
 package com.simpleftp.filesystem.paths;
 
-import com.simpleftp.filesystem.FileSystemUtils;
+import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.exceptions.PathResolverException;
 import com.simpleftp.filesystem.paths.interfaces.PathResolver;
@@ -66,12 +66,12 @@ public class LocalPathResolver implements PathResolver {
         LocalFile file = new LocalFile(path);
         boolean absolute = file.isAbsolute();
         if (!absolute)
-            path = FileSystemUtils.addPwdToPath(currWorkingDir, path, UI.PATH_SEPARATOR);
+            path = FileUtils.addPwdToPath(currWorkingDir, path, UI.PATH_SEPARATOR);
 
         try {
-            if (!isPathCanonical(path)) {
-                file = new LocalFile(path);
-                path = file.getCanonicalPath();
+            file = new LocalFile(path);
+            if (!isPathCanonical(path) || file.isSymbolicLink()) {
+                path = file.getCanonicalPath(); // if the path doesn't contain . or .. but is a symbolic link, it's not canonical
             }
 
             return path;

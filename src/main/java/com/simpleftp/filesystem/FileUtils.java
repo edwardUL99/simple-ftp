@@ -24,11 +24,11 @@ import java.util.Calendar;
 /**
  * This class provides utility methods to the FileSystsemPackage
  */
-public final class FileSystemUtils {
+public final class FileUtils {
     /**
      * Prevent instantiation
      */
-    private FileSystemUtils() {}
+    private FileUtils() {}
 
     /**
      * The format for the date time string throughout the UI for files

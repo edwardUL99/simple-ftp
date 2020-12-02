@@ -17,13 +17,9 @@
 
 package com.simpleftp.ui.files;
 
-import com.simpleftp.filesystem.LocalFile;
-import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.FTPSystem;
-import com.simpleftp.ftp.connection.FTPConnection;
-import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.panels.FilePanel;
 import javafx.geometry.Pos;
@@ -37,9 +33,6 @@ import javafx.scene.text.Text;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.net.ftp.FTP;
-
-import java.io.File;
 
 /**
  * This is an abstract class representing a line entry on the panel.
