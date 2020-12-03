@@ -225,6 +225,8 @@ final class LocalFilePanelContainer extends FilePanelContainer {
             }
         } catch (LocalPathNotFoundException | FileSystemException ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+        } catch (UnsupportedOperationException ex) {
+            UI.doError("Symbolic Links Not Supported", "The creation of symbolic links is not supported on this system");
         } catch (AccessDeniedException ex) {
             if (FTPSystem.isDebugEnabled())
                 ex.printStackTrace();
