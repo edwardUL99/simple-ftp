@@ -194,6 +194,14 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
     }
 
     /**
+     * Defines how a symbolic link should be created
+     */
+    @Override
+    void createSymbolicLink() {
+        UI.doInfo("Symbolic Link Creation", "To create a symbolic link, contact the Server Administrator to create the link in the FTP location on the server");
+    }
+
+    /**
      * Takes the given path and attempts to go the the location in the remote file system identified by it
      * @param path the path to go to
      */

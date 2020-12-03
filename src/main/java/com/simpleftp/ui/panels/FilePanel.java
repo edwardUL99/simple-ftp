@@ -458,7 +458,15 @@ public abstract class FilePanel extends VBox {
                                                              // as a consequence, this method also checks if the file is open or not. If this call is to be changed to this.delete(), add the isOpen check and confirmation dialog to that method
                                                             // this.delete doesn't remove the file from the combo box anyway (although refresh would get that)
         MenuItem menuItem4 = new MenuItem("Properties");
-        menuItem4.setOnAction(e -> new FilePropertyWindow(lineEntry).show());
+        menuItem4.setOnAction(e -> {
+            try {
+                new FilePropertyWindow(lineEntry).show();
+            } catch (FileSystemException ex) {
+                if (FTPSystem.isDebugEnabled())
+                    ex.printStackTrace();
+                UI.doError("Properties Window Failure", "Failed to open the properties window for file " + lineEntry.getFilePath() + ".");
+            }
+        });
         contextMenu.getItems().addAll(menuItem1, menuItem2, menuItem3, menuItem4);
 
         lineEntry.setOnContextMenuRequested(e -> contextMenu.show(lineEntry, e.getScreenX(), e.getScreenY()));

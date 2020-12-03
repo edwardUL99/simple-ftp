@@ -230,14 +230,24 @@ public abstract class FilePanelContainer extends VBox {
         menuItem.setOnAction(e -> createNewDirectory());
 
         MenuItem menuItem1 = new MenuItem();
-        menuItem.setMnemonicParsing(true);
+        menuItem1.setMnemonicParsing(true);
         menuItem1.setText("_File");
         ImageView imageView1 = new ImageView(new Image("file_icon.png"));
         imageView1.setFitWidth(20);
         imageView1.setFitHeight(20);
         menuItem1.setGraphic(imageView1);
         menuItem1.setOnAction(e -> createNewFile());
-        createButton.getItems().addAll(menuItem, menuItem1);
+
+        MenuItem menuItem2 = new MenuItem();
+        menuItem2.setMnemonicParsing(true);
+        menuItem2.setText("_Symbolic Link");
+        ImageView imageView2 = new ImageView(new Image("sym_link.png"));
+        imageView2.setFitWidth(20);
+        imageView2.setFitHeight(20);
+        menuItem2.setGraphic(imageView2);
+        menuItem2.setOnAction(e -> createSymbolicLink());
+
+        createButton.getItems().addAll(menuItem, menuItem1, menuItem2);
     }
 
     /**
@@ -316,6 +326,11 @@ public abstract class FilePanelContainer extends VBox {
      * The handler for the goto button
      */
     abstract void gotoPath();
+
+    /**
+     * Defines how a symbolic link should be created
+     */
+    abstract void createSymbolicLink();
 
     /**
      * Refreshes the file names displayed in the ComboBox

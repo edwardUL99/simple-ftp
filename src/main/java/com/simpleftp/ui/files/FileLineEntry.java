@@ -32,6 +32,6 @@ final class FileLineEntry extends LineEntry {
      * @param owningPanel the panel owning this entry, i.e. the panel it is on
      */
     FileLineEntry(CommonFile file, FilePanel owningPanel) throws FileSystemException {
-        super("file_icon.png", file, owningPanel);
+        super(file.isSymbolicLink() ? "file_icon_symlink.png":"file_icon.png", file, owningPanel);
     }
 }

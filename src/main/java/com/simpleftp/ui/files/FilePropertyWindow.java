@@ -60,8 +60,9 @@ public class FilePropertyWindow extends VBox {
     /**
      * Constructs a FilePropertyWindow with the provided container and line entry
      * @param lineEntry the LineEntry to display properties of
+     * @throws FileSystemException if an error occurs accessing the file system to query the file
      */
-    public FilePropertyWindow(LineEntry lineEntry) {
+    public FilePropertyWindow(LineEntry lineEntry) throws FileSystemException {
         this.lineEntry = lineEntry;
         setSpacing(10);
         setStyle(UI.WHITE_BACKGROUND);
@@ -77,18 +78,21 @@ public class FilePropertyWindow extends VBox {
      * Determines the type of the line entry and returns the associated image url
      * @return image url to display
      */
-    private String getImageURL() {
-        if (lineEntry instanceof DirectoryLineEntry) {
-            return "dir_icon.png";
+    private String getImageURL() throws FileSystemException {
+        CommonFile file = lineEntry.getFile();
+        if (file.isADirectory()) {
+            return file.isSymbolicLink() ? "dir_icon_symlink.png":"dir_icon.png";
+        } else if (file.isNormalFile()) {
+            return file.isSymbolicLink() ? "file_icon_symlink.png":"file_icon.png";
         } else {
-            return "file_icon.png";
+            throw new FileSystemException("Cannot determine the file type, it may not exist");
         }
     }
 
     /**
      * Initialises the namePanel
      */
-    private void initNamePanel() {
+    private void initNamePanel() throws FileSystemException {
         namePanel = new HBox();
         namePanel.setSpacing(10);
         namePanel.setPrefHeight(100);

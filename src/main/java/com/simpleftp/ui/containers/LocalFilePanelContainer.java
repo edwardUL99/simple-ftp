@@ -20,13 +20,19 @@ package com.simpleftp.ui.containers;
 import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
+import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.files.LineEntry;
 import com.simpleftp.ui.panels.FilePanel;
+import javafx.util.Pair;
 
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -145,6 +151,86 @@ final class LocalFilePanelContainer extends FilePanelContainer {
             }
         } catch (IOException ex) {
             UI.doError("Create file error", "Failed to resolve path " + path + " when creating file");
+        }
+    }
+
+    /**
+     * Resolves the target path, if it is a symbolic link, it keeps the symbolic link without going to target
+     * @param targetPath the path to resolve
+     * @return the resolved path
+     */
+    private String resolveTargetPath(String targetPath) throws LocalPathNotFoundException, FileSystemException, IOException {
+        LocalFile file = new LocalFile(targetPath);
+        targetPath = !file.isAbsolute() ? FileUtils.addPwdToPath(filePanel.getCurrentWorkingDirectory(), targetPath, UI.PATH_SEPARATOR):targetPath;
+        String windowsParent;
+        String root = ((windowsParent = System.getenv("SystemDrive")) != null) ? windowsParent:null;
+        targetPath = UI.resolveSymbolicPath(targetPath, UI.PATH_SEPARATOR, root);
+        file = new LocalFile(targetPath);
+
+        if (!file.isSymbolicLink())
+            targetPath = UI.resolveLocalPath(targetPath, filePanel.getCurrentWorkingDirectory());
+
+        FileSystem fileSystem = filePanel.getFileSystem();
+
+        if (!fileSystem.fileExists(targetPath))
+            throw new LocalPathNotFoundException("The target path " + targetPath + " does not exist", targetPath);
+
+        return targetPath;
+    }
+
+    /**
+     * Checks if the symbolic link by the given name already exists
+     * @param symbolicName the name to check
+     * @return the resolved string if exists, null if not
+     */
+    private String resolveSymbolicName(String symbolicName) throws FileSystemException {
+        LocalFile file = new LocalFile(symbolicName);
+        String path = !file.isAbsolute() ? FileUtils.addPwdToPath(filePanel.getCurrentWorkingDirectory(), symbolicName, UI.PATH_SEPARATOR):symbolicName;
+        String windowsParent;
+        String root = ((windowsParent = System.getenv("SystemDrive")) != null) ? windowsParent:null;
+        path = UI.resolveSymbolicPath(path, UI.PATH_SEPARATOR, root);
+
+        return !filePanel.getFileSystem().fileExists(path) ? path:null;
+    }
+
+    /**
+     * Defines how a symbolic link should be created
+     */
+    @Override
+    void createSymbolicLink() {
+        Pair<String, String> paths = UI.doCreateSymLinkDialog();
+        String targetPath = paths.getKey();
+        String namePath = paths.getValue();
+
+        try {
+            targetPath = resolveTargetPath(targetPath);
+            String resolvedNamePath = resolveSymbolicName(namePath);
+
+            if (resolvedNamePath != null) {
+                Path link = Paths.get(resolvedNamePath);
+                Path target = Paths.get(targetPath);
+
+                Path result = Files.createSymbolicLink(link, target);
+
+                if (Files.exists(result)) {
+                    UI.doInfo("Symbolic Link Created", "The Symbolic link " + namePath + " has been successfully created to point to " + targetPath);
+
+                    if (UI.getParentPath(namePath).equals(filePanel.getCurrentWorkingDirectory()))
+                        filePanel.refresh();
+                } else {
+                    UI.doError("Symbolic Link Not Created", "The Symbolic link was not created successfully");
+                }
+            } else {
+                UI.doError("File Exists", "A file with the path " + namePath + " already exists");
+            }
+        } catch (LocalPathNotFoundException | FileSystemException ex) {
+            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+        } catch (AccessDeniedException ex) {
+            if (FTPSystem.isDebugEnabled())
+                ex.printStackTrace();
+            UI.doError("Access Denied", "You do not have access to create the symbolic link " + namePath);
+        } catch (IOException ex) {
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
         }
     }
 

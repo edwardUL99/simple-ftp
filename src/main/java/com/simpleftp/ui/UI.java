@@ -38,6 +38,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCode;
+import javafx.util.Pair;
 import org.apache.tika.Tika;
 
 import java.io.File;
@@ -436,13 +437,22 @@ public final class UI {
     }
 
     /**
-     * SHows the dialog that the specified path is a symbolic link
+     * Shows the dialog that the specified path is a symbolic link
      * @param path the path to the symbolic link
      * @return true if the user wants to go to the path, false if they want to go to the target
      */
     public static boolean doSymbolicPathDialog(String path) {
         SymbolicPathDialog symbolicPathDialog = new SymbolicPathDialog(path);
         return symbolicPathDialog.showAndGetChoice();
+    }
+
+    /**
+     * Shows the dialog to create a symbolic link and returns the pair of paths. First of the pair being the target, second being the link name
+     * @return the pair of paths, first is target path, second is name of link
+     */
+    public static Pair<String, String> doCreateSymLinkDialog() {
+        CreateSymLinkDialog symLinkDialog = new CreateSymLinkDialog();
+        return symLinkDialog.showAndGetEntry();
     }
 
     /**
