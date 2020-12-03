@@ -216,11 +216,8 @@ public class RemoteFile implements CommonFile {
         } else if (ftpFile.isValid() && !ftpFile.isSymbolicLink()) { // if symbolic link, query the ftp server
             return ftpFile.isDirectory();
         } else {
-            try {
-                if (ftpFile.isSymbolicLink())
-                    return connection.remotePathExists(ftpFile.getLink(), true); // ensure link isn't broken
-                else
-                    return connection.remotePathExists(absolutePath, true);
+            try { // if link was broken here, it would return false
+                return connection.remotePathExists(absolutePath, true);
             } catch (FTPException ex) {
                 throw new FileSystemException("A FTP Exception occurred, it could not be determined if this file is a directory", ex);
             }
@@ -241,8 +238,8 @@ public class RemoteFile implements CommonFile {
             return ftpFile.isFile();
         } else {
             try {
-                if (ftpFile.isSymbolicLink())                                       // make sure the link isn't broken
-                    return connection.remotePathExists(ftpFile.getLink(), false); // always explicitly check for remote path as ftpFile may be "." if the file is the same name as current directory
+                if (isSymbolicLink()) // ensure link isn't broken
+                    return connection.remotePathExists(absolutePath, false) && connection.remotePathExists(getSymbolicLinkTarget(), false);
                 else
                     return connection.remotePathExists(absolutePath, false);
             } catch (FTPException ex) {

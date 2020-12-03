@@ -17,6 +17,7 @@
 
 package com.simpleftp.filesystem.paths;
 
+import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.paths.interfaces.PathResolver;
 
 import java.util.ArrayList;
@@ -113,11 +114,15 @@ public class SymbolicPathResolver implements PathResolver {
      * Resolves the specified path to an absolute, canonicalized path.
      * As described in the class javadoc header, this is a "loose" canonicalization
      *
-     * @param path the path to resolve
+     * @param path the path to resolve. For SymbolicPathResolver, the path must be absolute
      * @return the resolved path string
      */
     @Override
     public String resolvePath(String path) {
+        if (!path.startsWith("/") || !(new LocalFile(path)).isAbsolute()) {
+            throw new IllegalArgumentException("The path " + path + " is not absolute. SymbolicPathResolver expects an absolute path");
+        }
+
         ArrayList<String> pathComponents = parsePath(path);
         return buildPath(pathComponents);
     }

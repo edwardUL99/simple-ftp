@@ -65,11 +65,12 @@ public class LocalPathResolver implements PathResolver {
     public String resolvePath(String path) throws PathResolverException {
         LocalFile file = new LocalFile(path);
         boolean absolute = file.isAbsolute();
-        if (!absolute)
+        if (!absolute) {
             path = FileUtils.addPwdToPath(currWorkingDir, path, UI.PATH_SEPARATOR);
+            file = new LocalFile(path);
+        }
 
         try {
-            file = new LocalFile(path);
             if (!isPathCanonical(path) || file.isSymbolicLink()) {
                 path = file.getCanonicalPath(); // if the path doesn't contain . or .. but is a symbolic link, it's not canonical
             }

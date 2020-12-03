@@ -157,26 +157,25 @@ final class LocalFilePanelContainer extends FilePanelContainer {
             String currWorkingDir = filePanel.getCurrentWorkingDirectory();
             LocalFile file = new LocalFile(path);
             boolean absolute = file.isAbsolute();
-            path = !absolute ? FileUtils.addPwdToPath(currWorkingDir, path, UI.PATH_SEPARATOR):path;
+            path = !absolute ? FileUtils.addPwdToPath(currWorkingDir, path, UI.PATH_SEPARATOR) : path;
 
             String windowsRoot;
-            String root = ((windowsRoot = System.getenv("SystemDrive")) != null) ? windowsRoot:null;
+            String root = ((windowsRoot = System.getenv("SystemDrive")) != null) ? windowsRoot : null;
             String symbolicPath = UI.resolveSymbolicPath(path, UI.PATH_SEPARATOR, root);
             if (symbolicPath == null)
                 return; // this is a rare case. UI.resolveSymbolicPath would have shown an error dialog
 
-            file = !absolute ? new LocalFile(symbolicPath):file;
+            file = new LocalFile(symbolicPath);
 
             if (!file.exists())
                 throw new LocalPathNotFoundException("The path " + symbolicPath + " does not exist", symbolicPath);
 
-            boolean canonicalize = !file.isSymbolicLink() || !UI.doSymbolicPathDialog(symbolicPath);
+            boolean canonicalize = file.isADirectory() && (!file.isSymbolicLink() || !UI.doSymbolicPathDialog(symbolicPath));
 
-            if (canonicalize)
+            if (canonicalize) {
                 path = UI.resolveLocalPath(symbolicPath, currWorkingDir);
-            else
-                path = symbolicPath;
-            file = new LocalFile(path);
+                file = new LocalFile(path);
+            }
 
             if (file.isDirectory()) {
                 filePanel.setDirectory(file);

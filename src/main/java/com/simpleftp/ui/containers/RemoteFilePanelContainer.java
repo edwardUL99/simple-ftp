@@ -213,25 +213,21 @@ final class RemoteFilePanelContainer extends FilePanelContainer {
             if (!remoteFile.exists())
                 throw new FTPRemotePathNotFoundException("The path " + symbolicPath + " does not exist", symbolicPath);
 
-            boolean canonicalize = !remoteFile.isSymbolicLink() || !UI.doSymbolicPathDialog(symbolicPath);
-
-            if (canonicalize)
-                path = UI.resolveRemotePath(symbolicPath, currWorkingDir, true, fileSystem.getFTPConnection());
-            else
-                path = symbolicPath;
-
-            if (!path.equals(symbolicPath))
-                remoteFile = new RemoteFile(path);
+            boolean canonicalize = remoteFile.isADirectory() && (!remoteFile.isSymbolicLink() || !UI.doSymbolicPathDialog(symbolicPath)); // only open dialog if it a directory, opening a file doesn't matter
+            if (canonicalize) {
+                path = UI.resolveRemotePath(path, currWorkingDir, true, fileSystem.getFTPConnection());
+                remoteFile = new RemoteFile(path, connection, null);
+            }
 
             if (remoteFile.isADirectory()) {
                 filePanel.setDirectory(remoteFile);
                 filePanel.refresh();
             } else if (remoteFile.isNormalFile()) {
-                LineEntry lineEntry = LineEntry.newInstance(remoteFile, filePanel);
+                LineEntry lineEntry = LineEntry.newInstance(remoteFile, filePanel); // for a file opening it doesn't matter if it's link or not because it doesn't change directory
                 if (lineEntry != null)
                     filePanel.openLineEntry(lineEntry);
             } else {
-                UI.doError("Path does not exist", "The path: " + path + " does not exist or it is not a directory");
+                UI.doError("Path does not exist", "The path: " + remoteFile.getFilePath() + " does not exist or it is not a directory");
             }
         } catch (FTPException ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
