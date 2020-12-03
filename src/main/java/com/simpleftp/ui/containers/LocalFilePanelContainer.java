@@ -215,7 +215,7 @@ final class LocalFilePanelContainer extends FilePanelContainer {
                 if (Files.exists(result)) {
                     UI.doInfo("Symbolic Link Created", "The Symbolic link " + namePath + " has been successfully created to point to " + targetPath);
 
-                    if (UI.getParentPath(namePath).equals(filePanel.getCurrentWorkingDirectory()))
+                    if (UI.getParentPath(resolvedNamePath).equals(filePanel.getCurrentWorkingDirectory()))
                         filePanel.refresh();
                 } else {
                     UI.doError("Symbolic Link Not Created", "The Symbolic link was not created successfully");
