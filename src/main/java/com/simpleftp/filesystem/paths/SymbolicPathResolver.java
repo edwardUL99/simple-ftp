@@ -111,7 +111,7 @@ public class SymbolicPathResolver implements PathResolver {
     }
 
     /**
-     * Resolves the specified path to an absolute, canonicalized path.
+     * Resolves the specified path to an absolute "loosely" canonicalized path.
      * As described in the class javadoc header, this is a "loose" canonicalization
      *
      * @param path the path to resolve. For SymbolicPathResolver, the path must be absolute

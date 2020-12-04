@@ -33,7 +33,7 @@ import com.simpleftp.filesystem.exceptions.PathResolverException;
  */
 public interface PathResolver {
     /**
-     * Resolves the specified path to an absolute, canonicalized path
+     * Resolves the specified path to what the implementation defines a "resolved" path
      * @param path the path to resolve
      * @return the resolved path string
      * @throws PathResolverException if an IOException or FTPException occurs

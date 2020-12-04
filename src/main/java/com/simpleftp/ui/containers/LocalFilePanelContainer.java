@@ -202,6 +202,16 @@ final class LocalFilePanelContainer extends FilePanelContainer {
         String targetPath = paths.getKey();
         String namePath = paths.getValue();
 
+        if (targetPath.isEmpty()) {
+            UI.doError("Empty Target Path", "The target path cannot be empty");
+            return;
+        }
+
+        if (namePath.isEmpty()) {
+            UI.doError("Empty Symbolic Name", "The name of the symbolic link cannot be empty");
+            return;
+        }
+
         try {
             targetPath = resolveTargetPath(targetPath);
             String resolvedNamePath = resolveSymbolicName(namePath);
