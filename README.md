@@ -51,7 +51,7 @@ to a specified directory)
 
 ## How to install
 
-*Note, I hope to generate a build script in the future to randomly generate the password.encrypt file on installation and abstract these operations to the end-user*
+*Note, I am in the process of generating a build script to randomly generate the password.encrypt file on installation and abstract these operations to the end-user*
 
 1. You need the password.encrypt file on the classpath containing a 20 character key for encrypting passwords.
 2. It is best to have this file inside in the Jar, or else run export (set on windows) CLASSPATH=<folder containing password.encrypt (not the file name)>:$CLASSPATH(%CLASSPATH% on windows)
@@ -63,6 +63,9 @@ to a specified directory)
 Example is jar -uf simple-ftp-1.0-SNAPSHOT.jar password.encrypt. (1.0 may be a different version number)
 8. Run jar -tvf <name of simpleftp jar> and verify that a file called password.encrypt is in the root of the jar
 9. Delete all copies of password.encrypt that are not inside in the JAR (if not having it inside the jar, ensure there is only one copy in the location on the classpath or specified by the property)
+    
+You need the JavaFX runtime components to run this application. If running JRE 11 or higher, follow these instructions:
+https://openjfx.io/openjfx-docs/#install-javafx
 
 #### jar command not found
 If the jar command could not be found, you have a JRE installed instead of JDK, you can use the zip command (as a JAR file is just a ZIP).
