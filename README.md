@@ -67,7 +67,7 @@ Example is jar -uf simple-ftp-1.0-SNAPSHOT.jar password.encrypt. (1.0 may be a d
 9. Delete all copies of password.encrypt that are not inside in the JAR (if not having it inside the jar, ensure there is only one copy in the location on the classpath or specified by the property)
     
 You need the JavaFX runtime components to run this application. If running JRE 11 or higher, follow these instructions:
-https://openjfx.io/openjfx-docs/#install-javafx
+https://openjfx.io/openjfx-docs/#install-javafx. I recommend you set the PATH_TO_FX variable in the same place you set your PATH variable on startup (e.g in Windows system variables or Linux in .bashrc, .profile etc)
 
 #### jar command not found
 If the jar command could not be found, you have a JRE installed instead of JDK, you can use the zip command (as a JAR file is just a ZIP).
