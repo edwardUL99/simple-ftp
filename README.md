@@ -41,6 +41,8 @@ You need the following to run the application:
 - For development:
     - Maven 3.6.3 if you don't want to use wrapper
     - Java JDK 1.8.0 minimum (all other dependencies resolved automatically by Maven)
+- For both:
+    - JavaFX Runtime Components, install here if JDK 11+: https://openjfx.io/openjfx-docs/#install-javafx
 
 ## How to build
 1. In a directory where you want to download the project, call git clone using the clone url (or download the zip and extract 
