@@ -32,4 +32,3 @@ src/main/java/TestSessionSaver.java
 src/main/java/com/simpleftp/FTPClient.java
 *.txt
 
-*.sh

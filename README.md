@@ -37,12 +37,12 @@ Features that are nice to have, see below.
 ## Pre-requisites
 You need the following to run the application:
 - For runtime (no development):
-    - Java JRE 1.8.0 minimum
+    - Java JRE 11 minimum
 - For development:
     - Maven 3.6.3 if you don't want to use wrapper
-    - Java JDK 1.8.0 minimum (all other dependencies resolved automatically by Maven)
+    - Java JDK 11 minimum (all other dependencies resolved automatically by Maven)
 - For both:
-    - JavaFX Runtime Components, install here if JDK 11+: https://openjfx.io/openjfx-docs/#install-javafx
+    - JavaFX Runtime Components minimum 11.0.2, install here if you want to install globally: https://openjfx.io/openjfx-docs/#install-javafx
 
 ## How to build
 1. In a directory where you want to download the project, call git clone using the clone url (or download the zip and extract 
@@ -52,9 +52,11 @@ to a specified directory)
 4. The built jar will be in the target folder
 
 ## How to install
+All installation artifacts are in the install directory in the project root
 
-*Note, I am in the process of generating a build script to randomly generate the password.encrypt file on installation and abstract these operations to the end-user*
+*Note, I am in the process of generating a build script for Windows*
 
+### Manual Installation Steps (Windows installation)
 1. You need the password.encrypt file on the classpath containing a 20 character key for encrypting passwords.
 2. It is best to have this file inside in the Jar, or else run export (set on windows) CLASSPATH=<folder containing password.encrypt (not the file name)>:$CLASSPATH(%CLASSPATH% on windows)
 3. You can specify a system property to provide a different name or specific path to the file (see Configuration properties)
@@ -66,8 +68,10 @@ Example is jar -uf simple-ftp-1.0-SNAPSHOT.jar password.encrypt. (1.0 may be a d
 8. Run jar -tvf <name of simpleftp jar> and verify that a file called password.encrypt is in the root of the jar
 9. Delete all copies of password.encrypt that are not inside in the JAR (if not having it inside the jar, ensure there is only one copy in the location on the classpath or specified by the property)
     
-You need the JavaFX runtime components to run this application. If running JRE 11 or higher, follow these instructions:
+You need the JavaFX runtime components to run this application. Follow these instructions:
 https://openjfx.io/openjfx-docs/#install-javafx. I recommend you set the PATH_TO_FX variable in the same place you set your PATH variable on startup (e.g in Windows system variables or Linux in .bashrc, .profile etc)
+
+Or use the -i flag on install script for a local version of JavaFX (It is recommended to install system-wide however)
 
 #### jar command not found
 If the jar command could not be found, you have a JRE installed instead of JDK, you can use the zip command (as a JAR file is just a ZIP).
@@ -76,11 +80,46 @@ For adding the file, replace the jar -uf command with the zip -u command with th
 To list the files, use unzip -l <jar name> command and see if the file is included.
 All other steps still stand (e.g. password.encrypt must be in the same directory etc.)
 
+### Automatic Installation (On Linux)
+This uses the simpleftp_install.sh script. It has the following options:
+- -v <version number> (as seen in GitHub releases)
+- -j <jar-file> (location of the jar file)
+Either -v or -j can be provided (not both). If both are omitted, this attempts to install the latest release.
+The -j flag can be used to install a JAR that you have built following the build instructions.
+- -o <output directory> (specifies the directory to install the program to, defaults to current directory)
+If this directory isn't accessible by the current user, the script needs to be run with sudo privileges.
+- -h (displays help information on the arguments)
+- -javafx <runtime installation lib folder> (Used to specify the installation of JavaFX runtime lib folder)
+This can be used if you get an error that the module path requires module path specification. This is because the script couldn't determine the installation directory.
+- -d (Enables debugging information to be displayed from the installed program)
+- -i (This flag specifies that the JavaFX runtime should be installed to the output directory).
+The -javafx and -i flag can't be both specified.
+
+The script creates a simple_ftp script which can be double clicked (if your linux operating system is configured for this) or run from the command line.
+This script can be moved to any location provided the installed JAR (and JavaFX components if specified) stay in the same location.
+
+1. If JavaFX Runtime is installed globally either have PATH_TO_FX environment variable called before running the script, or specify the location of the lib folder with the -javafx argument
+2. Launch the script (if you want the latest version, omit the -v and -j flags)
+3. If there are existing simple-ftp jars in the output directory, you will be asked individually if you want to remove them.
+It is recommended to remove them and only have the single updated JAR file to avoid conflicts.
+4. After this, on successful installation, there should be a script simple_ftp in the output directory, and it should be executable.
+5. If there is a password.encrypt file in the output directory, it means it got left behind. Remove it.
+6. If you want to install JavaFX run-time just for this installation, use the flag -i. After installation, in the output directory, there should be a folder called javafx-sdk-11.0.2.
+If this inadvertently gets removed, re-install the application with this script.
+7. If you don't want the latest version, go to the GitHub repository and see the released versions and enter the desired version number.
+
 ## How to run
 The project doesn't have a main class to run at the moment committed to the repository.
 At present, it is just a local testing main program which cannot be committed as it would expose passwords.
 
 Check back here closer/after release 1.0 for run-instructions
+
+The basic command for running on JDK 11 and up: java --module-path $PATH_TO_FX --add-modules=javafx.controls <system-properties> -jar <jar_name>
+If you get errors like unrecognised option with --module-path etc, you may have the wrong java version.
+Run java -version and verify it is 11 or greater.
+
+If you get errors saying module path requires module path specification, see the installation steps on how to resolve it.
+If you get errors saying failed to find javafx.controls, either the JavaFX runtime components are not installed correctly, or the path provided by the PATH_TO_FX or by -javafx flag is incorrect.
 
 ## Configuration properties
 If the file is not dded to the jar, you need to add the file's location to the CLASSPATH.
