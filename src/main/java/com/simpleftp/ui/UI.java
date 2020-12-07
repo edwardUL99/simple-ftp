@@ -637,7 +637,7 @@ public final class UI {
     }
 
     /**
-     * Adds the window to the opened windows list.
+     * Adds the window to the opened windows list. Doesn't call the window.show() method
      * @param window to add
      */
     public static void openWindow(Window window) {
@@ -655,7 +655,7 @@ public final class UI {
     }
 
     /**
-     * Removes the window from the list of opened windows
+     * Removes the window from the list of opened windows. Doesn't call the window.close() method
      * @param window the window to close
      */
     public static void closeWindow(Window window) {
