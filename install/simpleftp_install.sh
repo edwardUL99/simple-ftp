@@ -403,7 +403,7 @@ if [ -n "$jar_file" ]; then
       done
     fi
 
-    if [ "$choice" == "Y" ] || [ "$install_fx_runtime" ]; then
+    if [ "$choice" == "Y" ] || [ "$install_fx_runtime" == "true" ]; then
       use_installed_sdk="true"
       echo "Using JavaFX Runtime $javafx_version found in $output_dir"
     elif [ "$choice" == "N" ]; then
@@ -413,6 +413,7 @@ if [ -n "$jar_file" ]; then
     export PATH_TO_FX="$javafx_install"
 
     if [ "$install_fx_runtime" == "true" ] || [ "$use_installed_sdk" == "true" ]; then
+      echo "Setting PATH_TO_FX to local installation temporarily"
       export PATH_TO_FX="$(pwd)/javafx-sdk-$javafx_version/lib"
     fi
 
