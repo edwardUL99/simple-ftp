@@ -199,10 +199,7 @@ public class PanelView extends VBox {
             VBox remotePanelBox = new VBox();
             remotePanelBox.setAlignment(Pos.CENTER);
             remotePanelBox.setStyle(UI.WHITE_BACKGROUND);
-            Label remote = new Label("Remote");
-            remote.setFont(Font.font(15));
-            remote.setStyle(UI.SMOKE_WHITE_BACKGROUND);
-            remotePanelBox.getChildren().addAll(remote);
+            remotePanelBox.getChildren().add(getRemotePanelLabel());
 
             panelsBox.getChildren().remove(1);
             remotePanelBox.getChildren().add(remotePanel);
