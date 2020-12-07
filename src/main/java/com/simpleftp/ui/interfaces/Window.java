@@ -14,7 +14,25 @@
  * You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+package com.simpleftp.ui.interfaces;
+
 /**
- * This package provides panels for displaying files and controls for those files in a directory
+ * An interface to describe a window that the application can open.
+ *
+ * It defines 2 basic operations that a Window can do, show and close.
+ * The implementing windows can define for each type of window if they want to be added to the UI#trackedWindows list
  */
-package com.simpleftp.ui.panels;
+public interface Window {
+    /**
+     * Defines the basic operation of showing a window.
+     * This usually entails defining a scene to place a pane in and then using a Stage to show it
+     */
+    void show();
+
+    /**
+     * Defines the basic operation of closing a window.
+     * This usually entails doing some clean up and then calling the stage that was opened to close
+     */
+    void close();
+}

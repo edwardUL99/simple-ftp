@@ -19,12 +19,12 @@ package com.simpleftp.ui.editor;
 
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.ftp.FTPSystem;
-import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
-import com.simpleftp.ftp.connection.FTPConnection;
+import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
-import com.simpleftp.ui.panels.FilePanel;
+import com.simpleftp.ui.directories.DirectoryPane;
+import com.simpleftp.ui.interfaces.Window;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Tooltip;
@@ -39,17 +39,17 @@ import org.fxmisc.richtext.StyleClassedTextArea;
 /**
  * This class represents a Window for editing and saving files
  */
-public class FileEditorWindow extends VBox {
+public abstract class FileEditorWindow extends VBox implements Window {
     /**
      * The file panel that opened this window
      */
     @Getter
-    private final FilePanel creatingPanel;
+    protected final DirectoryPane creatingPane;
     /**
      * The file to display in this editor
      */
     @Getter
-    private final CommonFile file;
+    protected final CommonFile file;
     /**
      * The contents of the file
      */
@@ -90,12 +90,12 @@ public class FileEditorWindow extends VBox {
 
     /**
      * Constructs a FileEditorWindow with the specified panel and file
-     * @param creatingPanel the FilePanel opening this window
+     * @param creatingPane the DirectoryPane opening this window
      * @param fileContents the contents of the file as this class does not download the contents
      * @param file the file the contents belongs to
      */
-    public FileEditorWindow(FilePanel creatingPanel, String fileContents, CommonFile file) {
-        this.creatingPanel = creatingPanel;
+    FileEditorWindow(DirectoryPane creatingPane, String fileContents, CommonFile file) {
+        this.creatingPane = creatingPane;
         this.fileContents = fileContents;
         this.file = file;
         editor = new StyleClassedTextArea() {
@@ -175,29 +175,10 @@ public class FileEditorWindow extends VBox {
     }
 
     /**
-     * Gets the path of where to save the file to. If this file is a symbolic link, it is the target path, as uplaoading to the parent path of the link will break the link
+     * Gets the path of where to save the file to. If this file is a symbolic link, it is the target path, as uploading to the parent path of the link will break the link
      * @return the path where to save the file
      */
-    private String getSaveFilePath() throws Exception {
-        // the default option if it is an unknown file type
-        if (file.isSymbolicLink()) {
-            String targetPath = file.getSymbolicLinkTarget();
-
-            /* we made FilePanel and FilePanelContainer abstract to avoid this situation as if a new type of file is implemented, you only have to extend and create a type for that file, implementing abstract methods.
-             * However here, you can only logically define symbolic links in a local file system or remote on the server. In a different file type for representing a different file that is not on the local or remote machine, symbolic links don't make sense
-             * Since, this is such a small method, we can just change this method if absolutely necessary. WOuld be a bit extreme to make several different types of FileEditorWindow for one method. If you end up having more methods like this, do extract into sub-classes like FilePanel and FilePanelContainer
-             */
-            if (file instanceof LocalFile) {
-                return UI.resolveLocalPath(targetPath, creatingPanel.getCurrentWorkingDirectory());
-            } else if (file instanceof RemoteFile) {
-                FTPConnection connection = creatingPanel.getFileSystem().getFTPConnection();
-                return UI.resolveRemotePath(targetPath, creatingPanel.getCurrentWorkingDirectory(), true, connection);
-            }
-
-        }
-
-        return file.getFilePath();
-    }
+    abstract String getSaveFilePath() throws Exception;
 
     /**
      * Saves the file if edited
@@ -216,6 +197,7 @@ public class FileEditorWindow extends VBox {
 
                 return true;
             } catch (Exception ex) {
+                checkExceptionForFTP(ex);
                 ex.printStackTrace();
                 UI.doError("File not saved", "An error occurred saving the file: " + ex.getMessage());
             }
@@ -253,18 +235,11 @@ public class FileEditorWindow extends VBox {
     }
 
     /**
-     * Gets the file path to display as a title on the opened file window
+     * Gets the file path to display as a title on the opened file window.
+     * If this is remote, it should append what form of remote path it is, e.g. ftp
      * @return the file path
      */
-    private String getFilePath() {
-        String filePath = file.getFilePath();
-
-        if (file instanceof RemoteFile) {
-            filePath = "ftp:/" + filePath;
-        }
-
-        return filePath;
-    }
+    abstract String getFilePath();
 
     /**
      * Sets the value for save field variable and determines whether to show star or not on title. THIS DOES NOT SAVE THE FILE
@@ -288,8 +263,56 @@ public class FileEditorWindow extends VBox {
         try {
             return file.exists();
         } catch (FileSystemException ex) {
+            checkExceptionForFTP(ex);
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
             return false;
+        }
+    }
+
+    /**
+     * On exit, checks if the file still exists and if not, does the appropriate action
+     * @return true if the event should be consumed, false if not
+     */
+    private boolean checkSaveOnExit() {
+        boolean stillExists = checkFileStillExists();
+        boolean consumeEvent = false;
+
+        if (!saved || stillExists) {
+            if (!saved) {
+                if (!stillExists)
+                    UI.doError("File No Longer Exists", "The file may no longer exist, if you want to keep the file, press save in the next dialog", true);
+                if (UI.doUnsavedChanges()) {
+                    if (!save()) {
+                        consumeEvent = true;
+                    }
+                }
+            }
+        } else {
+            UI.doError("File No Longer Exists", "File may no longer exist, go back and decide to save or just quit");
+            setSave(false);
+            consumeEvent = true;
+            originalText = editor.getText(); // save the text that was there at the time, in case reset is pressed
+        }
+
+        if (!consumeEvent) {
+            UI.closeFile(file.getFilePath());
+        }
+
+        return consumeEvent;
+    }
+
+    /**
+     * Checks if the exception is either a FileSystemException, (if so checks the cause) or checks if it is a FTPException and calls creatingPane#checkFTPConnectionException
+     * @param ex the exception to check
+     */
+    private void checkExceptionForFTP(Exception ex) {
+        if (ex instanceof FileSystemException) {
+            Throwable cause = ex.getCause();
+
+            if (cause instanceof FTPException)
+                creatingPane.checkFTPConnectionException((FTPException)cause);
+        } else if (ex instanceof FTPException) {
+            creatingPane.checkFTPConnectionException((FTPException)ex);
         }
     }
 
@@ -305,29 +328,45 @@ public class FileEditorWindow extends VBox {
             stage.show();
             editor.requestFocus();
             stage.setOnCloseRequest(e -> {
-                boolean stillExists = checkFileStillExists();
-                if (!saved || stillExists) {
-                    if (!saved) {
-                        if (!stillExists)
-                            UI.doError("File No Longer Exists", "The file may no longer exist, if you want to keep the file, press save in the next dialog", true);
-                        if (UI.doUnsavedChanges()) {
-                            if (!save()) {
-                                e.consume(); // consume so you can view what happened
-                            }
-                        }
-                    }
-                } else {
-                    UI.doError("File No Longer Exists", "File may no longer exist, go back and decide to save or just quit");
-                    setSave(false);
-                    e.consume();
-                    originalText = editor.getText(); // save the text that was there at the time, in case reset is pressed
-                }
+                boolean consumeEvent = checkSaveOnExit();
 
-                if (!e.isConsumed())
-                    UI.closeFile(file.getFilePath());
+                if (consumeEvent)
+                    e.consume();
             });
         } catch (Exception ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
+            checkExceptionForFTP(ex);
+            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
     }
+
+    /**
+     * Closes this FileEditorWindow
+     */
+    public void close() {
+        if (stage != null) {
+            if (!checkSaveOnExit()) {
+                stage.close(); // don't close
+            }
+        }
+    }
+
+    /**
+     * Constructs a FileEditorWindow with the specified panel and file
+     * @param creatingPane the DirectoryPane opening this window
+     * @param fileContents the contents of the file as this class does not download the contents
+     * @param file the file the contents belongs to
+     */
+    public static FileEditorWindow newInstance(DirectoryPane creatingPane, String fileContents, CommonFile file) {
+        if (file instanceof LocalFile) {
+            return new LocalFileEditorWindow(creatingPane, fileContents, file);
+        } else {
+            return new RemoteFileEditorWindow(creatingPane, fileContents, file);
+        }
+    }
+
+    /**
+     * Returns true if this editor window is remote, false if local
+     * @return true if remote, false if local
+     */
+    public abstract boolean isRemote();
 }

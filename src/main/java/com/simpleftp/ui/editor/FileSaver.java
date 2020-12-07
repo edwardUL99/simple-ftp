@@ -18,7 +18,7 @@
 package com.simpleftp.ui.editor;
 
 import com.simpleftp.ui.UI;
-import com.simpleftp.ui.editor.uploaders.FileUploader;
+import com.simpleftp.ui.editor.tasks.FileUploader;
 
 /**
  * This class will provide functionality for saving a file that has been opened.

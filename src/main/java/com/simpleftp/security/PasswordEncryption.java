@@ -26,6 +26,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import java.util.Base64;
@@ -51,11 +52,7 @@ public class PasswordEncryption {
 
             String property = System.getProperty("simpleftp.passwordEncryptFile");
 
-            if (property == null) {
-                encryptionFile = "password.encrypt";
-            } else {
-                encryptionFile = property;
-            }
+            encryptionFile = Objects.requireNonNullElse(property, "password.encrypt");
 
             inputStream = ClassLoader.getSystemResourceAsStream(encryptionFile);
 

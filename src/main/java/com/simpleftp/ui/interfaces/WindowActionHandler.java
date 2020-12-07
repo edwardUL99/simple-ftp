@@ -14,7 +14,17 @@
  * You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+package com.simpleftp.ui.interfaces;
+
 /**
- * This package provides panels for displaying files and controls for those files in a directory
+ * An ActionHandler which takes a Window as a parameter and does some action on it
  */
-package com.simpleftp.ui.panels;
+@FunctionalInterface
+public interface WindowActionHandler {
+    /**
+     * Performs the action on the specified window
+     * @param window the window to do the action on
+     */
+    void doAction(Window window);
+}

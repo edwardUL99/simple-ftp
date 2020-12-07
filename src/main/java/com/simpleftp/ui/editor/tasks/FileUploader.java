@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ui.editor.uploaders;
+package com.simpleftp.ui.editor.tasks;
 
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
@@ -24,8 +24,8 @@ import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
+import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.editor.FileEditorWindow;
-import com.simpleftp.ui.panels.FilePanel;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
@@ -36,7 +36,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 /**
- * The service for uploading a changed file
+ * The service for uploading the text of a changed file
  * Abstract as uploads differ between file types. E.g local files aren't really uploaded, so their definition of the upload method would be just clean up.
  * This can only be instantiated by calling newInstance which will return the appropriate implementation for that file
  */
@@ -72,7 +72,7 @@ public abstract class FileUploader extends Service<Void> {
             UI.removeBackgroundTask(this);
 
             if (!errorOccurred) {
-                FilePanel filePanel = editorWindow.getCreatingPanel();
+                DirectoryPane directoryPane = editorWindow.getCreatingPane();
                 String parentPath = new File(filePath).getParent();
                 String windowsParent;
                 parentPath = parentPath == null ? ((windowsParent = System.getenv("SystemDrive")) != null ? windowsParent:"/"):parentPath; // if windows, find the root
@@ -82,8 +82,8 @@ public abstract class FileUploader extends Service<Void> {
                 Platform.runLater(() -> {
                     UI.doInfo("File Saved", "File " + filePath + " saved successfully");
 
-                    if (finalParent.equals(filePanel.getDirectory().getFilePath())) {
-                        filePanel.refresh();
+                    if (finalParent.equals(directoryPane.getDirectory().getFilePath())) {
+                        directoryPane.refresh();
                     }
                 });
             }
@@ -96,7 +96,7 @@ public abstract class FileUploader extends Service<Void> {
      */
     @Override
     protected Task<Void> createTask() {
-        return new Task<Void>() {
+        return new Task<>() {
             @Override
             protected Void call() throws Exception {
                 saveFile();

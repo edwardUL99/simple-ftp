@@ -14,7 +14,27 @@
  * You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+package com.simpleftp.ui.exceptions;
+
 /**
- * This package provides panels for displaying files and controls for those files in a directory
+ * An exception surrounding any exceptions thrown in the UI
  */
-package com.simpleftp.ui.panels;
+public class UIException extends Exception {
+    /**
+     * Constructs an UIException object with the given message
+     * @param message the message for this exception
+     */
+    public UIException(String message) {
+        super(message);
+    }
+
+    /**
+     * Constructs an exception from the given message and cause
+     * @param message the message for the display
+     * @param cause the cause of this exception
+     */
+    public UIException(String message, Exception cause) {
+        super(message, cause);
+    }
+}

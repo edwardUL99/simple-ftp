@@ -15,6 +15,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 /**
- * Provides interfaces for dialogs package
+ * This package provides classes for displaying files in a directory and controls related to that directory
  */
-package com.simpleftp.ui.dialogs.interfaces;
+package com.simpleftp.ui.directories;

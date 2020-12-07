@@ -76,4 +76,10 @@ public interface FileSystem {
      * @return the connection being used
      */
     FTPConnection getFTPConnection();
+
+    /**
+     * Sets the connection for the file system
+     * @param connection the connection to set
+     */
+    void setFTPConnection(FTPConnection connection);
 }

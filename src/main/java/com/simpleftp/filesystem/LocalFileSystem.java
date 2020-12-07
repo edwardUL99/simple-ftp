@@ -41,13 +41,10 @@ import java.io.File;
  * It only has to be connection and logged in for addFile in LocalFileSystem
  */
 public class LocalFileSystem implements FileSystem {
-    private final FTPConnection ftpConnection;
+    private FTPConnection ftpConnection;
 
-    public LocalFileSystem() throws FileSystemException {
+    public LocalFileSystem() {
         ftpConnection = FTPSystem.getConnection();
-        if (ftpConnection == null) {
-            throw new FileSystemException("The FTPSystem needs to have a connection for the FileSystem to use.");
-        }
     }
 
     public LocalFileSystem(FTPConnection connection)  {
@@ -60,6 +57,9 @@ public class LocalFileSystem implements FileSystem {
      * @throws FileSystemException if not connected and logged in
      */
     private void validateConnection(FTPConnection connection) throws FileSystemException {
+        if (connection == null)
+            throw new FileSystemException("The provided connection is null");
+
         if (!connection.isConnected() && !connection.isLoggedIn()) {
             throw new FileSystemException("The backing FTPConnection needs to be logged in to download a file");
         }
@@ -159,5 +159,15 @@ public class LocalFileSystem implements FileSystem {
     @Override
     public FTPConnection getFTPConnection() {
         return ftpConnection;
+    }
+
+    /**
+     * Sets the connection for the file system
+     *
+     * @param connection the connection to set
+     */
+    @Override
+    public void setFTPConnection(FTPConnection connection) {
+        this.ftpConnection = connection;
     }
 }

@@ -28,9 +28,12 @@ import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.dialogs.*;
-import com.simpleftp.ui.dialogs.interfaces.DialogActionHandler;
+import com.simpleftp.ui.exceptions.UIException;
+import com.simpleftp.ui.interfaces.ActionHandler;
+import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.editor.FileEditorWindow;
-import com.simpleftp.ui.panels.FilePanel;
+import com.simpleftp.ui.interfaces.WindowActionHandler;
+import com.simpleftp.ui.interfaces.Window;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.geometry.Insets;
@@ -43,9 +46,7 @@ import org.apache.tika.Tika;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -88,19 +89,29 @@ public final class UI {
     public static final String SHOW_FILES = "_Show hidden files";
 
     /**
-     * Height of the File panel including FilePanelContainer
+     * Height of the File panel
      */
     public static final int FILE_PANEL_HEIGHT = 500;
 
     /**
-     * Width of the File panel including FilePanelContainer
+     * Width of the File panel
      */
     public static final int FILE_PANEL_WIDTH = 570;
 
     /**
-     * The background colour for the file panel container toolbar
+     * Width for the panel view
      */
-    public static final String PANEL_CONTAINER_COLOUR = "-fx-background-color: #cff8fa;";
+    public static final int PANEL_VIEW_WIDTH = (FILE_PANEL_WIDTH * 2);
+
+    /**
+     * Height for the panel view
+     */
+    public static final int PANEL_VIEW_HEIGHT = FILE_PANEL_HEIGHT + 15;
+
+    /**
+     * The background colour for the file panel toolbar
+     */
+    public static final String PANEL_COLOUR = "-fx-background-color: #cff8fa;";
 
     /**
      * The height for file editors
@@ -113,9 +124,9 @@ public final class UI {
     public static final int FILE_EDITOR_WIDTH = 700;
 
     /**
-     * The width for the FilePanelContainer ComboBox
+     * The width for the DirectoryPane ComboBox
      */
-    public static final int PANEL_CONTAINER_COMBO_WIDTH = 170;
+    public static final int PANEL_COMBO_WIDTH = 195;
 
     /**
      * The width for the properties window
@@ -151,6 +162,11 @@ public final class UI {
      * The format for the date time string throughout the UI for files
      */
     public static final String FILE_DATETIME_FORMAT = "MMM dd HH:mm";
+
+    /**
+     * The list to keep track of Windows
+     */
+    private static final ArrayList<Window> openedWindows = new ArrayList<>();
 
     /**
      * An enum to determine which type of dialog to show for a given exception
@@ -216,42 +232,76 @@ public final class UI {
         } else {
             // more exception types can be handled here
             if (ex instanceof FTPRemotePathNotFoundException || ex instanceof LocalPathNotFoundException) {
-                String path;
-                String headerPrefix;
-                if (ex instanceof FTPRemotePathNotFoundException) {
-                    path = ((FTPRemotePathNotFoundException)ex).getRemotePath();
-                    headerPrefix = "Remote ";
-                } else {
-                    path = ((LocalPathNotFoundException)ex).getLocalPath();
-                    headerPrefix = "Local ";
-                }
-                ErrorDialog errorDialog = new ErrorDialog(headerPrefix + "file does not exist", "The path " + path + " could not be found");
-                errorDialog.showAndWait();
+                handlePathNotFoundException(ex);
             } else if (ex instanceof FTPException) {
-                ErrorDialog errorDialog;
-                String error = ((FTPException) ex).getReplyString();
-                if (error != null && error.equals(""))
-                    error = "N/A";
-                if (ex instanceof FTPConnectionFailedException) {
-                    errorDialog = new ErrorDialog("FTP Connection Error", ex.getMessage() + "\nFTP Error: " + (error == null ? "FTP Connection failed":error));
-                } else if (ex instanceof FTPCommandFailedException) {
-                    errorDialog = new ErrorDialog("FTP Operation Error", ex.getMessage() + "\nFTP Error: " + error);
-                } else if (ex instanceof FTPNotConnectedException) {
-                    errorDialog = new ErrorDialog("Not Connected to FTP Server", ex.getMessage() + "\nFTP Error: " + error);
-                } else {
-                    // this is a FTPError
-                    errorDialog = new ErrorDialog("General FTP Error", ex.getMessage() + "\nFTP Error: " + error);
-                }
-
-                errorDialog.showAndWait();
+                handleFTPException(ex);
             } else if (ex instanceof FileSystemException) {
-                Throwable cause = ex.getCause();
-                if (cause instanceof FTPException)
-                    doException((Exception)cause, ExceptionType.ERROR, false);
+                handleFileSystemException(ex);
             } else if (ex instanceof IOException) {
                 doError("I/O Exception occurred", ex.getMessage());
+            } else if (ex instanceof UIException) {
+                handleUIException(ex);
+            } else {
+                doError("Unknown Error occurred", "AN unknown error has occurred with the message: " + ex.getMessage());
             }
         }
+    }
+
+    /**
+     * Handles displaying an exception related to a path not being found
+     * @param ex the exception to display
+     */
+    private static void handlePathNotFoundException(Exception ex) {
+        String path;
+        String headerPrefix;
+        if (ex instanceof FTPRemotePathNotFoundException) {
+            path = ((FTPRemotePathNotFoundException)ex).getRemotePath();
+            headerPrefix = "Remote ";
+        } else {
+            path = ((LocalPathNotFoundException)ex).getLocalPath();
+            headerPrefix = "Local ";
+        }
+        ErrorDialog errorDialog = new ErrorDialog(headerPrefix + "file does not exist", "The path " + path + " could not be found");
+        errorDialog.showAndWait();
+    }
+
+    /**
+     * Handles displaying of a FTPException
+     * @param ex the exception to display
+     */
+    private static void handleFTPException(Exception ex) {
+        ErrorDialog errorDialog;
+        String error = ((FTPException) ex).getReplyString();
+        if (error != null && error.equals(""))
+            error = "N/A";
+        if (ex instanceof FTPConnectionFailedException) {
+            errorDialog = new ErrorDialog("FTP Connection Error", ex.getMessage() + "\nFTP Error: " + (error == null ? "FTP Connection failed":error));
+        } else if (ex instanceof FTPCommandFailedException) {
+            errorDialog = new ErrorDialog("FTP Operation Error", ex.getMessage() + "\nFTP Error: " + error);
+        } else if (ex instanceof FTPNotConnectedException) {
+            errorDialog = new ErrorDialog("Not Connected to FTP Server", ex.getMessage() + "\nFTP Error: " + error);
+        } else {
+            // this is a FTPError
+            errorDialog = new ErrorDialog("General FTP Error", ex.getMessage() + "\nFTP Error: " + error);
+        }
+
+        errorDialog.showAndWait();
+    }
+
+    /**
+     * Handles displaying a FileSystemException
+     * @param ex the exception to display
+     */
+    private static void handleFileSystemException(Exception ex) {
+        Throwable cause = ex.getCause();
+        if (cause instanceof FTPException)
+            doException((Exception)cause, ExceptionType.ERROR, false);
+    }
+
+    private static void handleUIException(Exception ex) {
+        Throwable cause = ex.getCause();
+        if (cause instanceof Exception)
+            doException((Exception)cause, ExceptionType.ERROR, FTPSystem.isDebugEnabled());
     }
 
     /**
@@ -314,7 +364,7 @@ public final class UI {
      * @param altEnterHandler the handler to perform when Alt + Enter is pressed, can be null
      * @return the created path
      */
-    public static String doCreateDialog(boolean directory, DialogActionHandler altEnterHandler) {
+    public static String doCreateDialog(boolean directory, ActionHandler altEnterHandler) {
         CreatePathDialog createPathDialog = new CreatePathDialog(directory);
         if (altEnterHandler != null) {
             AtomicBoolean altPressed = new AtomicBoolean(false);
@@ -391,8 +441,8 @@ public final class UI {
      * @param file the file to edit
      * @param fileContents the contents of the file
      */
-    public static void showFileEditor(FilePanel panel, CommonFile file, String fileContents) {
-        FileEditorWindow editorWindow = new FileEditorWindow(panel, fileContents,file);
+    public static void showFileEditor(DirectoryPane panel, CommonFile file, String fileContents) {
+        FileEditorWindow editorWindow = FileEditorWindow.newInstance(panel, fileContents,file);
         editorWindow.show();
     }
 
@@ -584,5 +634,40 @@ public final class UI {
      */
     public static boolean isFileOpened(final String filePath) {
         return openedFiles.contains(filePath);
+    }
+
+    /**
+     * Adds the window to the opened windows list.
+     * @param window to add
+     */
+    public static void openWindow(Window window) {
+        if (!openedWindows.contains(window)) {
+            openedWindows.add(window);
+        }
+    }
+
+    /**
+     * Returns an unmodifiable list of the opened windows
+     * @return unmodifiable list of opened windows
+     */
+    public static List<Window> getOpenedWindows() {
+        return List.copyOf(openedWindows);
+    }
+
+    /**
+     * Removes the window from the list of opened windows
+     * @param window the window to close
+     */
+    public static void closeWindow(Window window) {
+        openedWindows.remove(window);
+    }
+
+    /**
+     * Does the given action on each opened window.
+     * This works on a copy of the original list.
+     * @param actionHandler the handler defining the action
+     */
+    public static void forEachOpenedWindow(WindowActionHandler actionHandler) {
+        getOpenedWindows().forEach(actionHandler::doAction);
     }
 }

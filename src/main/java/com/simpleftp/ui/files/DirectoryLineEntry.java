@@ -19,7 +19,7 @@ package com.simpleftp.ui.files;
 
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
-import com.simpleftp.ui.panels.FilePanel;
+import com.simpleftp.ui.directories.DirectoryPane;
 
 /**
  * A line entry implementation for a Directory.
@@ -31,7 +31,7 @@ final class DirectoryLineEntry extends LineEntry {
      * @param file the file that this entry represents. It is not this class' responsibility to ensure file is a directory
      * @param owningPanel the panel owning this entry, i.e. the panel it is on
      */
-    DirectoryLineEntry(CommonFile file, FilePanel owningPanel) throws FileSystemException {
+    DirectoryLineEntry(CommonFile file, DirectoryPane owningPanel) throws FileSystemException {
         super(file.isSymbolicLink() ? "dir_icon_symlink.png":"dir_icon.png", file, owningPanel);
     }
 }

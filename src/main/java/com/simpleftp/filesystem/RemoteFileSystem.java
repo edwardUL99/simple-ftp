@@ -43,7 +43,7 @@ import java.util.Arrays;
  * For a RemoteFileSystem, it must be connected and logged in before use
  */
 public class RemoteFileSystem implements FileSystem {
-    private final FTPConnection ftpConnection;
+    private FTPConnection ftpConnection;
 
     public RemoteFileSystem() throws FileSystemException {
         ftpConnection = FTPSystem.getConnection();
@@ -209,5 +209,15 @@ public class RemoteFileSystem implements FileSystem {
     @Override
     public FTPConnection getFTPConnection() {
         return ftpConnection;
+    }
+
+    /**
+     * Sets the connection for the file system
+     *
+     * @param connection the connection to set
+     */
+    @Override
+    public void setFTPConnection(FTPConnection connection) {
+        this.ftpConnection = connection;
     }
 }
