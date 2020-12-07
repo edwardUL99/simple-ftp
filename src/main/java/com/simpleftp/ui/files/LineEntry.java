@@ -21,7 +21,7 @@ import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ui.UI;
-import com.simpleftp.ui.panels.FilePanel;
+import com.simpleftp.ui.directories.DirectoryPane;
 import javafx.geometry.Pos;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
@@ -36,7 +36,7 @@ import lombok.extern.log4j.Log4j2;
 
 /**
  * This is an abstract class representing a line entry on the panel.
- * FilePanel essentially displays a listing of the files in the current directory.
+ * DirectoryPane essentially displays a listing of the files in the current directory.
  * Each file on the panel can be represented as an entry of the file listing.
  * Since all the info for the file is laid out as a line by line basis on the panel, this class will be called a LineEntry
  * It can represent a Directory or File Line entry
@@ -59,11 +59,11 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
      */
     private static final int FILE_NAME_LENGTH = 20;
     /**
-     * The filePanel this LineEntry is a part of
+     * The directoryPane this LineEntry is a part of
      */
     @Getter
     @Setter
-    private FilePanel owningPanel;
+    private DirectoryPane owningPanel;
     /**
      * Stores the retrieved file size so you are not making constant calls to the FTPConnection for opening property window etc
      */
@@ -81,9 +81,9 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
      * Creates a base LineEntry with the specified image URL (which is assumed to be in the jar), file and panel
      * @param imageURL the URL to the image (assumed to be in the JAR)
      * @param file the file this LineEntry represents
-     * @param owningPanel the FilePanel this LineEntry is a part of
+     * @param owningPanel the DirectoryPane this LineEntry is a part of
      */
-    protected LineEntry(String imageURL, CommonFile file, FilePanel owningPanel) throws FileSystemException {
+    protected LineEntry(String imageURL, CommonFile file, DirectoryPane owningPanel) throws FileSystemException {
         setSpacing(30);
         setStyle(UI.WHITE_BACKGROUND);
         HBox imageNamePanel = new HBox();
@@ -172,9 +172,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
             paddedName = new StringBuilder(fileName.substring(0, FILE_NAME_LENGTH - 3) + "...");
         } else {
             paddedName = new StringBuilder(fileName);
-            for (int i = fileName.length(); i < FILE_NAME_LENGTH; i++) {
-                paddedName.append(" ");
-            }
+            paddedName.append(" ".repeat(FILE_NAME_LENGTH - fileName.length()));
         }
 
         String permissions = file.getPermissions();
@@ -234,7 +232,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
      * @param owningPanel the panel displaying this LineEntry
      * @return the appropriate instance of LineEntry or null if file doesn't exist or an error occurs
      */
-    public static LineEntry newInstance(CommonFile file, FilePanel owningPanel) {
+    public static LineEntry newInstance(CommonFile file, DirectoryPane owningPanel) {
         try {
             if (file.isADirectory())
                 return new DirectoryLineEntry(file, owningPanel);

@@ -17,167 +17,294 @@
 
 package com.simpleftp.ui.panels;
 
+import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.LocalFile;
-import com.simpleftp.filesystem.LocalFileSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
-import com.simpleftp.filesystem.interfaces.CommonFile;
+import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.FTPSystem;
+import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.UI;
+import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.files.LineEntry;
+import javafx.util.Pair;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.io.IOException;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * This FilePanel is for use displaying local files
+ * This class represents a DirectoryPane storing a DirectoryPane for remote files
  */
 final class LocalFilePanel extends FilePanel {
     /**
-     * Constructs a LocalFilePanel with the given directory to initialise this panel with
-     * @param directory the initial directory to display
+     * Constructs a LocalFilePanel with the provided directoryPane
+     * @param directoryPane the directory pane for this file panel to hold
      */
-    LocalFilePanel(LocalFile directory) throws FileSystemException {
-        super(directory);
+    LocalFilePanel(DirectoryPane directoryPane) {
+        super(directoryPane);
     }
 
     /**
-     * Initialises the file system for use with this FilePanel
-     *
-     * @throws FileSystemException if an error occurs initialising it
+     * Creates a local directory
+     * @param path the specified path
+     * @return true if it succeeds, false if not
      */
-    @Override
-    void initFileSystem() throws FileSystemException {
-        fileSystem = new LocalFileSystem();
-    }
-
-    /**
-     * Controls going up to parent directory
-     */
-    @Override
-    public void up() {
-        if (!isAtRootDirectory()) {
-            try {
-                LocalFile localFile = (LocalFile) directory;
-                String parent = localFile.getParent();
-                if (parent != null) {
-                    LocalFile parentFile = new LocalFile(parent);
-                    if (parentFile.exists() && parentFile.canRead()) {
-                        setDirectory(parentFile);
-                        refresh();
-                    }
-                }
-            } catch (FileSystemException ex) {
-                UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-            }
-        }
-    }
-
-    /**
-     * Checks the directory passed in to see if the type matches the dfile type this FilePanel is for.
-     * setDirectory calls this
-     *
-     * @param directory the directory to check
-     * @throws IllegalArgumentException if the type of directory is different to the type of the current one
-     */
-    @Override
-    void checkFileType(CommonFile directory) throws IllegalArgumentException {
-        if (!(directory instanceof LocalFile))
-            throw new IllegalArgumentException("The file type passed into this FilePanel must be an instance of LocalFile");
-    }
-
-    /**
-     * Renames the specified local file
-     * @param localFile the file to rename
-     */
-    private void renameLocalFile(final LocalFile localFile) {
-        String filePath = localFile.getFilePath();
-        String parentPath = UI.getParentPath(filePath);
-
-        String fileName = localFile.getName();
-        String newPath = UI.doRenameDialog(fileName);
-
-        if (newPath != null) {
-            newPath = new File(newPath).getName(); // ensure it is just the base name
-            if (!newPath.equals(fileName)) {
-                newPath = parentPath + System.getProperty("file.separator") + newPath;
-
-                if (localFile.renameTo(new File(newPath))) {
-                    UI.doInfo("File Renamed", "File has been renamed successfully");
-                    double vPosition = entriesScrollPane.getVvalue();
-                    double hPosition = entriesScrollPane.getHvalue();
-                    refresh();
-                    entriesScrollPane.setVvalue(vPosition);
-                    entriesScrollPane.setHvalue(hPosition); // resets the position of the scrollbars to where they were before the refresh
-                } else {
-                    UI.doError("Rename Failed", "Failed to rename file");
-                }
-            }
-        }
-    }
-
-    /**
-     * Handles when rename is called on the context menu with the specified line entry
-     *
-     * @param lineEntry the line entry to rename the file of
-     */
-    @Override
-    void renameLineEntry(LineEntry lineEntry) {
-        CommonFile file = lineEntry.getFile();
-        String filePath = file.getFilePath();
-
-        if (!UI.isFileOpened(filePath)) {
-            renameLocalFile((LocalFile) file);
+    private boolean createLocalDirectory(String path) {
+        LocalFile file = new LocalFile(path);
+        if (file.mkdir()) {
+            UI.doInfo("Directory Created", "The directory: " + path + " has been created successfully");
+            return true;
         } else {
-            UI.doError("File Open", "The file " + file.getName() + " is open, it cannot be renamed");
+            UI.doError("Directory Not Created", "Failed to make directory with path: " + path);
+            return false;
         }
     }
 
     /**
-     * Constructs the list of line entries from the files listed by the local file
-     * @param lineEntries the list of line entries to populate
-     * @param localFile the file to list
+     * Creates a local file
+     * @param path the specified path
+     * @return true if it succeeds, false if not
      */
-    private void constructListOfLocalFiles(ArrayList<LineEntry> lineEntries, LocalFile localFile) {
+    private boolean createLocalNormalFile(String path) {
         try {
-            CommonFile[] files = fileSystem.listFiles(localFile.getFilePath());
-            if (files == null || files.length == 0) {
-                lineEntries.clear();
+            LocalFile file = new LocalFile(path);
+            if (file.createNewFile()) {
+                UI.doInfo("File Created", "The file: " + path + " has been created successfully");
+                return true;
             } else {
-                for (CommonFile file : files) {
-                    LocalFile file1 = (LocalFile) file;
-                    boolean showFile = showFile(file, e -> showHiddenFiles || !file1.isHidden());
-
-                    if (showFile) {
-                        LineEntry constructed = createLineEntry(file1);
-
-                        if (constructed != null)
-                            lineEntries.add(constructed);
-                    }
-                }
+                UI.doError("File Not Created", "Failed to make file with path: " + path);
             }
-        } catch (FileSystemException ex) {
-            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-            lineEntries.clear();
+        } catch (IOException ex) {
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
+        }
+
+        return false;
+    }
+
+    /**
+     * Handler for creating a local directory
+     * @param resolvedPath the resolved path for the file
+     * @param directory true if to create a directory, false if file
+     * @return true if it succeeds, false if not
+     */
+    private boolean createLocalFile(String resolvedPath, boolean directory) {
+        String currentDirectory = directoryPane.getCurrentWorkingDirectory();
+
+        String parentPath = UI.getParentPath(resolvedPath);
+        boolean existsAsDir = new LocalFile(parentPath).isDirectory();
+
+        if (!existsAsDir) {
+            UI.doError("Directory does not exist", "Cannot create directory as path: " + parentPath + " does not exist");
+            return false;
+        } else {
+            boolean succeeds;
+            if (directory) {
+                succeeds = createLocalDirectory(resolvedPath);
+            } else {
+                succeeds = createLocalNormalFile(resolvedPath);
+            }
+
+            if (!succeeds)
+                return false;
+
+            boolean parentPathMatchesPanelsPath = currentDirectory.equals(parentPath);
+            if (parentPathMatchesPanelsPath) {
+                directoryPane.refresh(); // only need to refresh if the path the file is created in matches the cwd
+            }
+
+            return true;
         }
     }
 
     /**
-     * Constructs the list of line entries to display
-     *
-     * @return the list of constructed line entries
+     * The handler for creating a new directory
      */
     @Override
-    ArrayList<LineEntry> constructListOfFiles() {
-        ArrayList<LineEntry> lineEntries = new ArrayList<>();
-        constructListOfLocalFiles(lineEntries, (LocalFile)directory);
+    void createNewDirectory() {
+        String path = UI.doCreateDialog(true, null);
 
-        if (lineEntries.size() > 0) {
-            Collections.sort(lineEntries);
+        try {
+            if (path != null) {
+                String resolvedPath = UI.resolveLocalPath(path, directoryPane.getCurrentWorkingDirectory());
+                createLocalFile(resolvedPath, true);
+            }
+        } catch (IOException ex) {
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); //this could keep happening, so show exception dialog
         }
-
-        return lineEntries;
     }
 
+    /**
+     * The handler to create a new empty file
+     */
+    @Override
+    void createNewFile() {
+        AtomicBoolean openCreatedFile = new AtomicBoolean(false);
+        String path = UI.doCreateDialog(true, () -> openCreatedFile.set(true));
+        try {
+            if (path != null) {
+                String resolvedPath = UI.resolveLocalPath(path, directoryPane.getCurrentWorkingDirectory());
+                if (createLocalFile(resolvedPath, false) && openCreatedFile.get())
+                    directoryPane.openLineEntry(LineEntry.newInstance(new LocalFile(path), directoryPane));
+            }
+        } catch (IOException ex) {
+            UI.doError("Create file error", "Failed to resolve path " + path + " when creating file");
+        }
+    }
 
+    /**
+     * Resolves the target path, if it is a symbolic link, it keeps the symbolic link without going to target
+     * @param targetPath the path to resolve
+     * @return the resolved path
+     */
+    private String resolveTargetPath(String targetPath) throws LocalPathNotFoundException, FileSystemException, IOException {
+        LocalFile file = new LocalFile(targetPath);
+        targetPath = !file.isAbsolute() ? FileUtils.addPwdToPath(directoryPane.getCurrentWorkingDirectory(), targetPath, UI.PATH_SEPARATOR):targetPath;
+        String windowsParent;
+        String root = ((windowsParent = System.getenv("SystemDrive")) != null) ? windowsParent:null;
+        targetPath = UI.resolveSymbolicPath(targetPath, UI.PATH_SEPARATOR, root);
+        file = new LocalFile(targetPath);
+
+        if (!file.isSymbolicLink())
+            targetPath = UI.resolveLocalPath(targetPath, directoryPane.getCurrentWorkingDirectory());
+
+        FileSystem fileSystem = directoryPane.getFileSystem();
+
+        if (!fileSystem.fileExists(targetPath))
+            throw new LocalPathNotFoundException("The target path " + targetPath + " does not exist", targetPath);
+
+        return targetPath;
+    }
+
+    /**
+     * Checks if the symbolic link by the given name already exists
+     * @param symbolicName the name to check
+     * @return the resolved string if exists, null if not
+     */
+    private String resolveSymbolicName(String symbolicName) throws FileSystemException {
+        LocalFile file = new LocalFile(symbolicName);
+        String path = !file.isAbsolute() ? FileUtils.addPwdToPath(directoryPane.getCurrentWorkingDirectory(), symbolicName, UI.PATH_SEPARATOR):symbolicName;
+        String windowsParent;
+        String root = ((windowsParent = System.getenv("SystemDrive")) != null) ? windowsParent:null;
+        path = UI.resolveSymbolicPath(path, UI.PATH_SEPARATOR, root);
+
+        return !directoryPane.getFileSystem().fileExists(path) ? path:null;
+    }
+
+    /**
+     * Defines how a symbolic link should be created
+     */
+    @Override
+    void createSymbolicLink() {
+        Pair<String, String> paths = UI.doCreateSymLinkDialog();
+        String targetPath = paths.getKey();
+        String namePath = paths.getValue();
+
+        if (targetPath.isEmpty()) {
+            UI.doError("Empty Target Path", "The target path cannot be empty");
+            return;
+        }
+
+        if (namePath.isEmpty()) {
+            UI.doError("Empty Symbolic Name", "The name of the symbolic link cannot be empty");
+            return;
+        }
+
+        try {
+            targetPath = resolveTargetPath(targetPath);
+            String resolvedNamePath = resolveSymbolicName(namePath);
+
+            if (resolvedNamePath != null) {
+                Path link = Paths.get(resolvedNamePath);
+                Path target = Paths.get(targetPath);
+
+                Path result = Files.createSymbolicLink(link, target);
+
+                if (Files.exists(result)) {
+                    UI.doInfo("Symbolic Link Created", "The Symbolic link " + namePath + " has been successfully created to point to " + targetPath);
+
+                    if (UI.getParentPath(resolvedNamePath).equals(directoryPane.getCurrentWorkingDirectory()))
+                        directoryPane.refresh();
+                } else {
+                    UI.doError("Symbolic Link Not Created", "The Symbolic link was not created successfully");
+                }
+            } else {
+                UI.doError("File Exists", "A file with the path " + namePath + " already exists");
+            }
+        } catch (LocalPathNotFoundException | FileSystemException ex) {
+            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+        } catch (UnsupportedOperationException ex) {
+            UI.doError("Symbolic Links Not Supported", "The creation of symbolic links is not supported on this system");
+        } catch (AccessDeniedException ex) {
+            if (FTPSystem.isDebugEnabled())
+                ex.printStackTrace();
+            UI.doError("Access Denied", "You do not have access to create the symbolic link " + namePath);
+        } catch (IOException ex) {
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
+        }
+    }
+
+    /**
+     * Takes the given path and attempts to go the the location in the local file system identified by it.
+     * @param path the path to go to
+     */
+    private void goToLocalPath(String path) throws FileSystemException {
+        try {
+            String currWorkingDir = directoryPane.getCurrentWorkingDirectory();
+            LocalFile file = new LocalFile(path);
+            boolean absolute = file.isAbsolute();
+            path = !absolute ? FileUtils.addPwdToPath(currWorkingDir, path, UI.PATH_SEPARATOR) : path;
+
+            String windowsRoot;
+            String root = ((windowsRoot = System.getenv("SystemDrive")) != null) ? windowsRoot : null;
+            String symbolicPath = UI.resolveSymbolicPath(path, UI.PATH_SEPARATOR, root);
+            if (symbolicPath == null)
+                return; // this is a rare case. UI.resolveSymbolicPath would have shown an error dialog
+
+            file = new LocalFile(symbolicPath);
+
+            if (!file.exists())
+                throw new LocalPathNotFoundException("The path " + symbolicPath + " does not exist", symbolicPath);
+
+            boolean canonicalize = file.isADirectory() && (!file.isSymbolicLink() || !UI.doSymbolicPathDialog(symbolicPath));
+
+            if (canonicalize) {
+                path = UI.resolveLocalPath(symbolicPath, currWorkingDir);
+                file = new LocalFile(path);
+            }
+
+            if (file.isDirectory()) {
+                directoryPane.setDirectory(file);
+                directoryPane.refresh();
+            } else if (file.exists()) {
+                LineEntry lineEntry = LineEntry.newInstance(file, directoryPane);
+                if (lineEntry != null)
+                    directoryPane.openLineEntry(lineEntry);
+            } else {
+                UI.doError("Path does not exist", "The path: " + path + " does not exist");
+            }
+        } catch (LocalPathNotFoundException ex) {
+            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+        } catch (IOException ex) {
+            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); // if it fails here, it'll keep failing, show exception
+        }
+    }
+
+    /**
+     * The handler for the goto button
+     */
+    @Override
+    void gotoPath() {
+        String path = UI.doPathDialog();
+
+        if (path != null) {
+            try {
+                goToLocalPath(path);
+            } catch (FileSystemException ex) {
+                UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
+            }
+        }
+    }
 }

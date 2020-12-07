@@ -14,7 +14,16 @@
  * You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+package com.simpleftp.ui.interfaces;
+
 /**
- * This package provides panels for displaying files and controls for those files in a directory
+ * This is a functional interface for performing an action
  */
-package com.simpleftp.ui.panels;
+@FunctionalInterface
+public interface ActionHandler {
+    /**
+     * The method for carrying out the action
+     */
+    void doAction();
+}

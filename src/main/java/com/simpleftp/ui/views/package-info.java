@@ -14,16 +14,7 @@
  * You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-package com.simpleftp.ui.dialogs.interfaces;
-
 /**
- * This is a functional interface for performing an action on when a dialog is closed.
+ * This class provides the classes for the main views the user will see, for example, the entire window, or just the view with panels side by side
  */
-@FunctionalInterface
-public interface DialogActionHandler {
-    /**
-     * The method for carrying out the action
-     */
-    void doAction();
-}
+package com.simpleftp.ui.views;

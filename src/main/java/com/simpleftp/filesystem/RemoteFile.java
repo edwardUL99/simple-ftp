@@ -420,7 +420,7 @@ public class RemoteFile implements CommonFile {
                 ftpFile = null;
             }
         } catch (FTPException ex) {
-            throw new FileSystemException("Failed to refresh the file");
+            throw new FileSystemException("Failed to refresh the file", ex);
         }
     }
 

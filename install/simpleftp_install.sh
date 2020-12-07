@@ -185,7 +185,7 @@ echo -e "\n\t[Set up installation environment]\n"
 
 echo "Changing directory to $output_dir"
 
-cd $output_dir
+cd "$output_dir"
 succeeded=$?
 
 if [ "$succeeded" -ne "0" ]; then

@@ -17,689 +17,487 @@
 
 package com.simpleftp.ui.panels;
 
-import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.LocalFile;
-import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
+import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.interfaces.CommonFile;
-import com.simpleftp.filesystem.interfaces.FileSystem;
+import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
-import com.simpleftp.ui.containers.FilePanelContainer;
-import com.simpleftp.ui.files.FilePropertyWindow;
+import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.files.LineEntry;
+import com.simpleftp.ui.views.PanelView;
 import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.*;
-import javafx.scene.paint.Paint;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
+import javafx.scene.input.KeyCode;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.VBox;
 import lombok.Getter;
+import lombok.extern.log4j.Log4j2;
 
 import java.util.ArrayList;
-import java.util.function.Predicate;
-
-/*
-The conditions for determining if an exception or error dialog show up may have to be reconsidered
- */
+import java.util.HashMap;
 
 /**
- * Represents a panel of Files. These files may be in different locations, hence why the class is abstract.
- * Some methods need to be defined differently depending on the type of file required. i.e. at the moment, LocalFiles have different behaviour than a RemoteFile.
+ * This is a Panel that contains a DirectoryPane and a toolbar of options for controlling that DirectoryPane.
+ * To hook a DirectoryPane and a DirectoryPane together, you need to call DirectoryPane.setFilePanel().
+ * While everything here could be implemented in a single DirectoryPane class, this helps provide some abstraction.
+ * Keeps the responsibility of DirectoryPane to just that, listing the files, with options to refresh it or go up to the next level of files.
+ * For other options there needs to be a class which will contain the panel and provide some options of controlling it
  *
- * This class can only be constructed outside this package by using FilePanel.newInstance(CommonFile) which returns the appropriate FilePanel implementation for that file type.
- * You can only implement this class inside the panels package as it does not make sense to be implementing FilePanels outside of the panels package
+ * A DirectoryPane is abstract as the functionality differs depending on the file type. It can only be constructed with DirectoryPane which returns the appropriate
+ * instance for the given file type.
+ * It can only be implemented inside the panels package as it does not make sense implementing a DirectoryPane outside of it
  */
+@Log4j2
 public abstract class FilePanel extends VBox {
     /**
-     * The status panel which contains all the buttons and current symbolicLink label
-     */
-    private HBox statusPanel;
-    /**
-     * The label outlining current symbolicLink
-     */
-    private Label currentDirectoryLabel;
-    /**
-     * The label showing the path to the current symbolicLink
-     */
-    private Label currentDirectory;
-    /**
-     * A tool tip for displaying the current symbolicLink when mouse is hovered over currentDirectory in case it is abbreviated
-     */
-    private Tooltip currentDirectoryTooltip;
-    /**
-     * Button for refreshing the FilePanel and its entries
-     */
-    private Button refresh;
-    /**
-     * Button for moving up to the parent symbolicLink
-     */
-    private Button up;
-    /**
-     * The list of line entries inside in entries box
-     */
-    private ArrayList<LineEntry> lineEntries;
-    /**
-     * The symbolicLink that this FilePanel is currently listing
+     * The DirectoryPane this DirectoryPane is connected tp
      */
     @Getter
-    protected CommonFile directory;
+    protected DirectoryPane directoryPane;
     /**
-     * The FilePanelContainer that is holding this FilePanel
+     * The parent panel view
      */
     @Getter
-    private FilePanelContainer parentContainer;
+    protected PanelView panelView;
     /**
-     * The ScrollPane that will provide scrolling functionality for the entriesBox
+     * The HBox with combo box and buttons
      */
-    protected ScrollPane entriesScrollPane;
+    private FlowPane toolBar;
     /**
-     * The VBox which will hold all the LineEntries
+     * The button for deleting chosen files
      */
-    private VBox entriesBox;
+    private Button delete;
     /**
-     * The file system this FilePanel is connected to
+     * The button for opening chosen files
      */
-    @Getter
-    protected FileSystem fileSystem;
+    private Button open;
     /**
-     * The max length for file path before it is shortened and ... added to the end of it
+     * Button for opening the dialog box to change directory
      */
-    private static int MAX_FILE_PATH_LENGTH = 30;
+    private Button gotoButton;
     /**
-     * Flag for showing hidden files
-     * By default, it is false
+     * Button for showing/hiding hidden files
      */
-    protected boolean showHiddenFiles;
+    private Button hideHiddenFiles;
     /**
-     * A pane to display an empty folder if there are no files
+     * The Button to display options to create different objects
      */
-    private BorderPane emptyFolderPane;
+    private MenuButton createButton;
     /**
-     * A mask used to match files against. If null, it has no effect
+     * The button used to bring up the mask button
      */
-    @Getter
-    private String fileMask;
+    private Button maskButton;
     /**
-     * The regex fileMask is converted to
+     * A button to take you to symbolic link destination. Should be the last button on the toolbar
      */
-    private String fileMaskRegex;
+    private Button symLinkDestButton;
+    /**
+     * The combobox displaying the base names of files displayed in the DirectoryPane
+     */
+    private ComboBox<String> comboBox;
+    /**
+     * Mapping of file basenames to their respective line entries
+     */
+    private final HashMap<String, LineEntry> entryMappings;
 
     /**
-     * Constructs a FilePanel object with the specified symbolicLink
-     * @param directory the symbolicLink object. Can be Local or Remote file
-     * @throws FileSystemException if the symbolicLink is not in fact a symbolicLink
+     * Constructs a DirectoryPane with the specified directoryPane
+     * @param directoryPane the directoryPane this panel holds
      */
-    FilePanel(CommonFile directory) throws FileSystemException {
+    FilePanel(DirectoryPane directoryPane) {
+        entryMappings = new HashMap<>();
         setStyle(UI.WHITE_BACKGROUND);
-        lineEntries = new ArrayList<>();
+        setPadding(new Insets(UI.UNIVERSAL_PADDING));
+        setSpacing(UI.UNIVERSAL_PADDING);
 
+        initComboBox(); // combo box needs to be initalised before file panel is set
+        toolBar = new FlowPane();
+        initToolbar();
+        getChildren().add(toolBar);
+        setDirectoryPane(directoryPane);
         initButtons();
-        initStatusPanel();
-        initEntriesBox();
-        initFileSystem();
-        initDirectory(directory);
-        initEmptyFolderPane();
+
+        toolBar.getChildren().addAll(new Label("Files: "), comboBox, delete, open, gotoButton, hideHiddenFiles, createButton, maskButton, symLinkDestButton);
+        setKeyBindings();
     }
 
     /**
-     * Initialises the pane used to display an empty folder
+     * Initialises the combo box in the toolbar
      */
-    private void initEmptyFolderPane() {
-        emptyFolderPane = new BorderPane();
-        ImageView openDirImage = new ImageView(new Image("opened_folder.png"));
-        Label emptyFolder = new Label("Directory is empty");
-        VBox dirBox = new VBox();
-        dirBox.setSpacing(5);
-        dirBox.getChildren().addAll(openDirImage, emptyFolder);
-        dirBox.setAlignment(Pos.CENTER);
-        emptyFolderPane.setCenter(dirBox);
-        emptyFolderPane.setPadding(new Insets(UI.EMPTY_FOLDER_PANEL_PADDING));
-    }
-
-    /**
-     * Initialises the CurrentDirectory labels of the FilePanel and returns the header label
-     * @return header label with value "Current Directory:"
-     */
-    private Label initCurrentDirectoryLabel() {
-        currentDirectoryLabel = new Label("Current Directory:");
-        currentDirectoryLabel.setPadding(new Insets(5, 0, 0, 0));
-        currentDirectoryLabel.setAlignment(Pos.CENTER_LEFT);
-        currentDirectoryLabel.setFont(Font.font("Monospaced", FontWeight.BOLD, currentDirectoryLabel.getFont().getSize()));
-
-        currentDirectory = new Label();
-        currentDirectory.setPadding(new Insets(5, 0, 0, 0));
-        currentDirectory.setAlignment(Pos.CENTER_LEFT);
-        currentDirectory.setFont(Font.font("Monospaced"));
-
-        return currentDirectoryLabel;
-    }
-
-    /**
-     * Initialises the buttons and sets their respective actions
-     */
-    private void initButtons() {
-        refresh = new Button();
-        refresh.setMnemonicParsing(true);
-        refresh.setText("_Refresh");
-        up = new Button();
-        up.setMnemonicParsing(true);
-        up.setText("_Up");
-        refresh.setOnAction(e -> refresh());
-
-        up.setOnAction(e -> up());
-
-        up.setPickOnBounds(true);
-        refresh.setPickOnBounds(true);
-    }
-
-    /**
-     * Intialises the status panel which contains the buttons and current symbolicLink
-     */
-    private void initStatusPanel() {
-        statusPanel = new HBox();
-        statusPanel.setPadding(new Insets(UI.UNIVERSAL_PADDING));
-        statusPanel.setSpacing(10);
-        statusPanel.getChildren().addAll(refresh, up, initCurrentDirectoryLabel(), currentDirectory);
-        statusPanel.setBorder(new Border(new BorderStroke(Paint.valueOf("BLACK"), BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));
-        statusPanel.setStyle(UI.GREY_BACKGROUND);
-    }
-
-    /**
-     * Initialises the VBox containing file entries
-     */
-    private void initEntriesBox() {
-        entriesBox = new VBox();
-        entriesScrollPane = new ScrollPane();
-        entriesScrollPane.setFitToWidth(true);
-        entriesScrollPane.setFitToHeight(true);
-        entriesScrollPane.setContent(entriesBox);
-        entriesScrollPane.setStyle(UI.WHITE_BACKGROUND);
-        entriesBox.setStyle(UI.WHITE_BACKGROUND);
-        entriesScrollPane.setPrefHeight(UI.FILE_PANEL_HEIGHT);
-    }
-
-    /**
-     * Initialises the file system for use with this FilePanel
-     * @throws FileSystemException if an error occurs initialising it
-     */
-    abstract void initFileSystem() throws FileSystemException;
-
-    /**
-     * Initialises the symbolicLink that this FilePanel is set up to view
-     * @param directory the symbolicLink to set as initial symbolicLink
-     */
-    private void initDirectory(CommonFile directory) throws FileSystemException {
-        setDirectory(directory);
-        refresh();
-
-        setCurrDirText(directory.getFilePath());
-    }
-
-    /**
-     * Sets the FilePanelContainer that is the parent, i.e. contains this FilePanel.
-     * This action hooks the two together.
-     * Calling setParentContainer automatically links the given container to this file panel
-     * @param parentContainer the container to add this FilePanel to
-     */
-    public void setParentContainer(FilePanelContainer parentContainer) {
-        this.parentContainer = parentContainer;
-        if (this.parentContainer.getFilePanel() != this) // prevent a cycle of infinite recursion
-            this.parentContainer.setFilePanel(this);
-    }
-
-    /**
-     * Sets the text of the current symbolicLink text in the status panel and abbreviates it if it is too long
-     * @param currentDirectory the symbolicLink to change the text to
-     */
-    private void setCurrDirText(String currentDirectory) {
-        if (currentDirectory.length() >= MAX_FILE_PATH_LENGTH) {
-            String currentDirectoryShortened = currentDirectory.substring(0, MAX_FILE_PATH_LENGTH - 3) + "...";
-            if (currentDirectoryTooltip == null) {
-                currentDirectoryTooltip = new Tooltip(currentDirectory);
-                Tooltip.install(this.currentDirectory, currentDirectoryTooltip);
-            } else {
-                currentDirectoryTooltip.setText(currentDirectory);
-            }
-
-            this.currentDirectory.setText(currentDirectoryShortened);
-        } else {
-            if (currentDirectoryTooltip != null) {
-                Tooltip.uninstall(this.currentDirectory, currentDirectoryTooltip);
-                currentDirectoryTooltip = null;
-            }
-
-            this.currentDirectory.setText(currentDirectory);
-        }
-    }
-
-    /**
-     * Checks if you are at the root symbolicLink
-     * @return true if at the root symbolicLink
-     */
-    public boolean isAtRootDirectory() {
-        return new LocalFile(directory.getFilePath()).getParent() == null;
-    }
-
-    /**
-     * Controls going up to parent symbolicLink
-     */
-    public abstract void up();
-
-    /**
-     * Checks the symbolicLink passed in to see if the type matches the dfile type this FilePanel is for.
-     * setDirectory calls this
-     * @param directory the symbolicLink to check
-     * @throws IllegalArgumentException if the type of symbolicLink is different to the type of the current one
-     */
-    abstract void checkFileType(CommonFile directory) throws IllegalArgumentException;
-
-    /**
-     * Returns the path of the current working symbolicLink
-     * @return the current working symbolicLink path
-     */
-    public String getCurrentWorkingDirectory() {
-        return directory.getFilePath();
-    }
-
-    /**
-     * Checks if the file represents a symbolic link and throws IllegalArgumentException if not
-     * @param symbolicLink the file to check for being a link
-     * @throws IllegalArgumentException if it is not a symbolic link
-     */
-    private void checkSymbolicLink(CommonFile symbolicLink) throws IllegalArgumentException {
-        if (!symbolicLink.isSymbolicLink())
-            throw new IllegalArgumentException("The file provided is not a symbolic link");
-    }
-
-    /**
-     * Changes symbolicLink but doesn't check the type of the symbolicLink or if it is a symbolicLink.
-     * This is used internally as it is called by doubleClickDirectoryEntry. Since, you knew it was a symbolicLink to create a symbolicLink entry, you don't need to check it again.
-     * The types will also always stay the same. The public method setDirectory is a wrapper for this, doing validation checks and then calling this.
-     * While, internally these checks should be enforced, it can't be guaranteed an external class calling it would have stuck to them.
-     * @param directory the symbolicLink to set
-     */
-     void setDirectoryUnchecked(CommonFile directory) {
-        if (this.directory != null)
-            UI.closeFile(getCurrentWorkingDirectory()); // after successfully leaving this symbolicLink to the new one, close it
-        this.directory = directory;
-        String path = directory.getFilePath();
-        UI.openFile(path); // open the new symbolicLink
-
-        setCurrDirText(path);
-    }
-
-    /**
-     * Changes symbolicLink. Refresh should be called after this action
-     * @param directory the symbolicLink to change to, local, or remote
-     * @throws FileSystemException if the symbolicLink is not a symbolicLink
-     * @throws IllegalArgumentException if type of the symbolicLink is different to the type that was initially passed in.
-     *              You're not allowed pass in RemoteFile to constructor and then suddenly set symbolicLink to a LocalFile or it's not a symbolicLink
-     */
-    public void setDirectory(CommonFile directory) throws FileSystemException, IllegalArgumentException {
-        checkFileType(directory);
-
-        if (directory.isADirectory()) {
-            setDirectoryUnchecked(directory);
-        } else {
-            throw new IllegalArgumentException("The directory for a FilePanel must be in fact a directory, not a file");
-        }
-    }
-
-    /**
-     * This method is for changing to a symbolicLink that is a symbolic link and indicates to follow it to the destination.
-     * setDirectory called on symbolic link follows it symbolically, represents it as a folder of the parent
-     * @param symbolicLink the symbolic link to change to
-     * @throws FileSystemException if an error occurs
-     * @throws IllegalArgumentException if the symbolicLink is not in fact a symbolicLink and is not a symbolic link
-     */
-    private void setSymbolicLinkTargetDir(CommonFile symbolicLink) throws FileSystemException, IllegalArgumentException {
-        checkFileType(symbolicLink);
-
-        String path = symbolicLink.getSymbolicLinkTarget();
-        if (symbolicLink.isNormalFile())
-        {
-            // go to the parent folder of the file
-            path = UI.getParentPath(path);
-        }
-
-        CommonFile targetFile = fileSystem.getFile(path);
-        setDirectory(targetFile); // need to use the checked setDirectory as this is a public method
-        refresh();
-    }
-
-    /**
-     * Opens the given symbolic link. If it is a symbolicLink, it goes to the target symbolicLink. If it is a file, it goes to the parent of the target file
-     * @param symbolicLink the symbolic link to open
-     * @throws FileSystemException if an error occurs
-     * @throws IllegalArgumentException if the file is not a symbolic link
-     */
-    public void openSymbolicLink(CommonFile symbolicLink) throws FileSystemException, IllegalArgumentException {
-        checkSymbolicLink(symbolicLink);
-        setSymbolicLinkTargetDir(symbolicLink);
-    }
-
-    /**
-     * Checks the given filename against the file mask. It is assumed the mask is not null when calling this method
-     * @param fileName the name to check
-     * @return if the filename matches the mask
-     */
-    private boolean checkNameAgainstMask(String fileName) {
-        return fileName.matches(fileMaskRegex);
-    }
-
-    /**
-     * Converts any wildcards in the provided glob like linux matching i.e. file*
-     * @param glob the glob to convert
-     * @return the matching regex
-     */
-    private String createRegexFromGlob(String glob) {
-        StringBuilder out = new StringBuilder();
-        for(int i = 0; i < glob.length(); ++i) {
-            final char c = glob.charAt(i);
-            switch(c) {
-                case '*': out.append(".*"); break; // zero or more characters of any value
-                case '?': out.append('.'); break; // one and only one character. Can be any character
-                case '.': out.append("\\."); break; // if it is a dot, escape the dot as it is a literal
-                case '\\': out.append("\\\\"); break; // escape a slash
-                default: out.append(c); // just a normal character, add it to the regex
-            }
-        }
-
-        return out.toString();
-    }
-
-    /**
-     * Returns whether the local file should be shown
-     * @param file the file being queried
-     * @param hiddenChecker the predicate to determine if the file is hidden or not. This is required because at the moment there is no platform independent way of determining if it is hidden
-     * @return true if the file is to be shown
-     */
-    protected boolean showFile(CommonFile file, Predicate<CommonFile> hiddenChecker) {
-        boolean showFile = hiddenChecker.test(file);
-
-        if (!showFile) // if it is hidden, it will never be shown regardless of matching mask or not
-            return false;
-
-        if (fileMask != null) {
-            showFile = checkNameAgainstMask(file.getName());
-        }
-
-        return showFile;
-    }
-
-    /**
-     * Handles when rename is called on the context menu with the specified line entry
-     * @param lineEntry the line entry to rename the file of
-     */
-    abstract void renameLineEntry(final LineEntry lineEntry);
-
-    /**
-     * Creates a line entry, adding a context menu to it and returns it
-     * @param file the file the create the line entry from
-     * @return the line entry created
-     */
-    protected LineEntry createLineEntry(CommonFile file) {
-        LineEntry lineEntry = LineEntry.newInstance(file, this);
-
-        if (lineEntry == null)
-            return null;
-
-        ContextMenu contextMenu = new ContextMenu();
-        MenuItem menuItem1 = new MenuItem("Open");
-        menuItem1.setOnAction(e -> openLineEntry(lineEntry));
-        MenuItem menuItem2 = new MenuItem("Rename");
-        menuItem2.setOnAction(e -> renameLineEntry(lineEntry));
-        MenuItem menuItem3 = new MenuItem("Delete");
-        menuItem3.setOnAction(e -> parentContainer.delete()); // right clicking this would have selected it in the container's combo box. So use containers delete method to display confirmation dialog
-                                                             // as a consequence, this method also checks if the file is open or not. If this call is to be changed to this.delete(), add the isOpen check and confirmation dialog to that method
-                                                            // this.delete doesn't remove the file from the combo box anyway (although refresh would get that)
-        MenuItem menuItem4 = new MenuItem("Properties");
-        menuItem4.setOnAction(e -> {
-            try {
-                new FilePropertyWindow(lineEntry).show();
-            } catch (FileSystemException ex) {
-                if (FTPSystem.isDebugEnabled())
-                    ex.printStackTrace();
-                UI.doError("Properties Window Failure", "Failed to open the properties window for file " + lineEntry.getFilePath() + ".");
+    private void initComboBox() {
+        comboBox = new ComboBox<>();
+        comboBox.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ENTER) {
+                open();
             }
         });
-        contextMenu.getItems().addAll(menuItem1, menuItem2, menuItem3, menuItem4);
-
-        lineEntry.setOnContextMenuRequested(e -> contextMenu.show(lineEntry, e.getScreenX(), e.getScreenY()));
-
-        return lineEntry;
+        comboBox.setPrefWidth(UI.PANEL_COMBO_WIDTH);
+        comboBox.setOnAction(e -> checkComboBoxValue());
+        comboBox.setTooltip(new Tooltip("Currently Selected File"));
     }
 
     /**
-     * Constructs the list of line entries to display
-     * @return the list of constructed line entries
+     * Initialises the tool bar which contains combobox and buttons
      */
-    abstract ArrayList<LineEntry> constructListOfFiles();
-
-    /**
-     * Adds the list of line entries to the entriesBox
-     * @param lineEntries the line entries to add
-     */
-    private void addLineEntriesFromList(ArrayList<LineEntry> lineEntries) {
-        lineEntries.forEach(entriesBox.getChildren()::add);
+    private void initToolbar() {
+        toolBar.setStyle(UI.PANEL_COLOUR);
+        toolBar.setHgap(5);
+        toolBar.setVgap(5);
+        toolBar.setPadding(new Insets(2, 0, 2, 0));
     }
 
     /**
-     * Refreshes this file panel
+     * Initialises all the buttons for the toolbar
      */
-    public void refresh() {
-        ArrayList<LineEntry> lineEntries = constructListOfFiles();
-        this.lineEntries.clear();
-        getChildren().clear();
-        getChildren().add(statusPanel);
-        entriesBox.getChildren().clear();
-        if (lineEntries.size() > 0) {
-            addLineEntriesFromList(lineEntries);
-            getChildren().add(entriesScrollPane);
+    private void initButtons() {
+        delete = new Button();
+        delete.setMnemonicParsing(true);
+        delete.setText("_Delete");
+        delete.setOnAction(e -> delete());
+
+        open = new Button();
+        open.setMnemonicParsing(true);
+        open.setText("_Open");
+        open.setOnAction(e -> open());
+
+        gotoButton = new Button();
+        gotoButton.setMnemonicParsing(true);
+        gotoButton.setText("_Go To");
+        gotoButton.setOnAction(e -> gotoPath());
+
+        hideHiddenFiles = new Button();
+        hideHiddenFiles.setMnemonicParsing(true);
+        initHideButton();
+
+        createButton = new MenuButton();
+        createButton.setMnemonicParsing(true);
+        initCreateButton();
+
+        maskButton = new Button();
+        maskButton.setMnemonicParsing(true);
+        maskButton.setText("File _Mask");
+        initMaskButton();
+
+        initSymLinkButton();
+    }
+
+    /**
+     * Initialises the symbolic link button
+     */
+    private void initSymLinkButton() {
+        symLinkDestButton = new Button();
+        symLinkDestButton.setMnemonicParsing(true);
+        symLinkDestButton.setText("Go to _Target");
+        symLinkDestButton.setTooltip(new Tooltip("The selected file is a symbolic link. Click to go directly to the target directory"));
+        symLinkDestButton.setOnAction(e -> goToSymLinkTarget());
+        symLinkDestButton.managedProperty().bind(symLinkDestButton.visibleProperty()); // if hidden, re-arrange toolbar. But for best effects, keep the button as the last button so ToolBar doesn't keep chopping and changing
+        symLinkDestButton.setVisible(false);
+    }
+
+    /**
+     * Initialises the button to show/hide hidden files
+     */
+    private void initHideButton() {
+        boolean showHiddenFiles = directoryPane.hiddenFilesShown();
+
+        if (showHiddenFiles) {
+            hideHiddenFiles.setText(UI.HIDE_FILES);
         } else {
-            getChildren().add(emptyFolderPane);
+            hideHiddenFiles.setText(UI.SHOW_FILES);
         }
-        this.lineEntries = lineEntries;
 
-        if (parentContainer != null)
-            parentContainer.refresh();
+        hideHiddenFiles.setOnAction(e -> {
+            boolean hiddenFilesShown = directoryPane.hiddenFilesShown();
+            if (hiddenFilesShown) {
+                directoryPane.hideHiddenFiles();
+                hideHiddenFiles.setText(UI.SHOW_FILES);
+            } else {
+                directoryPane.showHiddenFiles();
+                hideHiddenFiles.setText(UI.HIDE_FILES);
+            }
 
-        entriesScrollPane.setHvalue(0); // reset scroll position
-        entriesScrollPane.setVvalue(0);
+            directoryPane.refresh();
+        });
     }
 
     /**
-     * Handles double click of the specified symbolicLink entry
-     * @param lineEntry the symbolicLink entry to double click
+     * Initialises the button to create new objects
      */
-    private void doubleClickDirectoryEntry(final LineEntry lineEntry) {
-        CommonFile file = lineEntry.getFile();
-        setDirectoryUnchecked(file);
+    private void initCreateButton() {
+        createButton.setText("_New");
+        MenuItem menuItem = new MenuItem();
+        menuItem.setMnemonicParsing(true);
+        menuItem.setText("Di_rectory");
+        ImageView imageView = new ImageView(new Image("dir_icon.png"));
+        imageView.setFitHeight(20);
+        imageView.setFitWidth(20);
+        menuItem.setGraphic(imageView);
+        menuItem.setOnAction(e -> createNewDirectory());
+
+        MenuItem menuItem1 = new MenuItem();
+        menuItem1.setMnemonicParsing(true);
+        menuItem1.setText("_File");
+        ImageView imageView1 = new ImageView(new Image("file_icon.png"));
+        imageView1.setFitWidth(20);
+        imageView1.setFitHeight(20);
+        menuItem1.setGraphic(imageView1);
+        menuItem1.setOnAction(e -> createNewFile());
+
+        MenuItem menuItem2 = new MenuItem();
+        menuItem2.setMnemonicParsing(true);
+        menuItem2.setText("_Symbolic Link");
+        ImageView imageView2 = new ImageView(new Image("sym_link.png"));
+        imageView2.setFitWidth(20);
+        imageView2.setFitHeight(20);
+        menuItem2.setGraphic(imageView2);
+        menuItem2.setOnAction(e -> createSymbolicLink());
+
+        createButton.getItems().addAll(menuItem, menuItem1, menuItem2);
+    }
+
+    /**
+     * Initialises the file mask button
+     */
+    private void initMaskButton() {
+        maskButton.setOnAction(e -> {
+            String currentMask = directoryPane.getFileMask();
+            String fileMask = UI.doInputDialog("File Mask", "Enter a mask to filter files: ", currentMask, "Enter wildcards (*) to check if filename contains, i.e *ile*.txt or no wildcards for exact match");
+            directoryPane.setFileMask(fileMask);
+            directoryPane.refresh(); // refresh to put the mask in effect
+        });
+    }
+
+    /**
+     * Sets key shortcut bindings
+     * Q - Quit
+     */
+    private void setKeyBindings() {
+        setOnKeyPressed(e -> {
+            if (!e.isAltDown()) {
+                // if alt is down, a mnenomic is needed
+                KeyCode keyCode = e.getCode();
+
+               if (keyCode == KeyCode.Q) {
+                    UI.doQuit();
+               } else if (keyCode == KeyCode.UP || keyCode == KeyCode.DOWN) {
+                   comboBox.requestFocus();
+               } else if (keyCode == KeyCode.DELETE) {
+                   delete();
+               } else if (keyCode == KeyCode.F5) {
+                   directoryPane.refresh();
+               }
+            }
+        });
+    }
+
+    /**
+     * Goes to the target of a symbolic link
+     */
+    private void goToSymLinkTarget() {
+        LineEntry lineEntry = getLineEntryFromComboBox(); // the line entry in question
+        if (lineEntry != null) {
+            try {
+                directoryPane.openSymbolicLink(lineEntry.getFile());
+            } catch (Exception ex) {
+                if (ex instanceof FileSystemException) {
+                    Throwable cause = ex.getCause();
+                    if (cause instanceof FTPException) {
+                        checkFTPConnectionException((FTPException)cause);
+                    }
+                }
+                UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+            }
+        }
+    }
+
+    /**
+     * This method checks the current value of the combo box for a certain property. At the moment, it just checks for symbolic link directory
+     */
+    private void checkComboBoxValue() {
+        LineEntry lineEntry = getLineEntryFromComboBox(); // the line entry in question
+        if (lineEntry != null) {
+            CommonFile file = lineEntry.getFile();
+            symLinkDestButton.setVisible(file.isSymbolicLink());
+        } else {
+            symLinkDestButton.setVisible(false);
+        }
+    }
+
+    /**
+     * The handler for creating a new directory
+     */
+    abstract void createNewDirectory();
+
+    /**
+     * The handler to create a new empty file
+     */
+    abstract void createNewFile();
+
+    /**
+     * The handler for the goto button
+     */
+    abstract void gotoPath();
+
+    /**
+     * Defines how a symbolic link should be created
+     */
+    abstract void createSymbolicLink();
+
+    /**
+     * Refreshes the file names displayed in the ComboBox
+     */
+    private void refreshComboBox() {
+        entryMappings.clear();
+        comboBox.getItems().clear();
+        ArrayList<LineEntry> filesDisplayed = directoryPane.filesDisplayed();
+        filesDisplayed.forEach(e -> {
+            String fileName = e.getFile().getName();
+            comboBox.getItems().add(fileName);
+            entryMappings.put(fileName, e);
+        });
+
+        comboBox.getItems().add(0, "");
+    }
+
+    /**
+     * Gets the specified LineEntry matching the value chosen in the combo box
+     * @return LineEntry matching file name chosen, can be null
+     */
+    private LineEntry getLineEntryFromComboBox() {
+        String file = comboBox.getValue();
+        if (file != null && !file.equals("")) {
+            return entryMappings.get(file);
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Deletes the chosen line entry from the combobox
+     */
+    public void delete() {
+        LineEntry lineEntry = getLineEntryFromComboBox();
+
+        if (lineEntry != null) {
+            CommonFile file = lineEntry.getFile();
+            String fileName = file.getName();
+
+            if (!UI.isFileOpened(file.getFilePath())) {
+                if (UI.doConfirmation("Confirm file deletion", "Confirm deletion of " + fileName)) {
+                    if (directoryPane.deleteEntry(lineEntry)) {
+                        UI.doInfo("File deleted successfully", "File " + fileName + " deleted");
+                        comboBox.getItems().remove(fileName);
+                        comboBox.setValue("");
+                        entryMappings.remove(fileName);
+                    } else {
+                        UI.doError("File not deleted", "File " + fileName + " wasn't deleted. FTP Reply: " + directoryPane.getFileSystem().getFTPConnection().getReplyString());
+                    }
+                }
+            } else {
+                UI.doError("File Open", "File " + fileName + " is currently opened, file can't be deleted");
+            }
+        }
+    }
+
+    /**
+     * Opens the chosen file from the combo box
+     */
+    private void open() {
+        LineEntry lineEntry = getLineEntryFromComboBox();
+
+        if (lineEntry != null) {
+            directoryPane.openLineEntry(lineEntry);
+        }
+    }
+
+    /**
+     * Sets the directory pane for this panel.
+     * Automatically links the file panel by calling DirectoryPane.setFilePanel
+     * @param directoryPane the file panel to set
+     */
+    public void setDirectoryPane(DirectoryPane directoryPane) {
+        if (this.directoryPane != null)
+            getChildren().remove(this.directoryPane);
+
+        this.directoryPane = directoryPane;
+        if (this.directoryPane.getFilePanel() != this) // prevent infinite recursion
+            this.directoryPane.setFilePanel(this);
+
+        getChildren().add(directoryPane);
         refresh();
     }
 
     /**
-     * Checks the size of the file and if under 100MB returns true, if over, gets confirmation if file size is ok and returns true
-     * @param file the file to check size of
-     * @return true if under 100MB or if over, the user confirmed it is ok to open this file
-     * @throws FileSystemException if an error occurs checking file size if the file is a remote file
+     * Refresh this DirectoryPane
      */
-    private boolean checkFileSize(CommonFile file) throws FileSystemException {
-        long size = file.getSize();
-
-        if (size >= 100000000)  {
-            return UI.doFileSizeWarningDialog(file.getFilePath());
-        }
-
-        return true;
+    public void refresh() {
+        refreshComboBox();
     }
 
     /**
-     * Handles double clicks of the specified file entry
-     * @param lineEntry the file entry to double click
+     * Sets the combobox to represent this line entry if the name of it is inside the combo box in the first place
+     * @param lineEntry the line entry to display
      */
-    private void doubleClickFileEntry(final LineEntry lineEntry) throws FTPException, FileSystemException {
-        CommonFile file = lineEntry.getFile();
-        if (checkFileSize(file)) {
-            FileStringDownloader fileStringDownloader = new FileStringDownloader(file, fileSystem, this);
-            fileStringDownloader.getFileString();
+    public void setComboBoxSelection(final LineEntry lineEntry) {
+        String name = lineEntry.getFile().getName();
+
+        if (comboBox.getItems().contains(name)) {
+            comboBox.setValue(name);
+            checkComboBoxValue();
         }
     }
 
     /**
-     * Handles the double click of the specified line entry
-     * @param lineEntry the line entry to double click
-     */
-    private void doubleClick(final LineEntry lineEntry) {
-        try {
-            String filePath = lineEntry.getFilePath();
-            if (!UI.isFileOpened(filePath)) {
-                CommonFile file = lineEntry.getFile();
-                file.refresh(); // update the existence information if this is a RemoteFile as the status may have changed after this file was loaded
-                            // RemoteFile sorts of "caches" the file retrieved from the remote server to update performance rather than retrieving the info from the server every time. But this info may not be up to date
-                           // Calling refresh updates the cache of the file if RemoteFile
-                if (file.isNormalFile()) {
-                    try {
-                        doubleClickFileEntry(lineEntry);
-                        UI.openFile(filePath); // only open it if an error doesn't occur
-                    } catch (FTPException ex) {
-                        UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-                    }
-                } else if (file.isADirectory()) {
-                    doubleClickDirectoryEntry(lineEntry); // this calls setDirectory which opens the new path
-                } else {
-                    UI.doError("File not found", "The file " + filePath + " no longer exists", true);
-                    removeEntryFromPanel(lineEntry);
-                }
-            } else {
-                UI.doInfo("File Open", "The file " + filePath + " is already opened");
-            }
-        } catch(FileSystemException ex) {
-            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-        }
-    }
-
-    /**
-     * Provides the click action for the specified line entry
-     * @param lineEntry the line entry to click
-     */
-    public void click(final LineEntry lineEntry) {
-        if (parentContainer != null)
-            parentContainer.setComboBoxSelection(lineEntry);
-    }
-
-    /**
-     * "Opens" the specified lineEntry. This is the equivalent to double clicking it
-     * If it is a symbolicLink, it will change the symbolicLink this file panel is in
-     * @param lineEntry the line entry to open
-     */
-    public void openLineEntry(final LineEntry lineEntry) {
-        doubleClick(lineEntry);
-    }
-
-    /**
-     * Removes the line entry from view on the panel and it's parent container. Doesn't physically delete the file
+     * Removes the line entry from the combo-box (doesn't delete the actual file)
      * @param lineEntry the line entry to remove
      */
-    private void removeEntryFromPanel(final LineEntry lineEntry) {
-        if (parentContainer != null) {
-            parentContainer.removeLineEntry(lineEntry);
+    public void removeLineEntry(final LineEntry lineEntry) {
+        String name = lineEntry.getFile().getName();
+
+        if (entryMappings.containsKey(name)) {
+            entryMappings.remove(name);
+            comboBox.getItems().remove(name);
+            comboBox.setValue("");
         }
-        entriesBox.getChildren().remove(lineEntry);
-        lineEntries.remove(lineEntry);
     }
 
     /**
-     * Attempts to delete the specified line entry and the file associated with it
-     * @param lineEntry the line entry to remove
-     * @return true if successful, false if not
+     * Sets the panel view parent for this FilePanel.
+     * This is necessary if you want to propagate exceptions to the PanelView (e.g. a connection failed exception, you may want to do an action in the PanelView
+     * @param panelView the panel view to set
      */
-    public boolean deleteEntry(final LineEntry lineEntry) {
-        CommonFile file = lineEntry.getFile();
-
-        try {
-            if (fileSystem.removeFile(file)) {
-                entriesBox.getChildren().remove(lineEntry);
-                lineEntries.remove(lineEntry);
-
-                return true;
-            }
-        } catch (FileSystemException ex) {
-            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-        }
-
-        return false;
+    public void setPanelView(PanelView panelView) {
+        this.panelView = panelView;
     }
 
     /**
-     * Returns the files that this FilePanel is displaying
-     * @return list of displayed files
+     * Creates a new FilePanel instance based on the file panel provided
+     * @param directoryPane the file panel to be contained by this
+     * @return the appropriate FilePanel Instance
+     * @throws NullPointerException if panel is null
      */
-    public ArrayList<LineEntry> filesDisplayed() {
-        return lineEntries;
-    }
+    public static FilePanel newInstance(DirectoryPane directoryPane) {
+        if (directoryPane == null)
+            throw new NullPointerException("The provided DirectoryPane is null");
 
-    /**
-     * Gets the value for showing hidden files
-     * @return true if hidden files are being shown
-     */
-    public boolean hiddenFilesShown() {
-        return showHiddenFiles;
-    }
+        boolean local = directoryPane.getDirectory() instanceof LocalFile; // Because of the DirectoryPane.checkFileType method, it guarantees that the type will always match the type of panel
 
-    /**
-     * Enables the file panel to show hidden files on the NEXT refresh.
-     * This just sets the flag. Refresh needs to be called to show the effects
-     */
-    public void showHiddenFiles() {
-        showHiddenFiles = true;
-    }
-
-    /**
-     * Disables the file panel to show hidden files on the NEXT refresh.
-     * This just sets the flag. Refresh needs to be called to show the effects
-     */
-    public void hideHiddenFiles() {
-        showHiddenFiles = false;
-    }
-
-    /**
-     * Sets the mask used for displaying files. Refresh should be called afterwards
-     * @param fileMask the file mask to show
-     */
-    public void setFileMask(String fileMask) {
-        this.fileMask = fileMask;
-
-        if (fileMask == null) {
-            fileMaskRegex = null;
-            currentDirectoryLabel.setText("Current Directory:");
-            MAX_FILE_PATH_LENGTH = 30;
-        } else {
-            fileMaskRegex = createRegexFromGlob(fileMask);
-            currentDirectoryLabel.setText("Current Directory (masked): ");
-            MAX_FILE_PATH_LENGTH = 20;
-        }
-
-        setCurrDirText(getCurrentWorkingDirectory());
-    }
-
-    /**
-     * Creates an instance of FilePanel based on the given symbolicLink
-     * @param directory the symbolicLink to initialise with
-     * @return the constructed file panel
-     * @throws NullPointerException if symbolicLink is null
-     */
-    public static FilePanel newInstance(CommonFile directory) throws FileSystemException {
-        if (directory == null)
-            throw new NullPointerException("The CommonFile object passed in is null");
-
-        if (directory instanceof LocalFile)
-            return new LocalFilePanel((LocalFile)directory);
+        if (local)
+            return new LocalFilePanel(directoryPane);
         else
-            return new RemoteFilePanel((RemoteFile)directory);
+            return new RemoteFilePanel(directoryPane);
+    }
+
+    /**
+     * Checks the given FTPException and determines if the exception is a FTPConnectionFailedException, if so, it "kills" the remote panel in the panel view
+     * @param exception the exception to check
+     */
+    void checkFTPConnectionException(FTPException exception) {
+        if (exception instanceof FTPConnectionFailedException && panelView != null)
+            panelView.emptyRemotePanel();
     }
 }

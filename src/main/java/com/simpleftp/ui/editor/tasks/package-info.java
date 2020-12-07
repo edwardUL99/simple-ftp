@@ -15,7 +15,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 /**
- * This package provides container classes which can contain other UI panes such as file panels.
- * These containers can have controls to control these enclosed panes
+ * Provides background tasks for editor package.
  */
-package com.simpleftp.ui.containers;
+package com.simpleftp.ui.editor.tasks;

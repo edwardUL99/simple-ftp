@@ -15,6 +15,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 /**
- * This package provides panels for displaying files and controls for those files in a directory
+ * Provides interfaces for dialogs package
  */
-package com.simpleftp.ui.panels;
+package com.simpleftp.ui.interfaces;

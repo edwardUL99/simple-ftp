@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ui.panels;
+package com.simpleftp.ui.directories.tasks;
 
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.LocalFileSystem;
@@ -26,6 +26,7 @@ import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
+import com.simpleftp.ui.directories.DirectoryPane;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
@@ -35,15 +36,15 @@ import java.io.FileReader;
 import java.io.IOException;
 
 /**
- * This class is a background task for downloading a file and retrieving the string contents
+ * This class is a background task for downloading the contents of a file as a string to display in an editor opened by a DirectoryPane
  */
-class FileStringDownloader extends Service<String> {
+public class FileStringDownloader extends Service<String> {
     private CommonFile file;
     /**
      * Need a separate connection for downloading files so it doesn't hog the main connection
      */
     private FTPConnection readingConnection;
-    private FilePanel creatingPanel;
+    private DirectoryPane creatingPanel;
     private boolean errorOccurred;
 
     /**
@@ -52,15 +53,15 @@ class FileStringDownloader extends Service<String> {
      * @param fileSystem the file system to download the file to
      * @param creatingPanel the panel that created this downloader
      */
-    public FileStringDownloader(CommonFile file, FileSystem fileSystem, FilePanel creatingPanel) throws FTPException {
+    public FileStringDownloader(CommonFile file, FileSystem fileSystem, DirectoryPane creatingPanel) throws FTPException {
         this.file = file;
         this.creatingPanel = creatingPanel;
-        this.readingConnection = FTPConnection.createTemporaryConnection(fileSystem.getFTPConnection());
         if (file instanceof RemoteFile) {
+            this.readingConnection = FTPConnection.createTemporaryConnection(fileSystem.getFTPConnection());
             this.readingConnection.connect();
             this.readingConnection.login();
             this.readingConnection.setTextTransferMode(true);
-        } // only need conenction for remote file
+        } // only need connection for remote file
     }
 
     /**
@@ -88,7 +89,7 @@ class FileStringDownloader extends Service<String> {
      */
     @Override
     protected Task<String> createTask() {
-        return new Task<String>() {
+        return new Task<>() {
             @Override
             protected String call() throws Exception {
                 String str = fileToString(file);
