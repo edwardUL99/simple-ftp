@@ -176,3 +176,8 @@ The following features for symbolic links supported are:
 - On a remote panel, you can click create symbolic link but it just gives directions how to
 - Navigating to symbolic links from entering the path in the go to dialog (for directories, gives the option to go to the path (follow), or go to the target) 
 - The size of the symbolic link displayed is the size of the actual file it points to. This is contrary to a linux symbolic link for directories, but I believe showing the actual size is better.
+
+## Branch structure
+This project has just been migrated to GitFlow (https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow).
+Initially all commits were on master, but all of them have been moved to develop.
+As of 8th December 2020, all development will be done off the development branch with feature branches etc.
