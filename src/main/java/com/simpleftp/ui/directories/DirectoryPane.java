@@ -221,7 +221,6 @@ public abstract class DirectoryPane extends VBox {
         entriesScrollPane.setFitToHeight(true);
         entriesScrollPane.setContent(entriesBox);
         entriesScrollPane.setStyle(UI.WHITE_BACKGROUND);
-        //entriesScrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
         entriesScrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
         entriesBox.setStyle(UI.WHITE_BACKGROUND);
         entriesScrollPane.setPrefHeight(UI.FILE_PANEL_HEIGHT);

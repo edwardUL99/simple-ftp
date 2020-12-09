@@ -78,6 +78,8 @@ public abstract class FileUploader extends Service<Void> {
                 parentPath = parentPath == null ? ((windowsParent = System.getenv("SystemDrive")) != null ? windowsParent:"/"):parentPath; // if windows, find the root
                 final String finalParent = parentPath;
 
+                editorWindow.setResetFileContents(savedFileContents); // we have now successfully saved the file contents. Our reset string should now match what is actually saved
+
                 // only refresh if the file we're saving is in out current working directory
                 Platform.runLater(() -> {
                     UI.doInfo("File Saved", "File " + filePath + " saved successfully");

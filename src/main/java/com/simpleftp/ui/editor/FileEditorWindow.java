@@ -21,9 +21,13 @@ import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
+import com.simpleftp.ftp.connection.FTPConnection;
+import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
 import com.simpleftp.ftp.exceptions.FTPException;
+import com.simpleftp.ftp.exceptions.FTPNotConnectedException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
+import com.simpleftp.ui.exceptions.UIException;
 import com.simpleftp.ui.interfaces.Window;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -84,9 +88,9 @@ public abstract class FileEditorWindow extends VBox implements Window {
      */
     private HBox buttonBar;
     /**
-     * The original text before edits
+     * The file contents that the reset button brings us back to
      */
-    private String originalText;
+    private String resetFileContents;
 
     /**
      * Constructs a FileEditorWindow with the specified panel and file
@@ -96,7 +100,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
      */
     FileEditorWindow(DirectoryPane creatingPane, String fileContents, CommonFile file) {
         this.creatingPane = creatingPane;
-        this.fileContents = fileContents;
+        this.fileContents = resetFileContents = fileContents;
         this.file = file;
         editor = new StyleClassedTextArea() {
             @Override
@@ -145,7 +149,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
         if (!saved) {
             double hPos = editorScrollPane.estimatedScrollXProperty().getValue();
             double vPos = editorScrollPane.estimatedScrollYProperty().getValue();
-            setEditorText(originalText);
+            setEditorText(resetFileContents);
             removeStarFromStageTitle();
             saved = true;
             editor.requestFocus();
@@ -181,6 +185,14 @@ public abstract class FileEditorWindow extends VBox implements Window {
     abstract String getSaveFilePath() throws Exception;
 
     /**
+     * Sets the text to set the file contents that the reset button will bring us back to
+     * @param resetFileContents the file contents reset should use
+     */
+    public void setResetFileContents(String resetFileContents) {
+        this.resetFileContents = resetFileContents;
+    }
+
+    /**
      * Saves the file if edited
      */
     private boolean save() {
@@ -190,10 +202,8 @@ public abstract class FileEditorWindow extends VBox implements Window {
                 FileSaver saver = new FileSaver(this);
                 String filePath = getSaveFilePath();
                 saver.saveFile(filePath, text);
-                removeStarFromStageTitle();
-                saved = true;
+                setSave(true);
                 editor.requestFocus();
-                originalText = text;
 
                 return true;
             } catch (Exception ex) {
@@ -230,8 +240,6 @@ public abstract class FileEditorWindow extends VBox implements Window {
                 }
             }
         });
-
-        originalText = fileContents;
     }
 
     /**
@@ -258,24 +266,20 @@ public abstract class FileEditorWindow extends VBox implements Window {
     /**
      * Checks if the file still exists.
      * @return true if exists, false if not or it couldn't be determined
+     * @throws FileSystemException if an error occurs
      */
-    private boolean checkFileStillExists() {
-        try {
-            return file.exists();
-        } catch (FileSystemException ex) {
-            checkExceptionForFTP(ex);
-            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-            return false;
-        }
+    private boolean checkFileStillExists() throws FileSystemException {
+        return file.exists();
     }
 
     /**
      * On exit, checks if the file still exists and if not, does the appropriate action
      * @return true if the event should be consumed, false if not
+     * @throws FileSystemException if an error occurs and cannot check if file is saved
      */
-    private boolean checkSaveOnExit() {
-        boolean stillExists = checkFileStillExists();
+    private boolean checkSaveOnExit() throws FileSystemException {
         boolean consumeEvent = false;
+        boolean stillExists = checkFileStillExists();
 
         if (!saved || stillExists) {
             if (!saved) {
@@ -291,7 +295,6 @@ public abstract class FileEditorWindow extends VBox implements Window {
             UI.doError("File No Longer Exists", "File may no longer exist, go back and decide to save or just quit");
             setSave(false);
             consumeEvent = true;
-            originalText = editor.getText(); // save the text that was there at the time, in case reset is pressed
         }
 
         if (!consumeEvent) {
@@ -317,6 +320,23 @@ public abstract class FileEditorWindow extends VBox implements Window {
     }
 
     /**
+     * Manages the exception that could be thrown when closing the window
+     * @param ex the exception to handle
+     * @return true if you should still exit false if not
+     */
+    private boolean doExitException(FileSystemException ex) {
+        Throwable cause = ex.getCause();
+
+        if (cause instanceof FTPConnectionFailedException || cause instanceof FTPNotConnectedException) {
+            String messageText = saved ? "Cannot check if the file still exists on the server before closing the window.":"Cannot save any unsaved changes to the file.";
+            return UI.doConfirmation("Connection Lost", "The connection to the remote server has been lost. " + messageText + "Confirm that you still want to exit or cancel", true);
+        } else {
+            String message = cause != null ? cause.getMessage():ex.getMessage();
+            return UI.doConfirmation("Connection Error", "An error with the message: " + message + ". You may lose the file if you exit", true);
+        }
+    }
+
+    /**
      * Shows this FileEditorWindow
      */
     public void show() {
@@ -328,7 +348,12 @@ public abstract class FileEditorWindow extends VBox implements Window {
             stage.show();
             editor.requestFocus();
             stage.setOnCloseRequest(e -> {
-                boolean consumeEvent = checkSaveOnExit();
+                boolean consumeEvent;
+                try {
+                    consumeEvent = checkSaveOnExit();
+                } catch (FileSystemException ex) {
+                    consumeEvent = !doExitException(ex);
+                }
 
                 if (consumeEvent)
                     e.consume();
@@ -344,9 +369,16 @@ public abstract class FileEditorWindow extends VBox implements Window {
      */
     public void close() {
         if (stage != null) {
-            if (!checkSaveOnExit()) {
-                stage.close(); // don't close
+            boolean closeStage;
+
+            try {
+                closeStage = !checkSaveOnExit();
+            } catch (FileSystemException ex) {
+                closeStage = doExitException(ex);
             }
+
+            if (closeStage)
+                stage.close();
         }
     }
 

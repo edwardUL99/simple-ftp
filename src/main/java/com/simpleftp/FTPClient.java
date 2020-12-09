@@ -57,23 +57,8 @@ public class FTPClient extends Application {
             FTPConnection connection = FTPConnection.createSharedConnection(FTPSystem.getPropertiesDefinedDetails(), new FTPConnectionDetails(100, 200));
             connection.connect();
             connection.login();
-
-            Runtime.getRuntime().addShutdownHook(new ShutDownHandler());
         } catch (PasswordEncryptionException ex) {
             UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled(), false); // set false as this is a fatal exception and application cant run after it
-        }
-    }
-
-    static class ShutDownHandler extends Thread {
-        @Override
-        public void run() {
-            if (FTPSystem.getConnection() != null) {
-                try {
-                    FTPSystem.getConnection().disconnect();
-                } catch (FTPException ex) {
-                    ex.printStackTrace();
-                }
-            }
         }
     }
 
