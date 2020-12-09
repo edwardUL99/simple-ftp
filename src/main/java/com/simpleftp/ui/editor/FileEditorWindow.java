@@ -298,7 +298,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
         }
 
         if (!consumeEvent) {
-            UI.closeFile(file.getFilePath());
+            UI.closeFile(file.getFilePath(), creatingPane.isLocal());
         }
 
         return consumeEvent;

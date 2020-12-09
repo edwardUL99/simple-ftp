@@ -193,9 +193,14 @@ public final class UI {
     private static final ArrayList<Service<?>> backgroundTasks = new ArrayList<>();
 
     /**
-     * List of paths of opened files
+     * List of paths of opened remote files
      */
-    private static final Set<String> openedFiles = new HashSet<>();
+    private static final Set<String> openedRemoteFiles = new HashSet<>();
+
+    /**
+     * Lost of paths of opened local files
+     */
+    private static final Set<String> openedLocalFiles = new HashSet<>();
 
     /**
      * Prevent instantiation
@@ -619,8 +624,10 @@ public final class UI {
      * and so can block the action if it is an action that isn't allowed while a file is open, e.g. delete/rename.
      * It is a way of tracking that the file has been opened. This call should be made everytime you open a file (like clicking into a directory or opening an editor). Example, opening a property window is not opening the file, because opening means either opening a directory or a file to view the contents
      * @param filePath the path of the file that has been opened in the UI. When opening a LineEntry, just call lineEntry.getFilePath to retrieve the path
+     * @param local true if this is a local path, false if remote
      */
-    public static void openFile(final String filePath) {
+    public static void openFile(final String filePath, boolean local) {
+        Set<String> openedFiles = local ? openedLocalFiles:openedRemoteFiles;
         openedFiles.add(filePath);
     }
 
@@ -632,8 +639,10 @@ public final class UI {
      * that would otherwise not be allowed if isFileOpened returned true, e.g. if you want to delete a file, and a call to openFile for that path was made, you need to call closeFile before you can delete it.
      * It is a way of tracking that the window is now closed. Should be made when leaving a file after it was opened (directory opened or file opened to view the contents, not opening a properties window for example)
      * @param filePath the path of the file that has been opened in the UI. When opening a LineEntry, just call lineEntry.getFilePath to retrieve the path
+     * @param local true if this is a local path, false if remote
      */
-    public static void closeFile(final String filePath) {
+    public static void closeFile(final String filePath, boolean local) {
+        Set<String> openedFiles = local ? openedLocalFiles:openedRemoteFiles;
         openedFiles.remove(filePath);
     }
 
@@ -641,9 +650,11 @@ public final class UI {
      * Checks if the specified file is opened in the UI. A LineEntry represents a file with a path, so more efficient to just pass in it's path.
      * Note that this method does not check if the path exists on the file system
      * @param filePath the path of the file to check. When opening a LineEntry, just call lineEntry.getFilePath to retrieve the path
+     * @param local true if this is a local path, false if remote
      * @return true if the file has been opened in the UI, false otherwise
      */
-    public static boolean isFileOpened(final String filePath) {
+    public static boolean isFileOpened(final String filePath, boolean local) {
+        Set<String> openedFiles = local ? openedLocalFiles:openedRemoteFiles;
         return openedFiles.contains(filePath);
     }
 

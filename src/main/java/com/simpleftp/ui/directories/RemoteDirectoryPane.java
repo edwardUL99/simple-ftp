@@ -123,7 +123,7 @@ final class RemoteDirectoryPane extends DirectoryPane {
         CommonFile file = lineEntry.getFile();
         String filePath = file.getFilePath();
 
-        if (!UI.isFileOpened(filePath)) {
+        if (!UI.isFileOpened(filePath, false)) {
             renameRemoteFile((RemoteFile) file);
         } else {
             UI.doError("File Open", "The file " + file.getName() + " is open, it cannot be renamed");
@@ -189,6 +189,16 @@ final class RemoteDirectoryPane extends DirectoryPane {
         }
 
         return lineEntries;
+    }
+
+    /**
+     * This method determines if a DirectoryPane is a local one. All Remote panes, regardless of the underlying connection is still remote, so they should return false
+     *
+     * @return false
+     */
+    @Override
+    public boolean isLocal() {
+        return false;
     }
 
     /**

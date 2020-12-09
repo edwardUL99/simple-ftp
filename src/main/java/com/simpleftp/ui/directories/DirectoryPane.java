@@ -319,6 +319,12 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
+     * This method determines if a DirectoryPane is a local one. All RemotePanes, regardless of the underlying connection is still remote, so they should return false
+     * @return true if local, false if remote
+     */
+    public abstract boolean isLocal();
+
+    /**
      * Changes symbolicLink but doesn't check the type of the symbolicLink or if it is a symbolicLink.
      * This is used internally as it is called by doubleClickDirectoryEntry. Since, you knew it was a symbolicLink to create a symbolicLink entry, you don't need to check it again.
      * The types will also always stay the same. The public method setDirectory is a wrapper for this, doing validation checks and then calling this.
@@ -326,14 +332,16 @@ public abstract class DirectoryPane extends VBox {
      * @param directory the symbolicLink to set
      */
      void setDirectoryUnchecked(CommonFile directory) {
+        boolean local = isLocal();
+
         if (this.directory != null)
-            UI.closeFile(getCurrentWorkingDirectory()); // after successfully leaving this symbolicLink to the new one, close it
+            UI.closeFile(getCurrentWorkingDirectory(), local); // after successfully leaving this symbolicLink to the new one, close it
         this.directory = directory;
         String path = directory.getFilePath();
-        UI.openFile(path); // open the new symbolicLink
+        UI.openFile(path, local); // open the new symbolicLink
 
         setCurrDirText(path);
-    }
+     }
 
     /**
      * Changes symbolicLink. Refresh should be called after this action
@@ -559,8 +567,10 @@ public abstract class DirectoryPane extends VBox {
      */
     private void doubleClick(final LineEntry lineEntry) {
         try {
+            boolean local = isLocal();
+
             String filePath = lineEntry.getFilePath();
-            if (!UI.isFileOpened(filePath)) {
+            if (!UI.isFileOpened(filePath, local)) {
                 CommonFile file = lineEntry.getFile();
                 file.refresh(); // update the existence information if this is a RemoteFile as the status may have changed after this file was loaded
                             // RemoteFile sorts of "caches" the file retrieved from the remote server to update performance rather than retrieving the info from the server every time. But this info may not be up to date
@@ -568,7 +578,7 @@ public abstract class DirectoryPane extends VBox {
                 if (file.isNormalFile()) {
                     try {
                         doubleClickFileEntry(lineEntry);
-                        UI.openFile(filePath); // only open it if an error doesn't occur
+                        UI.openFile(filePath, local); // only open it if an error doesn't occur
                     } catch (FTPException ex) {
                         checkFTPConnectionException(ex);
                         UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());

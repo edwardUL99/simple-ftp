@@ -386,7 +386,7 @@ public abstract class FilePanel extends VBox {
             CommonFile file = lineEntry.getFile();
             String fileName = file.getName();
 
-            if (!UI.isFileOpened(file.getFilePath())) {
+            if (!UI.isFileOpened(file.getFilePath(), directoryPane.isLocal())) {
                 if (UI.doConfirmation("Confirm file deletion", "Confirm deletion of " + fileName)) {
                     if (directoryPane.deleteEntry(lineEntry)) {
                         UI.doInfo("File deleted successfully", "File " + fileName + " deleted");
