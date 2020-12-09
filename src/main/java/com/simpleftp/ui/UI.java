@@ -344,7 +344,18 @@ public final class UI {
      * @return true if confirmed, false otherwise
      */
     public static boolean doConfirmation(String headerText, String messageText) {
-        ConfirmationDialog confirmationDialog = new ConfirmationDialog(headerText, messageText);
+        return doConfirmation(headerText, messageText, false);
+    }
+
+    /**
+     * Opens a confirmation dialog but gives the option to open it as a warning or normal confirmation
+     * @param headerText the text to display in the header
+     * @param messageText the message to display
+     * @param warning true to display as a warning, false to display as a normal confirmation dialog
+     * @return true if confirmed, false otherwise
+     */
+    public static boolean doConfirmation(String headerText, String messageText, boolean warning) {
+        ConfirmationDialog confirmationDialog = warning ? new WarnConfirmationDialog(headerText, messageText):new ConfirmationDialog(headerText, messageText);
         return confirmationDialog.showAndGetChoice();
     }
 

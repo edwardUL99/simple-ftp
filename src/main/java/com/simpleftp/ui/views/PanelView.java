@@ -21,6 +21,7 @@ import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.FileSystem;
+import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.editor.RemoteFileEditorWindow;
@@ -69,7 +70,7 @@ public class PanelView extends VBox {
         setMaxWidth(UI.PANEL_VIEW_WIDTH);
 
         initialiseLocalPanel(localDirectory);
-        emptyRemotePanel();
+        createEmptyRemotePanel();
 
         getChildren().addAll(panelsBox);
     }
@@ -119,15 +120,9 @@ public class PanelView extends VBox {
     }
 
     /**
-     * Creates the empty remote panel for until a connection is established.
-     * This can also be used in the event a connection is lost and to clear the remote panel.
-     *
-     * This closes all open remote FileEditorWindows
-     *
-     * You can still access the remote panel with getRemotePanel to get access to the directory it was at etc. Note that the connection may no longer be created so calls to other methods
-     * of the panel may fail. getDirectoryPane().getDirectory() should always succeed however
+     * Creates the panel representing a connection not established
      */
-    public void emptyRemotePanel() {
+    private void createEmptyRemotePanel() {
         VBox emptyPane = new VBox();
         emptyPane.setPrefHeight(UI.FILE_EDITOR_HEIGHT);
         emptyPane.setPrefWidth(UI.FILE_PANEL_WIDTH);
@@ -151,18 +146,24 @@ public class PanelView extends VBox {
             panelsBox.getChildren().remove(1);
 
         panelsBox.getChildren().add(emptyPane);
-        if (remotePanel != null)
-            closeAllRemoteEditorWindows();
     }
 
     /**
-     * Closes all remote editor windows if we lose our RemotePanel and editor windows were open
+     * Creates the empty remote panel for until a connection is established.
+     * This can also be used in the event a connection is lost and to clear the remote panel.
+     *
+     * This closes all open remote FileEditorWindows
+     *
+     * You can still access the remote panel with getRemotePanel to get access to the directory it was at etc. Note that the connection may no longer be created so calls to other methods
+     * of the panel may fail. getDirectoryPane().getDirectory() should always succeed however
      */
-    private void closeAllRemoteEditorWindows() {
-        UI.forEachOpenedWindow(e -> {
-            if (e instanceof RemoteFileEditorWindow)
-                e.close();
-        });
+    public void emptyRemotePanel() {
+        FTPConnection connection = remotePanel.getDirectoryPane()
+                .getFileSystem()
+                .getFTPConnection();
+        if (!connection.isConnected() && !connection.isLoggedIn()) {
+            createEmptyRemotePanel();
+        }
     }
 
     /**
