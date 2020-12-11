@@ -17,8 +17,8 @@
 
 package com.simpleftp.ui.editor;
 
-import com.simpleftp.ui.UI;
 import com.simpleftp.ui.editor.tasks.FileUploader;
+import com.simpleftp.ui.editor.tasks.UploadScheduler;
 
 /**
  * This class will provide functionality for saving a file that has been opened.
@@ -28,7 +28,7 @@ public class FileSaver {
     /**
      * The editor window saving the file
      */
-    private FileEditorWindow editorWindow;
+    private final FileEditorWindow editorWindow;
     /**
      * Constructs a file saver object
      * @param editorWindow the editor window saving the file
@@ -43,8 +43,6 @@ public class FileSaver {
      * @param savedFileContents the contents of the file to save
      */
     public void saveFile(String filePath, String savedFileContents) {
-        FileUploader uploader = FileUploader.newInstance(editorWindow, filePath, savedFileContents);
-        UI.addBackgroundTask(uploader);
-        uploader.start();
+        UploadScheduler.scheduleSave(editorWindow, FileUploader.newInstance(editorWindow, filePath, savedFileContents));
     }
 }

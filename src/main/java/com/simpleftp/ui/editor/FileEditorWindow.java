@@ -21,13 +21,11 @@ import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
-import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ftp.exceptions.FTPNotConnectedException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
-import com.simpleftp.ui.exceptions.UIException;
 import com.simpleftp.ui.interfaces.Window;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -163,9 +161,11 @@ public abstract class FileEditorWindow extends VBox implements Window {
      */
     private void addStarToStageTitle() {
         String filePath = stage.getTitle().split("-")[1];
-        filePath = "*" + filePath.trim();
+        if (!filePath.contains("*")) {
+            filePath = "*" + filePath.trim();
 
-        stage.setTitle("File Editor - " + filePath);
+            stage.setTitle("File Editor - " + filePath);
+        }
     }
 
     /**
@@ -269,7 +269,8 @@ public abstract class FileEditorWindow extends VBox implements Window {
      * @throws FileSystemException if an error occurs
      */
     private boolean checkFileStillExists() throws FileSystemException {
-        return file.exists();
+        file.refresh(); // refresh to get up to date file info
+        return file.isNormalFile(); // this shouldn't be a directory if an editor window has been opened for it
     }
 
     /**

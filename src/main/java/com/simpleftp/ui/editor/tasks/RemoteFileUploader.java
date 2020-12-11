@@ -21,16 +21,19 @@ import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFileSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.FileSystem;
+import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.editor.FileEditorWindow;
+import lombok.extern.log4j.Log4j2;
 
 import java.io.File;
 
 /**
  * This is for uploading remote files to a remote server
  */
+@Log4j2
 final class RemoteFileUploader extends FileUploader {
     /**
      * Constructs a file uploader
@@ -40,6 +43,19 @@ final class RemoteFileUploader extends FileUploader {
      */
     protected RemoteFileUploader(FileEditorWindow editorWindow, String filePath, String savedFileContents) {
         super(editorWindow, filePath, savedFileContents);
+        uploadService.setOnCancelled(e -> disconnectConnection());
+        uploadService.setOnFailed(e -> disconnectConnection());
+    }
+
+    /**
+     * Disconnects the ftp connection if it was connected
+     */
+    private void disconnectConnection() {
+        try {
+            getUploadingConnection().disconnect();
+        } catch (FTPException ex) {
+            log.warn("Failed to disconnect a connection used to download file contents");
+        }
     }
 
     /**
@@ -49,13 +65,46 @@ final class RemoteFileUploader extends FileUploader {
      */
     @Override
     FTPConnection getUploadingConnection() throws FTPException {
-        FileSystem fileSystem = editorWindow.getCreatingPane().getFileSystem();
-        FTPConnection uploadingConnection = FTPConnection.createTemporaryConnection(fileSystem.getFTPConnection());
-        uploadingConnection.connect();
-        uploadingConnection.login();
+        if (uploadingConnection == null) {
+            FileSystem fileSystem = editorWindow.getCreatingPane().getFileSystem();
+            uploadingConnection = FTPConnection.createTemporaryConnection(fileSystem.getFTPConnection());
+        }
+
+        if (!uploadingConnection.isConnected())
+            uploadingConnection.connect();
+
+        if (!uploadingConnection.isLoggedIn())
+            uploadingConnection.login();
+
         uploadingConnection.setTextTransferMode(true);
 
         return uploadingConnection;
+    }
+
+    /**
+     * Gets the backup path
+     *
+     * @param filePath the path to backup
+     * @return backup path
+     */
+    @Override
+    String getBackupPath(String filePath) throws Exception {
+        String pathSeparator = "/";
+        String backupPath;
+        if (filePath.endsWith(pathSeparator)) {
+            filePath = filePath.substring(0, filePath.length() - 1);
+        }
+
+        backupPath = filePath + "~";
+
+        int index = 1;
+        FTPConnection connection = getUploadingConnection();
+
+        while (connection.remotePathExists(backupPath)) {
+            backupPath = filePath + "~." + index++;
+        }
+
+        return backupPath;
     }
 
     /**
@@ -68,22 +117,25 @@ final class RemoteFileUploader extends FileUploader {
     @Override
     String writeBackup(String filePath, FTPConnection uploadingConnection) {
         try {
-            if (uploadingConnection.remotePathExists(filePath)) {
-                String backupPath = getBackupPath(filePath, false);
-                if (uploadingConnection.remotePathExists(backupPath)) {
-                    if (!uploadingConnection.removeFile(backupPath))
-                        return null; // return false as we haven't removed our backup.
-                }
+            if (uploadingConnection.remotePathExists(filePath, false)) { // should always be a file
+                String backupPath = getBackupPath(filePath);
+                /*if (uploadingConnection.remotePathExists(backupPath)) { TODO decide to keep this code or remove it. some servers mighn't allow an overwrite so maybe append .1~, if that exists .2~, and so on. Maybe the getBackupPath should do this and be made abstract too as implementations may vary for local and remote. All these files then should be cleaned after successful save.
+                    if (!uploadingConnection.removeFile(backupPath)) // TODO with that code you shouldn't have to do this check if the backup exists and shouldn't have to remove. That should be done in getBackupPath. do more testing
+                        return null; // return null as we haven't removed our backup. // the back
+                }*/
 
                 if (uploadingConnection.renameFile(filePath, backupPath)) {
                     return backupPath;
                 } else {
+                    System.out.println(uploadingConnection.getReplyString());
                     return null;
                 }
             }
 
             return filePath; // act like it has been backed-up but no need to create backup if it has been deleted before saving
-        } catch (FTPException ex) {
+        } catch (Exception ex) {
+            if (FTPSystem.isDebugEnabled())
+                ex.printStackTrace();
             return null;
         }
     }
@@ -123,12 +175,12 @@ final class RemoteFileUploader extends FileUploader {
         parent = parent == null ? "/" : parent;
         LocalFile tempFile = new LocalFile(filePath);
         fileSystem.addFile(tempFile, parent);
-        tempFile.delete();
+        tempFile.deleteOnExit();
 
-        boolean deleteBackup = new LocalFile(backupPath).getName().endsWith("~"); // the backup may not have had to be created, so if the backup path is just the file, don't delete it
+        boolean deleteBackup = new LocalFile(backupPath).getName().matches(BACKUP_REGEX); // the backup may not have had to be created, so if the backup path is just the file, don't delete it
 
         try {
-            FTPConnection uploadingConnection = fileSystem.getFTPConnection();
+            FTPConnection uploadingConnection = getUploadingConnection();
             if (uploadingConnection.remotePathExists(backupPath) && deleteBackup)
                 uploadingConnection.removeFile(backupPath); // after successful upload delete file
 

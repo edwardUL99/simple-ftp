@@ -26,10 +26,12 @@ import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
+import com.simpleftp.ui.background.BackgroundTask;
 import com.simpleftp.ui.directories.DirectoryPane;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
+import lombok.extern.log4j.Log4j2;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -38,7 +40,8 @@ import java.io.IOException;
 /**
  * This class is a background task for downloading the contents of a file as a string to display in an editor opened by a DirectoryPane
  */
-public class FileStringDownloader extends Service<String> {
+@Log4j2
+public class FileStringDownloader implements BackgroundTask {
     private CommonFile file;
     /**
      * Need a separate connection for downloading files so it doesn't hog the main connection
@@ -46,6 +49,10 @@ public class FileStringDownloader extends Service<String> {
     private FTPConnection readingConnection;
     private DirectoryPane creatingPanel;
     private boolean errorOccurred;
+    /**
+     * The download service for downloading the contents
+     */
+    private Service<String> downloadService;
 
     /**
      * Creates a FileStringDownloader object
@@ -62,39 +69,82 @@ public class FileStringDownloader extends Service<String> {
             this.readingConnection.login();
             this.readingConnection.setTextTransferMode(true);
         } // only need connection for remote file
+        initDownloadService();
     }
 
     /**
-     * Downloads the file in the background and opens the dialog
-     */
-    public void getFileString() {
-        setOnSucceeded(e -> {
-            if (!errorOccurred) {
-                String contents = (String) e.getSource().getValue();
-                Platform.runLater(() -> UI.showFileEditor(creatingPanel, file, contents));
-            }
-            UI.removeBackgroundTask(this);
-        });
-        UI.addBackgroundTask(this);
-        start();
-    }
-
-    /**
-     * Invoked after the Service is started on the JavaFX Application Thread.
-     * Implementations should save off any state into final variables prior to
-     * creating the Task, since accessing properties defined on the Service
-     * within the background thread code of the Task will result in exceptions.
-     *
-     * @return the Task to execute
+     * Starts the download and when finished opens it
      */
     @Override
-    protected Task<String> createTask() {
+    public void start() {
+        UI.addBackgroundTask(this);
+        downloadService.start();
+    }
+
+    /**
+     * Stops the background task and the underlying service
+     */
+    @Override
+    public void cancel() {
+        downloadService.cancel();
+    }
+
+    /**
+     * Returns true if this task is running
+     *
+     * @return true if running, false if not
+     */
+    @Override
+    public boolean isRunning() {
+        return downloadService.isRunning();
+    }
+
+    /**
+     * Initialises the download service
+     */
+    private void initDownloadService() {
+        downloadService = new Service<>() {
+            @Override
+            protected Task<String> createTask() {
+                return FileStringDownloader.this.createTask();
+            }
+        };
+
+        downloadService.setOnSucceeded(e -> {
+            if (!errorOccurred) {
+                String contents = (String) e.getSource().getValue();
+                UI.showFileEditor(creatingPanel, file, contents);
+            }
+            disconnectConnection();
+            UI.removeBackgroundTask(this);
+        });
+
+        downloadService.setOnCancelled(e -> disconnectConnection());
+        downloadService.setOnFailed(e -> disconnectConnection());
+    }
+
+    /**
+     * Disconnects the ftp connection if it was connected
+     */
+    private void disconnectConnection() {
+        if (file instanceof RemoteFile) {
+            try {
+                readingConnection.disconnect();
+            } catch (FTPException ex) {
+                log.warn("Failed to disconnect a connection used to download file contents");
+            }
+        }
+    }
+
+    /**
+     * Creates the task for the service
+     * @return the task
+     */
+    private Task<String> createTask() {
         return new Task<>() {
             @Override
             protected String call() throws Exception {
                 String str = fileToString(file);
-                if (file instanceof RemoteFile)
-                    readingConnection.disconnect();
                 return str;
             }
         };

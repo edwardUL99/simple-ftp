@@ -24,23 +24,26 @@ import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
+import com.simpleftp.ui.background.BackgroundTask;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.editor.FileEditorWindow;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
+import javafx.concurrent.Worker;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.HashMap;
 
 /**
  * The service for uploading the text of a changed file
  * Abstract as uploads differ between file types. E.g local files aren't really uploaded, so their definition of the upload method would be just clean up.
  * This can only be instantiated by calling newInstance which will return the appropriate implementation for that file
  */
-public abstract class FileUploader extends Service<Void> {
+public abstract class FileUploader implements BackgroundTask {
     /**
      * The editor window saving the file
      */
@@ -52,11 +55,27 @@ public abstract class FileUploader extends Service<Void> {
     /**
      * The contents of the file to upload
      */
-    private String savedFileContents;
+    private final String savedFileContents;
     /**
      * Tracks if an exception/error occurred during saving
      */
     private boolean errorOccurred;
+    /**
+     * The upload service for uploading file contents
+     */
+    protected Service<Void> uploadService;
+    /**
+     * The connection to use to create temporary filesystem from and to upload the file if remote
+     */
+    protected FTPConnection uploadingConnection;
+    /**
+     * This returns true if there is an upload in progress for the specified FileEditorWindow
+     */
+    private static final HashMap<FileEditorWindow, Boolean> uploadInProgress = new HashMap<>();
+    /**
+     * Regex used to identify a backup file
+     */
+    protected static final String BACKUP_REGEX = "^.+([.]*~(([\\\\.])([0-9]+))*$)";
 
     /**
      * Constructs a file uploader
@@ -68,36 +87,83 @@ public abstract class FileUploader extends Service<Void> {
         this.editorWindow = editorWindow;
         this.filePath = filePath;
         this.savedFileContents = savedFileContents;
-        setOnSucceeded(e -> {
-            UI.removeBackgroundTask(this);
+        initUploadService();
+    }
 
-            if (!errorOccurred) {
-                DirectoryPane directoryPane = editorWindow.getCreatingPane();
-                String parentPath = new File(filePath).getParent();
-                String windowsParent;
-                parentPath = parentPath == null ? ((windowsParent = System.getenv("SystemDrive")) != null ? windowsParent:"/"):parentPath; // if windows, find the root
-                final String finalParent = parentPath;
-
-                editorWindow.setResetFileContents(savedFileContents); // we have now successfully saved the file contents. Our reset string should now match what is actually saved
-
-                // only refresh if the file we're saving is in out current working directory
-                Platform.runLater(() -> {
-                    UI.doInfo("File Saved", "File " + filePath + " saved successfully");
-
-                    if (finalParent.equals(directoryPane.getDirectory().getFilePath())) {
-                        directoryPane.refresh();
-                    }
-                });
+    /**
+     * Initialises the underlying upload service
+     */
+    private void initUploadService() {
+        uploadService = new Service<>() {
+            @Override
+            protected Task<Void> createTask() {
+                return FileUploader.this.createTask();
             }
-        });
+        };
+
+        uploadService.setOnSucceeded(e -> doSucceed());
+    }
+
+    /**
+     * A method to set the value of upload in progress for the specified editor window
+     * @param editorWindow the editor to window to set
+     * @param uploadInProgress the value for upload in progress
+     */
+    private static synchronized void setUploadInProgress(FileEditorWindow editorWindow, boolean uploadInProgress) {
+        FileUploader.uploadInProgress.put(editorWindow, uploadInProgress);
+    }
+
+    /**
+     * Defines what should happen when the upload succeeds
+     */
+    private void doSucceed() {
+        UI.removeBackgroundTask(this);
+        setUploadInProgress(editorWindow, false);
+
+        if (!errorOccurred) {
+            DirectoryPane directoryPane = editorWindow.getCreatingPane();
+            String parentPath = new File(filePath).getParent();
+            String windowsParent;
+            parentPath = parentPath == null ? ((windowsParent = System.getenv("SystemDrive")) != null ? windowsParent:"/"):parentPath; // if windows, find the root
+            final String finalParent = parentPath;
+
+            editorWindow.setResetFileContents(savedFileContents); // we have now successfully saved the file contents. Our reset string should now match what is actually saved
+
+            UI.doInfo("File Saved", "File " + filePath + " saved successfully");
+
+            if (finalParent.equals(directoryPane.getDirectory().getFilePath())) {
+                directoryPane.refresh();
+            }
+        }
+    }
+
+    /**
+     * Starts this background task.
+     * The preferred way to start it however is to call UploadScheduler.scheduleSave
+     */
+    @Override
+    public void start() {
+        uploadService.start();
+        setUploadInProgress(editorWindow, true);
+        UI.addBackgroundTask(this);
+    }
+
+    /**
+     * Returns true if an upload is in progress for the specified editor window.
+     * No uploads should be started for that editor window when this method returns true
+     * @param editorWindow the editor window to check
+     * @return true if an upload is in progress for that window, false if now
+     */
+    public static synchronized boolean isUploadInProgress(FileEditorWindow editorWindow) {
+        Boolean upload = uploadInProgress.get(editorWindow);
+        return upload != null ? upload:false;
     }
 
     /**
      * Constructs the task to execute
      * @return task
      */
-    @Override
-    protected Task<Void> createTask() {
+    private Task<Void> createTask() {
         return new Task<>() {
             @Override
             protected Void call() throws Exception {
@@ -127,21 +193,9 @@ public abstract class FileUploader extends Service<Void> {
     /**
      * Gets the backup path
      * @param filePath the path to backup
-     * @param local true if local, false if remote
      * @return backup path
      */
-    protected String getBackupPath(String filePath, boolean local) {
-        String pathSeparator = local ? UI.PATH_SEPARATOR:"/";
-        String backupPath;
-        if (filePath.endsWith(pathSeparator)) {
-            backupPath = filePath.substring(0, filePath.length() - 1);
-            backupPath = backupPath + "~" + pathSeparator;
-        } else {
-            backupPath = filePath + "~";
-        }
-
-        return backupPath;
-    }
+    abstract String getBackupPath(String filePath) throws Exception;
 
     /**
      * Writes a file backup
@@ -219,5 +273,31 @@ public abstract class FileUploader extends Service<Void> {
             return new LocalFileUploader(editorWindow, filePath, savedFileContents);
         else
             return new RemoteFileUploader(editorWindow, filePath, savedFileContents);
+    }
+
+    /**
+     * Stops the background task and the underlying service
+     */
+    @Override
+    public void cancel() {
+        uploadService.cancel();
+    }
+
+    /**
+     * Returns true if this task is running
+     *
+     * @return true if running, false if not
+     */
+    @Override
+    public boolean isRunning() {
+        return uploadService.isRunning();
+    }
+
+    /**
+     * Returns the state of the upload service
+     * @return the state of the upload service thread
+     */
+    public Worker.State getState() {
+        return uploadService.getState();
     }
 }

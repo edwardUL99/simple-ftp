@@ -19,9 +19,9 @@ package com.simpleftp.ui.editor.tasks;
 
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.LocalFileSystem;
-import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
+import com.simpleftp.ui.UI;
 import com.simpleftp.ui.editor.FileEditorWindow;
 
 import java.io.File;
@@ -48,10 +48,37 @@ final class LocalFileUploader extends FileUploader {
      */
     @Override
     FTPConnection getUploadingConnection() {
-        FileSystem fileSystem = editorWindow.getCreatingPane().getFileSystem();
-        FTPConnection uploadingConnection = FTPConnection.createTemporaryConnection(fileSystem.getFTPConnection());
+        if (uploadingConnection == null) {
+            FileSystem fileSystem = editorWindow.getCreatingPane().getFileSystem();
+            uploadingConnection = FTPConnection.createTemporaryConnection(fileSystem.getFTPConnection());
+        }
 
         return uploadingConnection;
+    }
+
+    /**
+     * Gets the backup path
+     *
+     * @param filePath the path to backup
+     * @return backup path
+     */
+    @Override
+    String getBackupPath(String filePath) {
+        String pathSeparator = UI.PATH_SEPARATOR;
+        String backupPath = "";
+        if (filePath.endsWith(pathSeparator)) {
+            filePath = filePath.substring(0, filePath.length() - 1);
+        }
+
+        backupPath = filePath + "~";
+
+        int index = 1;
+        while (new File(backupPath).exists()) {
+            backupPath = backupPath.substring(0, backupPath.length() - 1);
+            backupPath = backupPath + "~." + index++;
+        }
+
+        return backupPath;
     }
 
     /**
@@ -65,7 +92,7 @@ final class LocalFileUploader extends FileUploader {
     String writeBackup(String filePath, FTPConnection uploadingConnection) {
         LocalFile file = new LocalFile(filePath);
         if (file.exists()) {
-            String backupPath = getBackupPath(filePath, true);
+            String backupPath = getBackupPath(filePath);
             LocalFile backup = new LocalFile(backupPath);
             try {
                 if (backup.exists()) {
@@ -116,8 +143,8 @@ final class LocalFileUploader extends FileUploader {
      * @param fileSystem the file system being used
      */
     @Override
-    void uploadFile(String filePath, String backupPath, FileSystem fileSystem) throws FileSystemException {
-        boolean deleteBackup = new LocalFile(backupPath).getName().endsWith("~");
+    void uploadFile(String filePath, String backupPath, FileSystem fileSystem){
+        boolean deleteBackup = new LocalFile(backupPath).getName().matches(BACKUP_REGEX);
 
         if (deleteBackup)
             new File(backupPath).delete();

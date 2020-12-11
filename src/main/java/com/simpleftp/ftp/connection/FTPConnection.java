@@ -1065,6 +1065,8 @@ public class FTPConnection {
 
             ftpClient.setDefaultTimeout(mSeconds);
             ftpClient.setControlKeepAliveTimeout(seconds);
+            ftpClient.setControlKeepAliveReplyTimeout(mSeconds);
+            ftpClient.setDataTimeout(0);
         }
     }
 
@@ -1191,41 +1193,69 @@ public class FTPConnection {
      * This class is responsible for periodically sending a no-op to the server
      */
     private class NoopDriver {
+        /**
+         * The time the timer should run at
+         */
         private int timeoutSecs;
-        private final Timer timer;
+        /**
+         * The timer driving the noops
+         */
+        private Timer timer;
+        /**
+         * True if the timer has been started
+         */
         private boolean started = false;
+        /**
+         * A flag to detect if a thread has been cancelled and on the next run, it should stop
+         */
+        private boolean cancelled = false;
 
+        /**
+         * Creates the NoopDriver
+         * @param timeoutSecs the timeout seconds at which to send the noop
+         */
         private NoopDriver(int timeoutSecs) {
             this.timeoutSecs = timeoutSecs;
-            timer = new Timer(true);
+            timer = new Timer();
         }
 
+        /**
+         * Starts the timer
+         */
         private void start() {
             if (!started) {
+                if (cancelled) {
+                    timer = new Timer();
+                    cancelled = false;
+                }
+
                 started = true;
                 timer.scheduleAtFixedRate(new TimerTask() {
                     @Override
                     public void run() {
-                        NoopDriver.this.run();
+                        if (cancelled) {
+                            cancel();
+                            timer.cancel();
+                            started = false;
+                        } else {
+                            try {
+                                logDebug("Sending no-op to server");
+                                ftpClient.noop();
+                            } catch (IOException ex) {
+                                log.warn("An exception occurred sending a no-op, server may time-out");
+                            }
+                        }
                     }
-                }, 0, timeoutSecs * 1000);
+                }, 10000, timeoutSecs * 1000);
             }
         }
 
+        /**
+         * Sets the cancelled flag to true, so that on the next run, the timer should stop
+         */
         private void stop() {
-            if (started) {
-                timer.cancel();
-                started = false;
-            }
-        }
-
-        private void run() {
-            try {
-                logDebug("Sending no-op to server");
-                ftpClient.noop();
-            } catch (IOException ex) {
-                log.warn("An exception occurred sending a no-op, server may time-out");
-            }
+            if (started)
+                cancelled = true;
         }
     }
 }

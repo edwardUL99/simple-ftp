@@ -27,6 +27,7 @@ import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
+import com.simpleftp.ui.background.BackgroundTask;
 import com.simpleftp.ui.dialogs.*;
 import com.simpleftp.ui.exceptions.UIException;
 import com.simpleftp.ui.interfaces.ActionHandler;
@@ -35,7 +36,6 @@ import com.simpleftp.ui.editor.FileEditorWindow;
 import com.simpleftp.ui.interfaces.WindowActionHandler;
 import com.simpleftp.ui.interfaces.Window;
 import javafx.application.Platform;
-import javafx.concurrent.Service;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
@@ -190,7 +190,7 @@ public final class UI {
     /**
      * List of background UI tasks running
      */
-    private static final ArrayList<Service<?>> backgroundTasks = new ArrayList<>();
+    private static final ArrayList<BackgroundTask> backgroundTasks = new ArrayList<>();
 
     /**
      * List of paths of opened remote files
@@ -464,18 +464,18 @@ public final class UI {
 
     /**
      * The service to add to the system
-     * @param service background task to keep track of
+     * @param backgroundTask background task to keep track of
      */
-    public static void addBackgroundTask(Service<?> service) {
-        backgroundTasks.add(service);
+    public static void addBackgroundTask(BackgroundTask backgroundTask) {
+        backgroundTasks.add(backgroundTask);
     }
 
     /**
      * Removes the specified task from the system
-     * @param service the service to remove
+     * @param backgroundTask the background task to remove
      */
-    public static void removeBackgroundTask(Service<?> service) {
-        backgroundTasks.remove(service);
+    public static void removeBackgroundTask(BackgroundTask backgroundTask) {
+        backgroundTasks.remove(backgroundTask);
     }
 
     /**
@@ -483,8 +483,8 @@ public final class UI {
      * @return true if a background task is running
      */
     public static boolean backgroundTaskInProgress() {
-        for (Service<?> service : backgroundTasks) {
-            if (service.isRunning()) {
+        for (BackgroundTask backgroundTask : backgroundTasks) {
+            if (backgroundTask.isRunning()) {
                 return true;
             }
         }

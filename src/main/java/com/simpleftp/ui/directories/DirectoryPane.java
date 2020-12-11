@@ -557,7 +557,7 @@ public abstract class DirectoryPane extends VBox {
         CommonFile file = lineEntry.getFile();
         if (checkFileSize(file)) {
             FileStringDownloader fileStringDownloader = new FileStringDownloader(file, fileSystem, this);
-            fileStringDownloader.getFileString();
+            fileStringDownloader.start();
         }
     }
 
