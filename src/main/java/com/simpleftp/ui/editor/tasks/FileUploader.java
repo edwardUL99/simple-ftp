@@ -236,7 +236,6 @@ public abstract class FileUploader implements BackgroundTask {
             FTPConnection uploadingConnection = getUploadingConnection();
             FileSystem fileSystem = getFileSystem(uploadingConnection);
 
-
             String backupPath = writeBackup(filePath, uploadingConnection);
             boolean backupWritten = backupPath != null;
 

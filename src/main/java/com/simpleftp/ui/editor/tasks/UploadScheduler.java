@@ -18,6 +18,7 @@
 package com.simpleftp.ui.editor.tasks;
 
 import com.simpleftp.ui.editor.FileEditorWindow;
+import javafx.application.Platform;
 import javafx.concurrent.ScheduledService;
 import javafx.concurrent.Task;
 import javafx.concurrent.Worker;
@@ -60,7 +61,9 @@ public class UploadScheduler {
             protected Task<Void> createTask() {
                 return new Task<>() {
                     @Override
-                    protected Void call() {
+                    protected Void call() throws Exception {
+                        if (isCancelled())
+                            throw new InterruptedException();
                         startNextUploader();
                         return null;
                     }
@@ -86,7 +89,7 @@ public class UploadScheduler {
                 if (!FileUploader.isUploadInProgress(entry.getKey())) {
                     FileUploader uploader = fileUploaders.poll();
                     if (uploader != null && uploader.getState() == Worker.State.READY)
-                        uploader.start();
+                        Platform.runLater(uploader::start); // services should be started on JavaFX thread
                 }
             }
         }
@@ -107,6 +110,5 @@ public class UploadScheduler {
         }
 
         uploadQueue.add(fileUploader);
-
     }
 }
