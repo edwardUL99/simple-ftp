@@ -124,12 +124,14 @@ final class LocalFilePanel extends FilePanel {
      */
     @Override
     void createNewDirectory() {
-        String path = UI.doCreateDialog(true, null);
+        AtomicBoolean openCreatedDirectory = new AtomicBoolean(false);
+        String path = UI.doCreateDialog(true, () -> openCreatedDirectory.set(true));
 
         try {
             if (path != null) {
                 String resolvedPath = UI.resolveLocalPath(path, directoryPane.getCurrentWorkingDirectory());
-                createLocalFile(resolvedPath, true);
+                if (createLocalFile(resolvedPath, true) && openCreatedDirectory.get())
+                    directoryPane.openLineEntry(LineEntry.newInstance(new LocalFile(resolvedPath), directoryPane));
             }
         } catch (IOException ex) {
             UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); //this could keep happening, so show exception dialog
@@ -147,7 +149,7 @@ final class LocalFilePanel extends FilePanel {
             if (path != null) {
                 String resolvedPath = UI.resolveLocalPath(path, directoryPane.getCurrentWorkingDirectory());
                 if (createLocalFile(resolvedPath, false) && openCreatedFile.get())
-                    directoryPane.openLineEntry(LineEntry.newInstance(new LocalFile(path), directoryPane));
+                    directoryPane.openLineEntry(LineEntry.newInstance(new LocalFile(resolvedPath), directoryPane));
             }
         } catch (IOException ex) {
             UI.doError("Create file error", "Failed to resolve path " + path + " when creating file");
@@ -199,50 +201,53 @@ final class LocalFilePanel extends FilePanel {
     @Override
     void createSymbolicLink() {
         Pair<String, String> paths = UI.doCreateSymLinkDialog();
-        String targetPath = paths.getKey();
-        String namePath = paths.getValue();
 
-        if (targetPath.isEmpty()) {
-            UI.doError("Empty Target Path", "The target path cannot be empty");
-            return;
-        }
+        if (paths != null) {
+            String targetPath = paths.getKey();
+            String namePath = paths.getValue();
 
-        if (namePath.isEmpty()) {
-            UI.doError("Empty Symbolic Name", "The name of the symbolic link cannot be empty");
-            return;
-        }
-
-        try {
-            targetPath = resolveTargetPath(targetPath);
-            String resolvedNamePath = resolveSymbolicName(namePath);
-
-            if (resolvedNamePath != null) {
-                Path link = Paths.get(resolvedNamePath);
-                Path target = Paths.get(targetPath);
-
-                Path result = Files.createSymbolicLink(link, target);
-
-                if (Files.exists(result)) {
-                    UI.doInfo("Symbolic Link Created", "The Symbolic link " + namePath + " has been successfully created to point to " + targetPath);
-
-                    if (UI.getParentPath(resolvedNamePath).equals(directoryPane.getCurrentWorkingDirectory()))
-                        directoryPane.refresh();
-                } else {
-                    UI.doError("Symbolic Link Not Created", "The Symbolic link was not created successfully");
-                }
-            } else {
-                UI.doError("File Exists", "A file with the path " + namePath + " already exists");
+            if (targetPath.isEmpty()) {
+                UI.doError("Empty Target Path", "The target path cannot be empty");
+                return;
             }
-        } catch (LocalPathNotFoundException | FileSystemException ex) {
-            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-        } catch (UnsupportedOperationException ex) {
-            UI.doError("Symbolic Links Not Supported", "The creation of symbolic links is not supported on this system");
-        } catch (AccessDeniedException ex) {
-            if (FTPSystem.isDebugEnabled())
-                ex.printStackTrace();
-            UI.doError("Access Denied", "You do not have access to create the symbolic link " + namePath);
-        } catch (IOException ex) {
-            UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
+
+            if (namePath.isEmpty()) {
+                UI.doError("Empty Symbolic Name", "The name of the symbolic link cannot be empty");
+                return;
+            }
+
+            try {
+                targetPath = resolveTargetPath(targetPath);
+                String resolvedNamePath = resolveSymbolicName(namePath);
+
+                if (resolvedNamePath != null) {
+                    Path link = Paths.get(resolvedNamePath);
+                    Path target = Paths.get(targetPath);
+
+                    Path result = Files.createSymbolicLink(link, target);
+
+                    if (Files.exists(result)) {
+                        UI.doInfo("Symbolic Link Created", "The Symbolic link " + namePath + " has been successfully created to point to " + targetPath);
+
+                        if (UI.getParentPath(resolvedNamePath).equals(directoryPane.getCurrentWorkingDirectory()))
+                            directoryPane.refresh();
+                    } else {
+                        UI.doError("Symbolic Link Not Created", "The Symbolic link was not created successfully");
+                    }
+                } else {
+                    UI.doError("File Exists", "A file with the path " + namePath + " already exists");
+                }
+            } catch (LocalPathNotFoundException | FileSystemException ex) {
+                UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+            } catch (UnsupportedOperationException ex) {
+                UI.doError("Symbolic Links Not Supported", "The creation of symbolic links is not supported on this system");
+            } catch (AccessDeniedException ex) {
+                if (FTPSystem.isDebugEnabled())
+                    ex.printStackTrace();
+                UI.doError("Access Denied", "You do not have access to create the symbolic link " + namePath);
+            } catch (IOException ex) {
+                UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
+            }
         }
     }
 

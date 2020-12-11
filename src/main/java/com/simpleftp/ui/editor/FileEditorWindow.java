@@ -123,8 +123,11 @@ public abstract class FileEditorWindow extends VBox implements Window {
         reset.setTooltip(new Tooltip("This will discard all your changes"));
         reset.setOnAction(e -> reset());
         setOnKeyPressed(e -> {
-            if (e.isControlDown() && e.getCode() == KeyCode.S) {
+            KeyCode code = e.getCode();
+            if (e.isControlDown() && code == KeyCode.S) {
                 save();
+            } else if (code == KeyCode.ESCAPE) {
+                close();
             }
         });
         initButtonBar();

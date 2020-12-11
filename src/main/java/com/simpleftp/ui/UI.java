@@ -385,7 +385,7 @@ public final class UI {
         if (altEnterHandler != null) {
             AtomicBoolean altPressed = new AtomicBoolean(false);
             Button okButton = createPathDialog.lookupButton(ButtonType.OK);
-            okButton.setTooltip(new Tooltip("Press Alt + Enter to open created file"));
+            okButton.setTooltip(new Tooltip("Press Alt + Enter to open created " + (directory ? "directory":"file")));
             createPathDialog.getDialogPane().setOnKeyPressed(e -> {
                 altPressed.set(e.isAltDown());
                 if (e.getCode() == KeyCode.ENTER && altPressed.get()) {

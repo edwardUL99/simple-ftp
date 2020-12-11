@@ -160,14 +160,22 @@ final class RemoteFilePanel extends FilePanel {
      */
     @Override
     void createNewDirectory() {
-        String path = UI.doCreateDialog(true, null);
+        AtomicBoolean openCreatedDirectory = new AtomicBoolean(false);
+        String path = UI.doCreateDialog(true, () -> openCreatedDirectory.set(true));
         try {
             if (path != null) {
                 String resolvedPath = UI.resolveRemotePath(path, directoryPane.getCurrentWorkingDirectory(), false, directoryPane.getFileSystem().getFTPConnection());
-                createRemoteFile(resolvedPath, true);
+                if (createRemoteFile(resolvedPath, true) && openCreatedDirectory.get())
+                    directoryPane.openLineEntry(LineEntry.newInstance(new RemoteFile(resolvedPath), directoryPane));
             }
-        } catch (FTPException ex) {
-            checkFTPConnectionException(ex);
+        } catch (FTPException | FileSystemException ex) {
+            if (ex instanceof FileSystemException) {
+                Throwable cause = ex.getCause();
+                if (cause instanceof FTPException)
+                    checkFTPConnectionException((FTPException) cause);
+            } else {
+                checkFTPConnectionException((FTPException)ex);
+            }
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
     }
@@ -184,7 +192,7 @@ final class RemoteFilePanel extends FilePanel {
                 String resolvedPath = UI.resolveRemotePath(path, directoryPane.getCurrentWorkingDirectory(), false, directoryPane.getFileSystem().getFTPConnection());
                 if (createRemoteFile(resolvedPath, false) && openCreatedFile.get()) {
                     try {
-                        directoryPane.openLineEntry(LineEntry.newInstance(new RemoteFile(path), directoryPane));
+                        directoryPane.openLineEntry(LineEntry.newInstance(new RemoteFile(resolvedPath), directoryPane));
                     } catch (FileSystemException ex) {
                         UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
                     }
