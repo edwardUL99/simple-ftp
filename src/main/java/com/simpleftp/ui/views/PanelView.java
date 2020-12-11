@@ -24,7 +24,6 @@ import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
-import com.simpleftp.ui.editor.RemoteFileEditorWindow;
 import com.simpleftp.ui.exceptions.UIException;
 import com.simpleftp.ui.panels.FilePanel;
 import javafx.geometry.Insets;
