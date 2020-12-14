@@ -17,7 +17,7 @@
 
 package com.simpleftp.ftp.exceptions;
 
-import com.simpleftp.ftp.connection.FTPServer;
+import com.simpleftp.ftp.connection.Server;
 import lombok.Getter;
 
 /**
@@ -31,31 +31,31 @@ import lombok.Getter;
 @Getter
 public class FTPConnectionFailedException extends FTPException {
     /**
-     * The FTPServer object containing the details at which the connection failed
+     * The Server object containing the details at which the connection failed
      */
-    private final FTPServer ftpServer;
+    private final Server server;
 
     /**
-     * Constructs an object for this exception with the specified message and FTPServer object
+     * Constructs an object for this exception with the specified message and Server object
      * @param message the message for this exception to display
      * @param replyString the reply from the server
-     * @param ftpServer the FTPServer containing the details that were used to maintain the FTPConnection
+     * @param server the Server containing the details that were used to maintain the FTPConnection
      */
-    public FTPConnectionFailedException(String message, String replyString, FTPServer ftpServer) {
+    public FTPConnectionFailedException(String message, String replyString, Server server) {
         super(message, replyString);
-        this.ftpServer = ftpServer;
+        this.server = server;
     }
 
     /**
-     * Constructs an object for this exception with the specified message, causing exception and FTPServer object
+     * Constructs an object for this exception with the specified message, causing exception and Server object
      * @param message the message for this exception to display
      * @param replyString the reply from the server
      * @param e the causing exception for this one
-     * @param ftpServer the FTPServer object containing connection details
+     * @param server the Server object containing connection details
      */
-    public FTPConnectionFailedException(String message, String replyString, Exception e, FTPServer ftpServer) {
+    public FTPConnectionFailedException(String message, String replyString, Exception e, Server server) {
         super(message, replyString, e);
-        this.ftpServer = ftpServer;
+        this.server = server;
     }
 
     /**
@@ -64,6 +64,6 @@ public class FTPConnectionFailedException extends FTPException {
      */
     @Override
     public String getMessage() {
-        return super.getMessage() + ", with connection details: " + ftpServer.toString();
+        return super.getMessage() + ", with connection details: " + server.toString();
     }
 }

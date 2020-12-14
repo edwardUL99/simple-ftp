@@ -18,7 +18,7 @@
 package com.simpleftp.sessions;
 
 /**
- * This class provides names of the tags that are used in ftp_session.xsd.
+ * This class provides names of the tags that are used in sessions.xsd.
  * This allows easy maintainability in case names change, you only have to change one value
  */
 public final class XMLConstants {
@@ -37,23 +37,23 @@ public final class XMLConstants {
     /**
      * The tag representing server details
      */
-    public static final String FTP_SERVER = "FTPServer";
+    public static final String SERVER = "Server";
     /**
-     * The tag representing a FTP Server host
+     * The tag representing a Server host
      */
-    public static final String FTP_SERVER_HOST = "Host";
+    public static final String SERVER_HOST = "Host";
     /**
-     * The tag representing a FTP Server username
+     * The tag representing a Server username
      */
-    public static final String FTP_SERVER_USER = "User";
+    public static final String SERVER_USER = "User";
     /**
-     * The tag representing a FTP Server password
+     * The tag representing a Server password
      */
-    public static final String FTP_SERVER_PASSWORD = "Password";
+    public static final String SERVER_PASSWORD = "Password";
     /**
-     * The tag representing a FTP Server port
+     * The tag representing a Server port
      */
-    public static final String FTP_SERVER_PORT = "Port";
+    public static final String SERVER_PORT = "Port";
     /**
      * The tag representing Connection Details
      */
@@ -82,4 +82,16 @@ public final class XMLConstants {
      * The tag representing the time this session was saved
      */
     public static final String SAVED_TIME = "SavedTime";
+    /**
+     * The namespace for the session
+     */
+    public static final String SESSION_NAMESPACE = "urn:simple:ftp:sessions";
+    /**
+     * The prefix for the namespace
+     */
+    public static final String NAMESPACE_PREFIX = "urn";
+    /**
+     * The schema for the Sessions saving XML
+     */
+    public static final String SESSIONS_SCHEMA = "sessions.xsd";
 }

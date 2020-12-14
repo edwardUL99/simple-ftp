@@ -15,13 +15,12 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ftp.tests;
+package com.simpleftp.ftp.tests.testable;
 
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.connection.FTPConnectionDetails;
 import com.simpleftp.ftp.connection.FTPLookup;
-import com.simpleftp.ftp.connection.FTPServer;
-import lombok.AllArgsConstructor;
+import com.simpleftp.ftp.connection.Server;
 import org.apache.commons.net.ftp.FTPClient;
 
 /**
@@ -35,8 +34,8 @@ public class FTPConnectionTestable extends FTPConnection {
         super();
     }
 
-    public FTPConnectionTestable(FTPClient ftpClient, FTPServer ftpServer, FTPConnectionDetails ftpConnectionDetails, FTPLookup ftpLookup) {
-        super(ftpClient, ftpServer, ftpConnectionDetails, ftpLookup);
+    public FTPConnectionTestable(FTPClient ftpClient, Server server, FTPConnectionDetails ftpConnectionDetails, FTPLookup ftpLookup) {
+        super(ftpClient, server, ftpConnectionDetails, ftpLookup);
     }
 
     public void setConnected(boolean connected) {

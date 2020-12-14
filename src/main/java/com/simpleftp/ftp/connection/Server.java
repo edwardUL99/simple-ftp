@@ -1,3 +1,4 @@
+
 /*
  *  Copyright (C) 2020  Edward Lynch-Milner
  *
@@ -19,24 +20,39 @@ package com.simpleftp.ftp.connection;
 
 import lombok.*;
 
-/**
- * This class provides details to be used in creating a FTPConnection
- * Encapsulates all these details into one place
- */
-@NoArgsConstructor
+//This will represent a FTP server
 @AllArgsConstructor
 @With
 @Data
 @EqualsAndHashCode
-public class FTPConnectionDetails {
+public class Server {
+    @NonNull
+    private String server;
+    @NonNull
+    private String user;
+    @NonNull
+    @EqualsAndHashCode.Exclude
+    private String password;
+    private int port;
     /**
-     * The page size for listing files in the server
+     * The default port for FTP
      */
-    private int pageSize = 100;
+    public static final int DEFAULT_PORT = 21;
+
     /**
-     * The number of seconds for the server to time out
-     * This is used for all timeouts such a keep alive etc
+     * Initialises every field to empty string or 0
      */
-    private int timeout = 300;
-    //this will be added to
+    public Server() {
+        server = user = password = "";
+        port = 0;
+    }
+
+    /**
+     * Overrides Object's toString
+     * @return a String representation of this object
+     */
+    @Override
+    public String toString() {
+        return "Server Host: " + server + ", User: " + user + ", Port: " + port;
+    }
 }

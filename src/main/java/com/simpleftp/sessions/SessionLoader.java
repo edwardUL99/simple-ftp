@@ -20,27 +20,19 @@ package com.simpleftp.sessions;
 import static com.simpleftp.sessions.XMLConstants.*;
 import com.ctc.wstx.stax.WstxInputFactory;
 import com.simpleftp.ftp.connection.FTPConnectionDetails;
-import com.simpleftp.ftp.connection.FTPServer;
+import com.simpleftp.ftp.connection.Server;
 import com.simpleftp.security.PasswordEncryption;
 import com.simpleftp.sessions.exceptions.SessionLoadException;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import org.codehaus.stax2.XMLStreamReader2;
-import org.xml.sax.ErrorHandler;
-import org.xml.sax.SAXException;
-import org.xml.sax.SAXParseException;
+import org.codehaus.stax2.validation.XMLValidationSchema;
+import org.codehaus.stax2.validation.XMLValidationSchemaFactory;
 
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.events.XMLEvent;
-import javax.xml.transform.stream.StreamSource;
-import javax.xml.validation.Schema;
-import javax.xml.validation.SchemaFactory;
-import javax.xml.validation.Validator;
 import java.io.File;
-import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * This class loads in saved sessions from a specified xml file
@@ -54,71 +46,54 @@ public class SessionLoader {
     /**
      * Initialises the loader's reader instance with the specified file name
      * @param fileName the name of the file to read
-     * @throws XMLStreamException if an error occurs
+     * @throws SessionLoadException if an error occurs
      */
-    public void initialiseReader(String fileName) throws XMLStreamException, SessionLoadException {
-        WstxInputFactory inputFactory = new WstxInputFactory();
-        inputFactory.configureForXmlConformance();
-        reader = inputFactory.createXMLStreamReader(new File(fileName));
-        currentFile = fileName;
-        validate(fileName);
+    public void initialiseLoader(String fileName) throws SessionLoadException {
+        try {
+            WstxInputFactory inputFactory = new WstxInputFactory();
+            inputFactory.configureForXmlConformance();
+            reader = inputFactory.createXMLStreamReader(new File(fileName));
+            reader.validateAgainst(getValidationSchema());
+            currentFile = fileName;
+        } catch (XMLStreamException ex) {
+            throw new SessionLoadException("Failed to initialise the SessionLoader", ex);
+        }
+    }
+
+    /**
+     * Gets the schema to validate the file against
+     * @return schema to validate against
+     */
+    private XMLValidationSchema getValidationSchema() throws XMLStreamException {
+        return XMLValidationSchemaFactory.newInstance(XMLValidationSchema.SCHEMA_ID_W3C_SCHEMA)
+                .createSchema(ClassLoader.getSystemResource(SESSIONS_SCHEMA));
     }
 
     /**
      * Allows the reader for this class to be overridden
      * @param streamReader2 the read to override the default
      */
-    public void setReader(XMLStreamReader2 streamReader2) {
+    public void setReader(XMLStreamReader2 streamReader2) throws XMLStreamException {
         this.reader = streamReader2;
+        this.reader.validateAgainst(getValidationSchema());
     }
 
     /**
-     * Validates the XML file before loading it in
-     * @param fileName the filename to load in
+     * Checks if the provided text is in fact text and not just new line characters
+     * @param text the text to check
+     * @return true if the text is text of interest
      */
-    private void validate(String fileName) throws SessionLoadException {
-        String xsdFileName = "ftp_session.xsd"; // XSD is in the jar file
-        SchemaFactory schemaFactory = SchemaFactory.newInstance(javax.xml.XMLConstants.W3C_XML_SCHEMA_NS_URI);
-        try {
-            Schema schema = schemaFactory.newSchema(ClassLoader.getSystemResource(xsdFileName));
-            Validator validator = schema.newValidator();
-            AtomicBoolean validated = new AtomicBoolean(true);
-            AtomicReference<String> message = new AtomicReference<>();
-            validator.setErrorHandler(new ErrorHandler() {
-                @Override
-                public void warning(SAXParseException exception) {
-                    System.out.println(exception.getMessage());
-                }
-
-                @Override
-                public void error(SAXParseException exception) {
-                    validated.set(false);
-                    message.set(exception.getMessage());
-                }
-
-                @Override
-                public void fatalError(SAXParseException exception) {
-                    validated.set(false);
-                    message.set(exception.getMessage());
-                }
-            });
-
-            validator.validate(new StreamSource(new File(fileName)));
-
-            if (!validated.get()) {
-                throw new SessionLoadException("XML File " + fileName + " not valid with error: " + message.get());
-            }
-        } catch (SAXException | IOException e) {
-            throw new SessionLoadException("An error occurred validating " + fileName);
-        }
-    }
-
     private boolean isText(String text) {
         return (!text.contains("\n") && !text.contains("\r")) || !text.replaceAll("[\\n\\r]+", "").trim().equals("");
     }
 
-    private FTPServer readFTPServer() throws XMLStreamException {
-        FTPServer server = new FTPServer();
+    /**
+     * Reads in the next server element from the session file
+     * @return the read in server object
+     * @throws XMLStreamException if read fails
+     */
+    private Server readServer() throws XMLStreamException {
+        Server server = new Server();
         String tag = "";
 
         while (reader.hasNext()) {
@@ -130,22 +105,22 @@ public class SessionLoader {
                 String text = reader.getText();
                 if (isText(text)) {
                     switch (tag) {
-                        case FTP_SERVER_HOST:
+                        case SERVER_HOST:
                             server.setServer(text);
                             break;
-                        case FTP_SERVER_USER:
+                        case SERVER_USER:
                             server.setUser(text);
                             break;
-                        case FTP_SERVER_PASSWORD:
+                        case SERVER_PASSWORD:
                             server.setPassword(PasswordEncryption.decrypt(text));
                             break;
-                        case FTP_SERVER_PORT:
+                        case SERVER_PORT:
                             server.setPort(Integer.parseInt(text));
                             break;
                     }
                 }
             } else if (event == XMLEvent.END_ELEMENT) {
-                if (reader.getLocalName().equals(FTP_SERVER))
+                if (reader.getLocalName().equals(SERVER))
                     break; // you've reached end of this tag
                 tag = "";
             }
@@ -154,6 +129,11 @@ public class SessionLoader {
         return server;
     }
 
+    /**
+     * Reads the connection details from the file
+     * @return the read in connection details object
+     * @throws XMLStreamException if read fails
+     */
     private FTPConnectionDetails readConnectionDetails() throws XMLStreamException {
         FTPConnectionDetails connectionDetails = new FTPConnectionDetails();
         String tag = "";
@@ -182,8 +162,13 @@ public class SessionLoader {
         return connectionDetails;
     }
 
-    private SavedSession.LastSession readLastSession() throws XMLStreamException {
-        SavedSession.LastSession lastSession = new SavedSession.LastSession();
+    /**
+     * Reads the next last session from the file
+     * @return the read in last session
+     * @throws XMLStreamException if read fails
+     */
+    private Session.LastSession readLastSession() throws XMLStreamException {
+        Session.LastSession lastSession = new Session.LastSession();
         String tag = "";
 
         while (reader.hasNext()) {
@@ -201,9 +186,6 @@ public class SessionLoader {
                         case LAST_LOCAL_WD:
                             lastSession.setLastLocalWD(text);
                             break;
-                        case SAVED_TIME:
-                            lastSession.setSavedTime(LocalDateTime.parse(text));
-                            break;
                     }
                 }
             } else if (event == XMLEvent.END_ELEMENT) {
@@ -216,10 +198,17 @@ public class SessionLoader {
         return lastSession;
     }
 
-    private FTPSessionFile load(String fileName) throws XMLStreamException {
-        FTPSessionFile sessionFile = new FTPSessionFile(fileName);
-        SavedSession savedSession = null;
+    /**
+     * Loads in the file session by session and returns it as the in memory SessionFile
+     * @param fileName the name of the session file on disk
+     * @return the loaded in session file
+     * @throws XMLStreamException if load fails
+     */
+    private SessionFile load(String fileName) throws XMLStreamException {
+        SessionFile sessionFile = new SessionFile(fileName);
+        Session session = null;
         boolean setId = false;
+        boolean setSaveTime = false;
 
         while (reader.hasNext()) {
             int event = reader.next();
@@ -228,33 +217,43 @@ public class SessionLoader {
 
                 switch (elementName) {
                     case SESSION:
-                        savedSession = new SavedSession();
+                        session = new Session();
                         break;
                     case SESSION_ID:
                         setId = true;
                         break;
-                    case FTP_SERVER:
-                        savedSession.setFtpServerDetails(readFTPServer());
+                    case SAVED_TIME:
+                        setSaveTime = true;
+                        break;
+                    case SERVER:
+                        session.setServerDetails(readServer());
                         break;
                     case CONNECTION_DETAILS:
-                        savedSession.setFtpConnectionDetails(readConnectionDetails());
+                        session.setFtpConnectionDetails(readConnectionDetails());
                         break;
                     case LAST_SESSION:
-                        savedSession.setLastSession(readLastSession());
+                        session.setLastSession(readLastSession());
                         break;
                 }
             } else if (event == XMLEvent.CHARACTERS) {
-                if (setId) {
-                    savedSession.setSessionId(reader.getText());
-                    setId = false;
+                String text = reader.getText();
+
+                if (isText(text)) {
+                    if (setId) {
+                        session.setSessionId(Integer.parseInt(reader.getText()));
+                        setId = false;
+                    } else if (setSaveTime) {
+                        session.setSavedTime(LocalDateTime.parse(reader.getText()));
+                        setSaveTime = false;
+                    }
                 }
             } else if (event == XMLEvent.END_ELEMENT) {
                 String elementName = reader.getLocalName();
 
                 if (elementName.equals(SESSION)) {
-                    if (savedSession != null) {
-                        sessionFile.addSavedSession(savedSession);
-                        savedSession = null;
+                    if (session != null) {
+                        sessionFile.addSession(session);
+                        session = null;
                     }
                 }
             }
@@ -264,12 +263,12 @@ public class SessionLoader {
     }
 
     /**
-     * Loads the file specified by the fileName in initialiseReader into a FTPSessionFile.
+     * Loads the file specified by the fileName in initialiseReader into a SessionFile.
      * It is undefined if the XML file specified by filename is not valid
-     * @return FTPSessionFile with loaded in sessions
+     * @return SessionFile with loaded in sessions
      * @throws SessionLoadException if an error occurs
      */
-    public FTPSessionFile loadFile() throws SessionLoadException {
+    public SessionFile loadFile() throws SessionLoadException {
         try {
             return load(currentFile);
         } catch (XMLStreamException e) {

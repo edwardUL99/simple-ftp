@@ -20,9 +20,9 @@ package com.simpleftp.ftp.tests.integration;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPPathStats;
-import com.simpleftp.ftp.connection.FTPServer;
+import com.simpleftp.ftp.connection.Server;
 import com.simpleftp.ftp.exceptions.*;
-import com.simpleftp.ftp.tests.FTPConnectionTestable;
+import com.simpleftp.ftp.tests.testable.FTPConnectionTestable;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
 import org.junit.jupiter.api.AfterEach;
@@ -74,10 +74,10 @@ public class FTPConnectionIntegrationTest {
 
         ftpServer.start();
 
-        FTPServer serverDetails = new FTPServer("localhost", TEST_SERVER_USER, TEST_SERVER_PASSWORD, TEST_SERVER_PORT);
+        Server serverDetails = new Server("localhost", TEST_SERVER_USER, TEST_SERVER_PASSWORD, TEST_SERVER_PORT);
         FTPSystem.setSystemTesting(true);
         ftpConnection = new FTPConnectionTestable();
-        ftpConnection.setFtpServer(serverDetails);
+        ftpConnection.setServer(serverDetails);
     }
 
     @AfterEach

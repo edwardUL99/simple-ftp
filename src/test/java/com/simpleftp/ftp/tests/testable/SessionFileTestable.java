@@ -1,4 +1,3 @@
-
 /*
  *  Copyright (C) 2020  Edward Lynch-Milner
  *
@@ -16,42 +15,30 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.simpleftp.ftp.connection;
+package com.simpleftp.ftp.tests.testable;
 
-import lombok.*;
+import com.simpleftp.sessions.Session;
+import com.simpleftp.sessions.SessionFile;
 
-//This will represent a FTP server
-@AllArgsConstructor
-@With
-@Data
-@EqualsAndHashCode
-public class FTPServer {
-    @NonNull
-    private String server;
-    @NonNull
-    private String user;
-    @NonNull
-    private String password;
-    private int port;
+/**
+ * Extends a SessionFile to allow testing
+ */
+public class SessionFileTestable extends SessionFile {
     /**
-     * The default port for FTP
+     * Constructs a session file that can be tested
+     * @param fileName the name of the file
      */
-    public static final int DEFAULT_PORT = 21;
-
-    /**
-     * Initialises every field to empty string or 0
-     */
-    public FTPServer() {
-        server = user = password = "";
-        port = 0;
+    public SessionFileTestable(String fileName) {
+        super(fileName);
     }
 
     /**
-     * Overrides Object's toString
-     * @return a String representation of this object
+     * Adds the specified session to this SessionFile
+     *
+     * @param session the session to add
      */
     @Override
-    public String toString() {
-        return "Server Host: " + server + ", User: " + user + ", Port: " + port;
+    public void addSession(Session session) {
+        super.addSession(session);
     }
 }
