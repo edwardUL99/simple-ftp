@@ -21,7 +21,7 @@ import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.*;
 import com.simpleftp.ftp.exceptions.*;
-import com.simpleftp.ftp.tests.FTPConnectionTestable;
+import com.simpleftp.ftp.tests.testable.FTPConnectionTestable;
 import org.apache.commons.net.ftp.*;
 import org.apache.commons.net.io.CopyStreamException;
 import org.junit.jupiter.api.AfterEach;
@@ -43,7 +43,7 @@ class FTPConnectionUnitTest {
     @Mock
     private FTPClient ftpClient;
     @Mock
-    private FTPServer ftpServer;
+    private Server server;
     @Mock
     private FTPLookup ftpLookup;
 
@@ -88,9 +88,9 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldConnectSuccessfully() throws IOException, FTPConnectionFailedException {
-        given(ftpServer.getServer())
+        given(server.getServer())
                 .willReturn(TEST_SERVER_HOST);
-        given(ftpServer.getPort())
+        given(server.getPort())
                 .willReturn(TEST_SERVER_PORT);
         doNothing().when(ftpClient).connect(TEST_SERVER_HOST, TEST_SERVER_PORT); //we'll assume it connected successfully
         given(ftpClient.getReplyCode())
@@ -99,8 +99,8 @@ class FTPConnectionUnitTest {
         boolean result = ftpConnection.connect();
         assertTrue(result);
         assertTrue(ftpConnection.isConnected());
-        verify(ftpServer).getServer();
-        verify(ftpServer).getPort();
+        verify(server).getServer();
+        verify(server).getPort();
         verify(ftpClient).connect(TEST_SERVER_HOST, TEST_SERVER_PORT);
         verify(ftpClient).getReplyCode();
         verify(ftpClient, times(0)).disconnect();
@@ -108,15 +108,15 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldNotConnectSuccessfully() throws IOException {
-        given(ftpServer.getServer())
+        given(server.getServer())
                 .willReturn(TEST_SERVER_HOST);
-        given(ftpServer.getPort())
+        given(server.getPort())
                 .willReturn(TEST_SERVER_PORT);
         doThrow(IOException.class).when(ftpClient).connect(TEST_SERVER_HOST, TEST_SERVER_PORT);
         assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.connect());
         assertFalse(ftpConnection.isConnected());
-        verify(ftpServer).getServer();
-        verify(ftpServer).getPort();
+        verify(server).getServer();
+        verify(server).getPort();
         verify(ftpClient).connect(TEST_SERVER_HOST, TEST_SERVER_PORT);
     }
 
@@ -125,14 +125,14 @@ class FTPConnectionUnitTest {
         ftpConnection.setConnected(true);
         boolean result = ftpConnection.connect();
         assertFalse(result);
-        verifyNoInteractions(ftpServer);
+        verifyNoInteractions(server);
     }
 
     @Test
     void shouldThrowIfConnectionFailsOnConnect() throws IOException {
-        given(ftpServer.getServer())
+        given(server.getServer())
                 .willReturn(TEST_SERVER_HOST);
-        given(ftpServer.getPort())
+        given(server.getPort())
                 .willReturn(TEST_SERVER_PORT);
         doNothing().when(ftpClient).connect(TEST_SERVER_HOST, TEST_SERVER_PORT);
         given(ftpClient.getReplyCode())
@@ -143,8 +143,8 @@ class FTPConnectionUnitTest {
         verify(ftpClient).connect(TEST_SERVER_HOST, TEST_SERVER_PORT);
         verify(ftpClient).getReplyCode();
         verify(ftpClient).disconnect();
-        verify(ftpServer).getServer();
-        verify(ftpServer).getPort();
+        verify(server).getServer();
+        verify(server).getPort();
     }
 
     @Test
@@ -198,9 +198,9 @@ class FTPConnectionUnitTest {
     @Test
     void shouldLoginSuccessfully() throws IOException, FTPConnectionFailedException, FTPNotConnectedException, FTPCommandFailedException {
         ftpConnection.setConnected(true);
-        given(ftpServer.getUser())
+        given(server.getUser())
                 .willReturn(TEST_SERVER_USER);
-        given(ftpServer.getPassword())
+        given(server.getPassword())
                 .willReturn(TEST_SERVER_PASSWORD);
         given(ftpClient.login(TEST_SERVER_USER, TEST_SERVER_PASSWORD))
             .willReturn(true);
@@ -208,20 +208,20 @@ class FTPConnectionUnitTest {
         boolean result = ftpConnection.login();
         assertTrue(result);
         assertTrue(ftpConnection.isLoggedIn());
-        verify(ftpServer).getUser();
-        verify(ftpServer).getPassword();
+        verify(server).getUser();
+        verify(server).getPassword();
         verify(ftpClient).login(TEST_SERVER_USER, TEST_SERVER_PASSWORD);
     }
 
     @Test
     void shouldNotLogInIfNotConnected() {
         ftpConnection.setLoggedIn(true);
-        given(ftpServer.getUser())
+        given(server.getUser())
                 .willReturn(TEST_SERVER_USER);
         assertThrows(FTPNotConnectedException.class, () -> ftpConnection.login());
-        verify(ftpServer).getUser();
+        verify(server).getUser();
         assertFalse(ftpConnection.isLoggedIn());
-        verify(ftpServer, times(0)).getPassword();
+        verify(server, times(0)).getPassword();
         ;
 
     }
@@ -229,9 +229,9 @@ class FTPConnectionUnitTest {
     @Test
     void shouldNotLogInIfErrorOccurs() throws IOException {
         ftpConnection.setConnected(true);
-        given(ftpServer.getUser())
+        given(server.getUser())
                 .willReturn(TEST_SERVER_USER);
-        given(ftpServer.getPassword())
+        given(server.getPassword())
                 .willReturn(TEST_SERVER_PASSWORD);
         doThrow(IOException.class).when(ftpClient).login(TEST_SERVER_USER, TEST_SERVER_PASSWORD);
 
@@ -242,9 +242,9 @@ class FTPConnectionUnitTest {
     @Test
     void shouldNotLogInIfConnectionErrorOccurs() throws IOException {
         ftpConnection.setConnected(true);
-        given(ftpServer.getUser())
+        given(server.getUser())
                 .willReturn(TEST_SERVER_USER);
-        given(ftpServer.getPassword())
+        given(server.getPassword())
                 .willReturn(TEST_SERVER_PASSWORD);
         doThrow(FTPConnectionClosedException.class).when(ftpClient).login(TEST_SERVER_USER, TEST_SERVER_PASSWORD);
 
@@ -258,15 +258,15 @@ class FTPConnectionUnitTest {
     void shouldNotLogInAgainIfAlreadyLoggedIn() throws FTPConnectionFailedException, FTPNotConnectedException, IOException, FTPCommandFailedException {
         ftpConnection.setConnected(true);
         ftpConnection.setLoggedIn(true);
-        given(ftpServer.getUser())
+        given(server.getUser())
                 .willReturn(TEST_SERVER_USER);
 
         boolean result = ftpConnection.login();
 
         assertFalse(result);
         verify(ftpClient, times(0)).login(TEST_SERVER_USER, TEST_SERVER_PASSWORD);
-        verify(ftpServer).getUser();
-        verify(ftpServer, times(0)).getPassword();
+        verify(server).getUser();
+        verify(server, times(0)).getPassword();
     }
 
     @Test
@@ -1783,8 +1783,8 @@ class FTPConnectionUnitTest {
         assertThrows(FTPCommandFailedException.class, () -> ftpConnection.setTextTransferMode(false));
     }
 
-    private FTPServer getTestFTPServer() {
-        return new FTPServer().withServer(TEST_SERVER_HOST)
+    private Server getTestFTPServer() {
+        return new Server().withServer(TEST_SERVER_HOST)
                 .withUser(TEST_SERVER_USER)
                 .withPassword(TEST_SERVER_PASSWORD)
                 .withPort(TEST_SERVER_PORT);
@@ -1809,7 +1809,7 @@ class FTPConnectionUnitTest {
         FTPSystem.reset();
         assertNull(FTPSystem.getConnection());
 
-        FTPServer testServer = getTestFTPServer();
+        Server testServer = getTestFTPServer();
         FTPConnectionDetails connectionDetails = getTestConnectionDetails();
 
         FTPConnection connection = FTPConnection.createSharedConnection(testServer, connectionDetails);
@@ -1826,14 +1826,14 @@ class FTPConnectionUnitTest {
         FTPSystem.reset();
         assertNull(FTPSystem.getConnection());
 
-        FTPServer testServer = getTestFTPServer();
+        Server testServer = getTestFTPServer();
         FTPConnectionDetails connectionDetails = getTestConnectionDetails();
 
         FTPConnection connection = FTPConnection.createSharedConnection(testServer, connectionDetails);
 
         assertEquals(connection, FTPSystem.getConnection());
 
-        FTPServer newServer = new FTPServer("newServer", "user", "pass", 22);
+        Server newServer = new Server("newServer", "user", "pass", 22);
         FTPConnection connection1 = FTPConnection.createSharedConnection(newServer, connectionDetails);
 
         assertEquals(connection1, FTPSystem.getConnection());
@@ -1849,7 +1849,7 @@ class FTPConnectionUnitTest {
         FTPConnection connection = FTPConnection.createSharedConnection(null, null);
 
         assertEquals(connection, FTPSystem.getConnection());
-        assertNotNull(connection.getFtpServer());
+        assertNotNull(connection.getServer());
         assertNotNull(connection.getFtpConnectionDetails());
     }
 
@@ -1857,14 +1857,14 @@ class FTPConnectionUnitTest {
     void shouldCreateTempConnectionFromExisting() {
         FTPSystem.reset();
 
-        FTPServer ftpServer = getTestFTPServer();
+        Server server = getTestFTPServer();
         FTPConnectionDetails connectionDetails = getTestConnectionDetails();
 
-        FTPConnection connection = FTPConnection.createSharedConnection(ftpServer, connectionDetails);
+        FTPConnection connection = FTPConnection.createSharedConnection(server, connectionDetails);
         assertEquals(connection, FTPSystem.getConnection());
         FTPConnection connection1 = FTPConnection.createTemporaryConnection(connection);
         assertNotSame(connection, connection1);
-        assertEquals(ftpServer, connection1.getFtpServer());
+        assertEquals(server, connection1.getServer());
         assertEquals(connectionDetails, connection1.getFtpConnectionDetails());
     }
 
@@ -1872,12 +1872,12 @@ class FTPConnectionUnitTest {
     void shouldCreateTempConnectionFromDetails() {
         FTPSystem.reset();
 
-        FTPServer ftpServer = getTestFTPServer();
+        Server server = getTestFTPServer();
         FTPConnectionDetails connectionDetails = getTestConnectionDetails();
 
-        FTPConnection connection = FTPConnection.createTemporaryConnection(ftpServer, connectionDetails);
+        FTPConnection connection = FTPConnection.createTemporaryConnection(server, connectionDetails);
         assertNull(FTPSystem.getConnection());
-        assertEquals(connection.getFtpServer(), ftpServer);
+        assertEquals(connection.getServer(), server);
         assertEquals(connection.getFtpConnectionDetails(), connectionDetails);
     }
 }

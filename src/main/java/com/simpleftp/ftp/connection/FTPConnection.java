@@ -47,7 +47,7 @@ import java.util.TimerTask;
  * This is to enforce the purpose of the connection. I.e. for a connection to be used among filesystems etc., you want to share it. For temporary uploading.downloading for example, it's temporary
  */
 @Log4j2
-@EqualsAndHashCode(of = {"ftpServer", "ftpConnectionDetails", "connected", "loggedIn"})
+@EqualsAndHashCode(of = {"server", "ftpConnectionDetails", "connected", "loggedIn"})
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class FTPConnection {
     /**
@@ -62,11 +62,11 @@ public class FTPConnection {
     @Setter
     private FTPLookup ftpLookup;
     /**
-     * The FTPServer object providing all the login details and server parameters
+     * The Server object providing all the login details and server parameters
      */
     @Getter
     @Setter
-    private FTPServer ftpServer;
+    private Server server;
     /**
      * Provides details to this connection like page size etc
      */
@@ -91,7 +91,7 @@ public class FTPConnection {
         if (!FTPSystem.isSystemTesting()) // dont enable as if under test, hidden files causes issues
             ftpClient.setListHiddenFiles(true); // show hidden files and leave it up to UI to hide them or not
         ftpLookup = new FTPLookup(ftpClient);
-        ftpServer = new FTPServer();
+        server = new Server();
         ftpConnectionDetails = new FTPConnectionDetails();
         setNoopDriver();
         setTimeoutTime();
@@ -101,16 +101,16 @@ public class FTPConnection {
      * Constructs a connection object with the specified parameters.
      * Can be used if you want to specify a different FTPClient rather than a default one
      * @param ftpClient the client object to back this connection
-     * @param ftpServer the object storing the server parameters
+     * @param server the object storing the server parameters
      * @param ftpConnectionDetails the object storing the connection details
      * @param ftpLookup the ftp lookup object to use
      */
-    protected FTPConnection(FTPClient ftpClient, FTPServer ftpServer, FTPConnectionDetails ftpConnectionDetails, FTPLookup ftpLookup) {
+    protected FTPConnection(FTPClient ftpClient, Server server, FTPConnectionDetails ftpConnectionDetails, FTPLookup ftpLookup) {
         this.ftpClient = ftpClient;
         if (!FTPSystem.isSystemTesting()) // dont enable as if under test, hidden files causes issues
             ftpClient.setListHiddenFiles(true); // show hidden files and leave it up to UI to hide them or not
         this.ftpLookup = ftpLookup;
-        this.ftpServer = ftpServer;
+        this.server = server;
         this.ftpConnectionDetails = ftpConnectionDetails == null ? new FTPConnectionDetails():ftpConnectionDetails;
         setNoopDriver();
         setTimeoutTime();
@@ -119,15 +119,15 @@ public class FTPConnection {
     /**
      * Constructs a FTPConnection object with the specified ftp server details and connection details.
      * This is the constructor that guarantees the most correct functionality
-     * @param ftpServer the object storing the server parameters
+     * @param server the object storing the server parameters
      * @param ftpConnectionDetails the object storing the connection details
      */
-    protected FTPConnection(FTPServer ftpServer, FTPConnectionDetails ftpConnectionDetails) {
+    protected FTPConnection(Server server, FTPConnectionDetails ftpConnectionDetails) {
         this.ftpClient = new FTPClient();
         if (!FTPSystem.isSystemTesting()) // dont enable as if under test, hidden files causes issues
             ftpClient.setListHiddenFiles(true); // show hidden files and leave it up to UI to hide them or not
         this.ftpLookup = new FTPLookup(ftpClient);
-        this.ftpServer = ftpServer;
+        this.server = server;
         this.ftpConnectionDetails = ftpConnectionDetails == null ? new FTPConnectionDetails():ftpConnectionDetails;
         setNoopDriver();
         setTimeoutTime();
@@ -148,7 +148,7 @@ public class FTPConnection {
     }
 
     /**
-     * Connects to the FTP Server using the details specified in this object's FTPServer field
+     * Connects to the FTP Server using the details specified in this object's Server field
      * @return true if it was successful and false only and only if isConnected() returns true, other errors throw exceptions
      * @throws FTPConnectionFailedException if an error occurs during connection
      */
@@ -156,8 +156,8 @@ public class FTPConnection {
         boolean connectionFailed = false;
 
         if (!connected) {
-            String host = ftpServer.getServer();
-            int port = ftpServer.getPort();
+            String host = server.getServer();
+            int port = server.getPort();
 
             try {
                 logDebug("Connecting the FTPConnection to the server");
@@ -173,9 +173,9 @@ public class FTPConnection {
                 connectionFailed = true;
                 ftpClient.disconnect();
             } catch (IOException ex) {
-                log.error("Failed to connect to FTP Server with hostname {}, port {} and user {}", host, port, ftpServer.getUser());
+                log.error("Failed to connect to FTP Server with hostname {}, port {} and user {}", host, port, server.getUser());
                 resetConnectionValues();
-                throw new FTPConnectionFailedException("Failed to connect to FTP Server", ftpClient.getReplyString(), ftpServer);
+                throw new FTPConnectionFailedException("Failed to connect to FTP Server", ftpClient.getReplyString(), server);
             }
         }
 
@@ -183,7 +183,7 @@ public class FTPConnection {
             logDebug("FTPConnection already connected to the server, not about to re-connect");
         } else {
             log.error("FTP Server refused connection, connection failed");
-            throw new FTPConnectionFailedException("FTP Server refused connection to FTPConnection, failed to connect", ftpClient.getReplyString(), ftpServer);
+            throw new FTPConnectionFailedException("FTP Server refused connection to FTPConnection, failed to connect", ftpClient.getReplyString(), server);
         }
         return false;
     }
@@ -226,14 +226,14 @@ public class FTPConnection {
     }
 
     /**
-     * Attempts to login to the FTPServer using the details found in the passed in FTPServer object
+     * Attempts to login to the Server using the details found in the passed in Server object
      * @return login success
      * @throws FTPNotConnectedException if login is called when isConnected() returns false
      * @throws FTPConnectionFailedException if a connection failure occurs during the login process
      * @throws FTPCommandFailedException if an error occurs sending the login command or retrieving a reply
      */
     public boolean login() throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
-        String user = ftpServer.getUser();
+        String user = server.getUser();
 
         if (!connected) {
             log.error("FTPConnection is not connected to the server, cannot continue login process with user {}", user);
@@ -244,7 +244,7 @@ public class FTPConnection {
         try {
             logDebug("Logging in to ftp server with user {}", user);
             if (!loggedIn) {
-                loggedIn = ftpClient.login(user, ftpServer.getPassword());
+                loggedIn = ftpClient.login(user, server.getPassword());
                 if (loggedIn) {
                     logDebug("User {} logged into the ftp Server", user);
                     if (!FTPSystem.isSystemTesting())
@@ -257,7 +257,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException cl) {
             log.error("The FTPConnection unexpectedly closed, cannot login");
             resetConnectionValues();
-            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while logging in", ftpClient.getReplyString(), cl, ftpServer);
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while logging in", ftpClient.getReplyString(), cl, server);
         } catch (IOException ex) {
             log.error("Error occurred during login with user {}", user);
             throw new FTPCommandFailedException("A connection error occurred during login", ftpClient.getReplyString(), ex);
@@ -296,7 +296,7 @@ public class FTPConnection {
             } catch (FTPConnectionClosedException cl) {
                 log.error("The FTPConnection unexpectedly closed while logging out");
                 resetConnectionValues();
-                throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while logging out", ftpClient.getReplyString(), cl, ftpServer);
+                throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while logging out", ftpClient.getReplyString(), cl, server);
             } catch (IOException ex) {
                 log.error("An error occurred logging out from the server");
                 throw new FTPCommandFailedException("Error occurred logging out from server", ftpClient.getReplyString(), ex);
@@ -334,7 +334,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException cl) {
             log.error("The FTPConnection unexpectedly closed the connection when changing working directory");
             resetConnectionValues();
-            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while changing working directory", ftpClient.getReplyString(), cl, ftpServer);
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while changing working directory", ftpClient.getReplyString(), cl, server);
         } catch (IOException ex) {
             log.error("An error occurred when changing working directory to {}", path);
             throw new FTPCommandFailedException("An error occurred changing working directory", ftpClient.getReplyString(), ex);
@@ -367,7 +367,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException cl) {
             log.error("The FTPConnection unexpectedly closed the connection when changing to parent directory");
             resetConnectionValues();
-            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while changing to parent directory", ftpClient.getReplyString(), cl, ftpServer);
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while changing to parent directory", ftpClient.getReplyString(), cl, server);
         } catch (IOException ex) {
             log.error("An error occurred changing to parent of current working directory");
             throw new FTPCommandFailedException("An error occurred changing to the parent of the current working directory", ftpClient.getReplyString(), ex);
@@ -400,7 +400,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException cl) {
             log.error("The connection was unexpectedly closed when retrieving the current working directory");
             resetConnectionValues();
-            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed the connection when retrieving current working directory", ftpClient.getReplyString(), cl, ftpServer);
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed the connection when retrieving current working directory", ftpClient.getReplyString(), cl, server);
         } catch (IOException ex) {
             log.error("An error occurred when retrieving the current working directory");
             throw new FTPCommandFailedException("An error occurred retrieving the current working directory", ftpClient.getReplyString(), ex);
@@ -433,7 +433,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection when retrieving FTP file");
             resetConnectionValues();
-            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while retrieving FTPFile", ftpClient.getReplyString(), cl, ftpServer);
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while retrieving FTPFile", ftpClient.getReplyString(), cl, server);
         } catch (IOException ex) {
             log.error("An error occurred while retrieving the file specified by path {} from the server", path);
             throw new FTPCommandFailedException("An error occurred retrieving the file from the server", ftpClient.getReplyString(), ex);
@@ -465,7 +465,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection, cannot retrieve files");
             resetConnectionValues();
-            throw new FTPConnectionFailedException("FTPConnection unexpectedly closed the connection, cannot retrieve files", ftpClient.getReplyString(), cl, ftpServer);
+            throw new FTPConnectionFailedException("FTPConnection unexpectedly closed the connection, cannot retrieve files", ftpClient.getReplyString(), cl, server);
         } catch (IOException ex) {
             log.error("An error occurred when listing files");
             throw new FTPCommandFailedException("An error occurred when listing files", ftpClient.getReplyString(), ex);
@@ -532,7 +532,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection when uploading file");
             resetConnectionValues();
-            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while uploading file", ftpClient.getReplyString(), cl, ftpServer);
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while uploading file", ftpClient.getReplyString(), cl, server);
         } catch (FileNotFoundException fn) {
             log.error("File does not exist, cannot upload file");
             throw new FTPError("An error occurred creating an input stream for the provided file", ftpClient.getReplyString(), fn);
@@ -664,7 +664,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection while downloading file");
             resetConnectionValues();
-            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while downloading the file", ftpClient.getReplyString(), cl, ftpServer);
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while downloading the file", ftpClient.getReplyString(), cl, server);
         } catch (FileNotFoundException ex) {
             log.error("A file not found exception error occurred with creating an output stream for {}", localPath);
             throw new FTPError("An output stream could not be created for local file", ftpClient.getReplyString(), ex);
@@ -710,7 +710,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection while making directory {}", path);
             resetConnectionValues();
-            throw new FTPConnectionFailedException("FTPConnection unexpectedly closed the connection while making a directory", ftpClient.getReplyString(), cl, ftpServer);
+            throw new FTPConnectionFailedException("FTPConnection unexpectedly closed the connection while making a directory", ftpClient.getReplyString(), cl, server);
         } catch (IOException ex) {
             log.error("An error occurred making directory {}", path);
             throw new FTPCommandFailedException("An error occurred sending the make directory command", ftpClient.getReplyString(), ex);
@@ -744,7 +744,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException cl) {
             log.error("The FTPConnection unexpectedly closed the connection when renaming file");
             resetConnectionValues();
-            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed the connection when renaming file", ftpClient.getReplyString(), cl, ftpServer);
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed the connection when renaming file", ftpClient.getReplyString(), cl, server);
         } catch (IOException ex) {
             log.error("An error occurred renaming the file");
             throw new FTPCommandFailedException("An error occurred renaming the file", ftpClient.getReplyString(), ex);
@@ -779,7 +779,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection while removing file");
             resetConnectionValues();
-            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while removing file", ftpClient.getReplyString(), cl, ftpServer);
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while removing file", ftpClient.getReplyString(), cl, server);
         } catch (IOException ex) {
             log.error("An error occurred removing file {}", filePath);
             throw new FTPCommandFailedException("An error occurred when removing file", ftpClient.getReplyString(), ex);
@@ -812,7 +812,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException cl) {
             log.error("The FTPConnection unexpectedly closed the connection when removing directory");
             resetConnectionValues();
-            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed the connection when removing directory", ftpClient.getReplyString(), cl, ftpServer);
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed the connection when removing directory", ftpClient.getReplyString(), cl, server);
         } catch (IOException ex) {
             log.error("An error occurred sending the command or receiving a reply from the server");
             throw new FTPCommandFailedException("An error occurred sending the command or receiving a reply from the server", ftpClient.getReplyString(), ex);
@@ -851,7 +851,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection while checking if path exists");
             resetConnectionValues();
-            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while checking if path exists", ftpClient.getReplyString(), cl, ftpServer);
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while checking if path exists", ftpClient.getReplyString(), cl, server);
         } catch (IOException ex) {
             log.error("An error occurred when checking if path {} exists", remotePath);
             throw new FTPCommandFailedException("An error occurred when checking if path exists", ftpClient.getReplyString(), ex);
@@ -899,7 +899,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection while retrieving status");
             resetConnectionValues();
-            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while retrieving status", ftpClient.getReplyString(), cl, ftpServer);
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while retrieving status", ftpClient.getReplyString(), cl, server);
         } catch (IOException ex) {
             log.error("An error occurred when retrieving the server status");
             throw new FTPCommandFailedException("An error occurred when attempting to retrieve status from the server", ftpClient.getReplyString(), ex);
@@ -932,7 +932,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection while retrieving file status");
             resetConnectionValues();
-            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while retrieving file status", ftpClient.getReplyString(), cl, ftpServer);
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while retrieving file status", ftpClient.getReplyString(), cl, server);
         } catch (IOException ex) {
             log.error("An error occurred retrieving file status with path {}", filePath);
             throw new FTPCommandFailedException("An error occurred retrieving status for file", ftpClient.getReplyString(), ex);
@@ -965,7 +965,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection while retrieving file size");
             resetConnectionValues();
-            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while retrieving file size", ftpClient.getReplyString(), cl, ftpServer);
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while retrieving file size", ftpClient.getReplyString(), cl, server);
         } catch (IOException ex) {
             log.error("An error occurred retrieving file size for path {}", path);
             throw new FTPCommandFailedException("An error occurred retrieving file size", ftpClient.getReplyString(), ex);
@@ -998,7 +998,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection while retrieving modification time");
             resetConnectionValues();
-            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while retrieving modification time", ftpClient.getReplyString(), cl, ftpServer);
+            throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while retrieving modification time", ftpClient.getReplyString(), cl, server);
         } catch (IOException ex) {
             log.error("A connection error occurred while retrieving modification time for file {}", path);
             throw new FTPCommandFailedException("An error occurred while retrieving modification time", ftpClient.getReplyString(), ex);
@@ -1032,7 +1032,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException cl) {
             log.error("FTPConnection unexpectedly closed the connection when retrieving path stats");
             resetConnectionValues();
-            throw new FTPConnectionFailedException("A connection error occurred, so cannot retrieve FTPPathStats", ftpClient.getReplyString(), cl, ftpServer);
+            throw new FTPConnectionFailedException("A connection error occurred, so cannot retrieve FTPPathStats", ftpClient.getReplyString(), cl, server);
         } catch (IOException ex) {
             log.error("An error occurred retrieving file stats");
             throw new FTPCommandFailedException("An error occurred, so cannot retrieve FTPPathStats", ftpClient.getReplyString(), ex);
@@ -1113,7 +1113,7 @@ public class FTPConnection {
         } catch (FTPConnectionClosedException ex) {
             log.error("FTPConnection unexpectedly closed the connection when setting the text transfer mode");
             resetConnectionValues();
-            throw new FTPConnectionFailedException("FTPConnection unexpectedly closed the connection when setting the text transfer mode", ftpClient.getReplyString(), ex, ftpServer);
+            throw new FTPConnectionFailedException("FTPConnection unexpectedly closed the connection when setting the text transfer mode", ftpClient.getReplyString(), ex, server);
         } catch (IOException ex) {
             log.error("An error occurred when setting the text transfer mode");
             throw new FTPCommandFailedException("An error occurred when setting the text transfer mode", ftpClient.getReplyString(), ex);
@@ -1125,12 +1125,12 @@ public class FTPConnection {
      * @param ftpServer the server details
      * @return true if matches, false if not
      */
-    private static boolean connectionMatches(FTPServer ftpServer) {
+    private static boolean connectionMatches(Server ftpServer) {
         FTPConnection systemConnection = FTPSystem.getConnection();
         if (systemConnection == null) {
             return false;
         } else {
-            FTPServer server = systemConnection.getFtpServer();
+            Server server = systemConnection.getServer();
 
             return server.equals(ftpServer);
         }
@@ -1138,12 +1138,12 @@ public class FTPConnection {
 
     /**
      * This method sets the connection, but doesn't connect or log in
-     * @param ftpServer the details to create the connection with
+     * @param server the details to create the connection with
      * @param connectionDetails the connection details to use
      * @return the created connection
      */
-    private static FTPConnection createConnection(FTPServer ftpServer, FTPConnectionDetails connectionDetails) {
-        FTPConnection connection = new FTPConnection(ftpServer, connectionDetails);
+    private static FTPConnection createConnection(Server server, FTPConnectionDetails connectionDetails) {
+        FTPConnection connection = new FTPConnection(server, connectionDetails);
         ConnectionFTPSystem.setConnection(connection);
 
         return connection;
@@ -1158,8 +1158,8 @@ public class FTPConnection {
      * @param connectionDetails the connection details without timeout time etc
      * @return the created connection. This connection should equal FTPSystem.getConnection
      */
-    public static FTPConnection createSharedConnection(FTPServer serverDetails, FTPConnectionDetails connectionDetails) {
-        serverDetails = serverDetails == null ? new FTPServer():serverDetails;
+    public static FTPConnection createSharedConnection(Server serverDetails, FTPConnectionDetails connectionDetails) {
+        serverDetails = serverDetails == null ? new Server():serverDetails;
         connectionDetails = connectionDetails == null ? new FTPConnectionDetails():connectionDetails;
         if (!connectionMatches(serverDetails)) {
             return createConnection(serverDetails, connectionDetails);
@@ -1175,18 +1175,18 @@ public class FTPConnection {
      * @return the temporary connection
      */
     public static FTPConnection createTemporaryConnection(FTPConnection connectionBasis) {
-        return new FTPConnection(connectionBasis.ftpServer, connectionBasis.ftpConnectionDetails);
+        return new FTPConnection(connectionBasis.server, connectionBasis.ftpConnectionDetails);
     }
 
     /**
      * This allows creating a temporary FTPConnection not shared with other classes from the provided details.
      * This could be useful for creating an uploading/downloading connection as another temporary user
-     * @param ftpServer the FTPServer object containing the login details
+     * @param server the Server object containing the login details
      * @param ftpConnectionDetails the details for timeout etc.
      * @return the temporary connection
      */
-    public static FTPConnection createTemporaryConnection(FTPServer ftpServer, FTPConnectionDetails ftpConnectionDetails) {
-        return new FTPConnection(ftpServer, ftpConnectionDetails);
+    public static FTPConnection createTemporaryConnection(Server server, FTPConnectionDetails ftpConnectionDetails) {
+        return new FTPConnection(server, ftpConnectionDetails);
     }
 
     /**

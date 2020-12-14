@@ -22,7 +22,7 @@ import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnectionDetails;
-import com.simpleftp.ftp.connection.FTPServer;
+import com.simpleftp.ftp.connection.Server;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.security.PasswordEncryption;
@@ -52,7 +52,7 @@ public class FTPClient extends Application {
             System.setProperty("ftp-server", "pi");
             System.setProperty("ftp-user", "pi");
             System.setProperty("ftp-pass", password);
-            System.setProperty("ftp-port", "" + FTPServer.DEFAULT_PORT);
+            System.setProperty("ftp-port", "" + Server.DEFAULT_PORT);
 
             FTPConnection connection = FTPConnection.createSharedConnection(FTPSystem.getPropertiesDefinedDetails(), new FTPConnectionDetails(100, 200));
             connection.connect();

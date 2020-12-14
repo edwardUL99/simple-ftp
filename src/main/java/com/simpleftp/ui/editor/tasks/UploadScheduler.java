@@ -53,7 +53,7 @@ public class UploadScheduler {
      * Initialises the scheduler
      */
     private static void initScheduler() {
-        /**
+        /*
          * The scheduling service backing this UploadScheduler
          */
         ScheduledService<Void> scheduler = new ScheduledService<>() {

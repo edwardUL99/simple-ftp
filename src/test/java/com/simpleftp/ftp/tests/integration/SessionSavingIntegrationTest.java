@@ -19,11 +19,14 @@ package com.simpleftp.ftp.tests.integration;
 
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnectionDetails;
-import com.simpleftp.ftp.connection.FTPServer;
+import com.simpleftp.ftp.connection.Server;
+import com.simpleftp.ftp.tests.testable.SessionFileTestable;
+import com.simpleftp.ftp.tests.testable.SessionTestable;
 import com.simpleftp.sessions.*;
 import com.simpleftp.sessions.exceptions.SessionLoadException;
 import com.simpleftp.sessions.exceptions.SessionSaveException;
 import org.codehaus.stax2.XMLStreamReader2;
+import org.codehaus.stax2.XMLStreamWriter2;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,7 +47,7 @@ import static org.mockito.Mockito.doThrow;
  */
 public class SessionSavingIntegrationTest {
     @Mock
-    private XMLStreamWriter streamWriter;
+    private XMLStreamWriter2 streamWriter;
 
     private SessionSaver sessionSaver;
 
@@ -61,7 +64,7 @@ public class SessionSavingIntegrationTest {
 
     private static final String FILE_NAME = "test.xml";
 
-    private static final String TEST_ID = "1234-TEST-5678";
+    private static final int TEST_ID = 1;
 
     private AutoCloseable autoCloseable;
 
@@ -78,21 +81,21 @@ public class SessionSavingIntegrationTest {
         autoCloseable.close();
     }
 
-    private FTPSessionFile getFTPSessionFile() {
-        FTPSessionFile file = new FTPSessionFile(FILE_NAME);
-        SavedSession.LastSession lastSession = new SavedSession.LastSession("/last/remote/dir", "/last/local/dir");
-        FTPServer server = new FTPServer("ftp.server.com", "user", "Tester", FTPServer.DEFAULT_PORT);
+    private SessionFileTestable getFTPSessionFile() {
+        SessionFileTestable file = new SessionFileTestable(FILE_NAME);
+        Session.LastSession lastSession = new Session.LastSession("/last/remote/dir", "/last/local/dir");
+        Server server = new Server("ftp.server.com", "user", "Tester", Server.DEFAULT_PORT);
         FTPConnectionDetails connectionDetails = new FTPConnectionDetails(2, 100);
-        SavedSession savedSession = new SavedSession(TEST_ID, server, connectionDetails, lastSession);
-        file.addSavedSession(savedSession);
+        Session session = new SessionTestable(TEST_ID, server, connectionDetails, lastSession);
+        file.addSession(session);
 
         return file;
     }
 
     @Test
-    void shouldWriteFTPSessionFileSuccessfully() throws IOException, XMLStreamException {
-        FTPSessionFile file = getFTPSessionFile();
-        sessionSaver.initialiseWriter(file);
+    void shouldWriteFTPSessionFileSuccessfully() throws IOException, XMLStreamException, SessionSaveException {
+        SessionFile file = getFTPSessionFile();
+        sessionSaver.initialiseSaver(file);
         assertDoesNotThrow(() -> sessionSaver.writeSessionFile());
         File savedFile = new File(FILE_NAME);
         assertTrue(savedFile.exists());
@@ -100,11 +103,11 @@ public class SessionSavingIntegrationTest {
     }
 
     @Test
-    void shouldThrowExceptionIfStreamErrorOccursOnWritingFile() throws XMLStreamException, IOException {
-        FTPSessionFile file = getFTPSessionFile();
+    void shouldThrowExceptionIfStreamErrorOccursOnWritingFile() throws XMLStreamException, IOException, SessionSaveException {
+        SessionFile file = getFTPSessionFile();
         doThrow(XMLStreamException.class).when(streamWriter).writeStartDocument();
 
-        mockedSaver.initialiseWriter(file);
+        mockedSaver.initialiseSaver(file);
         mockedSaver.setWriter(streamWriter);
 
         assertThrows(SessionSaveException.class, () -> mockedSaver.writeSessionFile());
@@ -113,14 +116,14 @@ public class SessionSavingIntegrationTest {
 
     @Test
     void shouldLoadFTPSessionFileSuccessfully() throws XMLStreamException, SessionLoadException {
-        FTPSessionFile file = getFTPSessionFile();
+        SessionFile file = getFTPSessionFile();
         assertDoesNotThrow(() -> {
-            sessionSaver.initialiseWriter(file);
+            sessionSaver.initialiseSaver(file);
             sessionSaver.writeSessionFile();
         });
 
-        sessionLoader.initialiseReader(FILE_NAME);
-        FTPSessionFile loadedFile = sessionLoader.loadFile();
+        sessionLoader.initialiseLoader(FILE_NAME);
+        SessionFile loadedFile = sessionLoader.loadFile();
 
         assertEquals(file, loadedFile);
         new File(file.getFileName()).delete();
@@ -131,11 +134,11 @@ public class SessionSavingIntegrationTest {
         doThrow(XMLStreamException.class).when(streamReader2).hasNext();
 
         assertDoesNotThrow(() -> {
-            sessionSaver.initialiseWriter(getFTPSessionFile());
+            sessionSaver.initialiseSaver(getFTPSessionFile());
             sessionSaver.writeSessionFile();
         });
 
-        mockedLoader.initialiseReader(FILE_NAME);
+        mockedLoader.initialiseLoader(FILE_NAME);
         assertThrows(SessionLoadException.class, () -> {
             mockedLoader.setReader(streamReader2);
             mockedLoader.loadFile();

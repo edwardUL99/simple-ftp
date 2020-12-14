@@ -44,7 +44,7 @@ import java.util.Arrays;
  * Password is expected to be result of PasswordEncryption.encrypt()
  *
  * These should be set before calling this class by using System.setProperty
- * FTPConnection.createSharedConnection should be called with a FTPServer object representing the above properties. It must also be connected and logged in before creating this class
+ * FTPConnection.createSharedConnection should be called with a Server object representing the above properties. It must also be connected and logged in before creating this class
  */
 @AllArgsConstructor
 public class RemoteFile implements CommonFile {
@@ -74,7 +74,7 @@ public class RemoteFile implements CommonFile {
     }
 
     /**
-     * Creates a RemoteFile with the specified manager and ftp file. Uses fileName as path to search on FTPServer to initialise the FTPFile returned by getFtpFile
+     * Creates a RemoteFile with the specified manager and ftp file. Uses fileName as path to search on Server to initialise the FTPFile returned by getFtpFile
      * @param fileName the name of the file (absolute path preferred)
      * @param ftpConnection the connection to use
      * @param ftpFile the FTPFile to initialise this RemoteFile with. Leave null to force a lookup on FTP Server with fileName as path. This file may not exist. Assumed it does exist if you have the file
@@ -101,7 +101,7 @@ public class RemoteFile implements CommonFile {
 
     /**
      * Initialises the FTPFile object
-     * @param ftpFile the file to initialise with. Leave null if you want to force a lookup on the FTPServer using the filename provided
+     * @param ftpFile the file to initialise with. Leave null if you want to force a lookup on the Server using the filename provided
      */
     private void initialiseFTPFile(FTPFile ftpFile) throws FileSystemException {
        try {
