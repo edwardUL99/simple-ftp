@@ -442,6 +442,32 @@ public abstract class DirectoryPane extends VBox {
         return showFile;
     }
 
+
+    /**
+     * Checks whether the file exists already, if it is a directory, it throws an error and returns false as you can't rename a file to a directory
+     * If it is a file, it shows a confirmation dialog
+     * @param file the file to check
+     * @return true if the rename should continue, false if not
+     */
+    boolean overwriteExistingFile(CommonFile file) throws FileSystemException {
+        String filePath = file.getFilePath();
+
+        if (file.exists()) {
+            if (file.isADirectory()) {
+                UI.doError("File is a Directory", "You cannot rename file as " + filePath + " is a directory");
+                return false;
+            } else {
+                if (!file.isSymbolicLink()) {
+                    return UI.doConfirmation("Overwrite Existing File", "Renaming the file to " + filePath + " will overwrite an existing file. Confirm this operation", true);
+                } else {
+                    return UI.doConfirmation("Overwrite Symbolic Link", "Renaming the file to " + filePath + " will both overwrite and break the symbolic link. Confirm this operation", true);
+                }
+            }
+        }
+
+        return true;
+    }
+
     /**
      * Handles when rename is called on the context menu with the specified line entry
      * @param lineEntry the line entry to rename the file of

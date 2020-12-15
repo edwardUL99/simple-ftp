@@ -17,6 +17,7 @@
 
 package com.simpleftp.ui.directories;
 
+import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.RemoteFileSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
@@ -82,17 +83,15 @@ final class RemoteDirectoryPane extends DirectoryPane {
      */
     private void renameRemoteFile(final RemoteFile remoteFile) {
         String filePath = remoteFile.getFilePath();
-        String parentPath = UI.getParentPath(filePath);
 
         String fileName = remoteFile.getName();
         String newPath = UI.doRenameDialog(fileName);
 
         if (newPath != null) {
-            newPath = new File(newPath).getName(); // ensure it is just the base name
-            if (!newPath.equals(fileName)) {
-                newPath = parentPath + "/" + newPath;
-
-                try {
+            try {
+                newPath = FileUtils.addPwdToPath(getCurrentWorkingDirectory(), newPath, "/");
+                newPath = UI.resolveSymbolicPath(newPath, "/", null); // we will use symbolic path resolving as we may want to rename a file to a symbolic path
+                if (overwriteExistingFile(new RemoteFile(newPath))) {
                     FTPConnection connection = fileSystem.getFTPConnection();
                     if (connection.renameFile(filePath, newPath)) {
                         UI.doInfo("File Renamed", "File has been renamed successfully");
@@ -105,10 +104,16 @@ final class RemoteDirectoryPane extends DirectoryPane {
                         String replyString = connection.getReplyString();
                         UI.doError("Rename Failed", "Failed to rename file with error code: " + replyString);
                     }
-                } catch (FTPException ex) {
-                    checkFTPConnectionException(ex);
-                    UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
                 }
+            } catch (FTPException | FileSystemException ex) {
+                if (ex instanceof FileSystemException) {
+                    Throwable cause = ex.getCause();
+                    if (cause instanceof FTPException)
+                        checkFTPConnectionException((FTPException)cause);
+                } else {
+                    checkFTPConnectionException((FTPException)ex);
+                }
+                UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
             }
         }
     }

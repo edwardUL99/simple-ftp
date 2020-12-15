@@ -17,6 +17,7 @@
 
 package com.simpleftp.ui.directories;
 
+import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.LocalFileSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
@@ -26,6 +27,7 @@ import com.simpleftp.ui.UI;
 import com.simpleftp.ui.files.LineEntry;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -99,27 +101,27 @@ final class LocalDirectoryPane extends DirectoryPane {
      * @param localFile the file to rename
      */
     private void renameLocalFile(final LocalFile localFile) {
-        String filePath = localFile.getFilePath();
-        String parentPath = UI.getParentPath(filePath);
-
         String fileName = localFile.getName();
         String newPath = UI.doRenameDialog(fileName);
 
         if (newPath != null) {
-            newPath = new File(newPath).getName(); // ensure it is just the base name
-            if (!newPath.equals(fileName)) {
-                newPath = parentPath + System.getProperty("file.separator") + newPath;
-
-                if (localFile.renameTo(new File(newPath))) {
-                    UI.doInfo("File Renamed", "File has been renamed successfully");
-                    double vPosition = entriesScrollPane.getVvalue();
-                    double hPosition = entriesScrollPane.getHvalue();
-                    refresh();
-                    entriesScrollPane.setVvalue(vPosition);
-                    entriesScrollPane.setHvalue(hPosition); // resets the position of the scrollbars to where they were before the refresh
-                } else {
-                    UI.doError("Rename Failed", "Failed to rename file");
+            try {
+                newPath = FileUtils.addPwdToPath(getCurrentWorkingDirectory(), newPath, "/");
+                newPath = UI.resolveSymbolicPath(newPath, "/", System.getenv("SystemDrive")); // we will use symbolic path resolving as we may want to rename a file to a symbolic path
+                if (overwriteExistingFile(new LocalFile(newPath))) {
+                    if (localFile.renameTo(new File(newPath))) {
+                        UI.doInfo("File Renamed", "File has been renamed successfully");
+                        double vPosition = entriesScrollPane.getVvalue();
+                        double hPosition = entriesScrollPane.getHvalue();
+                        refresh();
+                        entriesScrollPane.setVvalue(vPosition);
+                        entriesScrollPane.setHvalue(hPosition); // resets the position of the scrollbars to where they were before the refresh
+                    } else {
+                        UI.doError("Rename Failed", "Failed to rename file");
+                    }
                 }
+            } catch (FileSystemException ex) {
+                UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
             }
         }
     }
