@@ -251,7 +251,7 @@ public class RemoteFile implements CommonFile {
         } else {
             try { // if link was broken here, it would return false
                 if (isSymbolicLink())
-                    return connection.remotePathExists(getSymbolicLinkTarget(), true);
+                    return exists() && connection.remotePathExists(getSymbolicLinkTarget(), true);
                 else
                     return connection.remotePathExists(absolutePath, true);
             } catch (FTPException ex) {
@@ -275,7 +275,7 @@ public class RemoteFile implements CommonFile {
         } else {
             try {
                 if (isSymbolicLink()) {// ensure link isn't broken
-                    return connection.remotePathExists(getSymbolicLinkTarget(), false);
+                    return exists() && connection.remotePathExists(getSymbolicLinkTarget(), false);
                 } else {
                     return connection.remotePathExists(absolutePath, false);
                 }
