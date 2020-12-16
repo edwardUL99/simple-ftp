@@ -27,7 +27,6 @@ import com.simpleftp.ui.UI;
 import com.simpleftp.ui.files.LineEntry;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -94,6 +93,17 @@ final class LocalDirectoryPane extends DirectoryPane {
     void checkFileType(CommonFile directory) throws IllegalArgumentException {
         if (!(directory instanceof LocalFile))
             throw new IllegalArgumentException("The file type passed into this DirectoryPane must be an instance of LocalFile");
+    }
+
+    /**
+     * Does the remove action for the file. Removal of a file may differ between local and remote file panels, hence why abstract
+     *
+     * @param commonFile the file to remove
+     * @return the result
+     */
+    @Override
+    boolean doRemove(CommonFile commonFile) throws Exception {
+        return fileSystem.removeFile(commonFile);
     }
 
     /**

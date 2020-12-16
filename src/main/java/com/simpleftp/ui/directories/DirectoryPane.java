@@ -17,6 +17,7 @@
 
 package com.simpleftp.ui.directories;
 
+import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFile;
@@ -374,7 +375,7 @@ public abstract class DirectoryPane extends VBox {
         if (symbolicLink.isNormalFile())
         {
             // go to the parent folder of the file
-            path = UI.getParentPath(path);
+            path = FileUtils.getParentPath(path, isLocal());
         }
 
         CommonFile targetFile = fileSystem.getFile(path);
@@ -460,7 +461,7 @@ public abstract class DirectoryPane extends VBox {
                 if (!file.isSymbolicLink()) {
                     return UI.doConfirmation("Overwrite Existing File", "Renaming the file to " + filePath + " will overwrite an existing file. Confirm this operation", true);
                 } else {
-                    return UI.doConfirmation("Overwrite Symbolic Link", "Renaming the file to " + filePath + " will both overwrite and break the symbolic link. Confirm this operation", true);
+                    return UI.doConfirmation("Overwrite Symbolic Link", "Renaming the file to " + filePath + " will overwrite the existing link and may break the symbolic link. Confirm this operation", true);
                 }
             }
         }
@@ -659,6 +660,13 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
+     * Does the remove action for the file. Removal of a file may differ between local and remote file panels, hence why abstract
+     * @param commonFile the file to remove
+     * @return the result
+     */
+    abstract boolean doRemove(CommonFile commonFile) throws Exception;
+
+    /**
      * Attempts to delete the specified line entry and the file associated with it
      * @param lineEntry the line entry to remove
      * @return true if successful, false if not
@@ -667,13 +675,13 @@ public abstract class DirectoryPane extends VBox {
         CommonFile file = lineEntry.getFile();
 
         try {
-            if (fileSystem.removeFile(file)) {
+            if (doRemove(file)) {
                 entriesBox.getChildren().remove(lineEntry);
                 lineEntries.remove(lineEntry);
 
                 return true;
             }
-        } catch (FileSystemException ex) {
+        } catch (Exception ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
 

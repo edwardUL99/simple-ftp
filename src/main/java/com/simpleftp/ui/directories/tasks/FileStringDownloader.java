@@ -24,6 +24,7 @@ import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
+import com.simpleftp.ftp.exceptions.FTPError;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.background.BackgroundTask;
@@ -184,12 +185,22 @@ public class FileStringDownloader implements BackgroundTask {
             try {
                 RemoteFile remoteFile = (RemoteFile) file;
 
-                LocalFile downloaded = new LocalFile(UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + remoteFile.getName());
-                new LocalFileSystem(readingConnection).addFile(remoteFile, downloaded.getParentFile().getAbsolutePath()); // download the file
-                String ret = fileToString(downloaded);
-                downloaded.deleteOnExit();
+                LocalFile downloaded;
+                if (remoteFile.isSymbolicLink()) {
+                    remoteFile = new RemoteFile(remoteFile.getSymbolicLinkTarget());
+                    downloaded = new LocalFile(UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + remoteFile.getName());
+                } else {
+                    downloaded = new LocalFile(UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + remoteFile.getName());
+                }
 
-                return ret;
+                if (new LocalFileSystem(readingConnection).addFile(remoteFile, downloaded.getParentFile().getAbsolutePath())) { // download the file
+                    String ret = fileToString(downloaded);
+                    downloaded.deleteOnExit();
+
+                    return ret;
+                } else {
+                    throw new FTPError("Failed to download remote file to temp directory", readingConnection.getReplyString());
+                }
             } catch (Exception ex) {
                 Platform.runLater(() -> UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled()));
                 errorOccurred = true;

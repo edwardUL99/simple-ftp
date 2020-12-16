@@ -145,7 +145,7 @@ public class RemoteFileSystem implements FileSystem {
             }
 
             return null;
-        } catch (FTPException ex) {
+        } catch (Exception ex) {
             throw new FileSystemException("A FTP Exception occurred when retrieving file", ex);
         }
     }

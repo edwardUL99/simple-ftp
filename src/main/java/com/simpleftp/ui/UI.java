@@ -44,7 +44,6 @@ import javafx.scene.input.KeyCode;
 import javafx.util.Pair;
 import org.apache.tika.Tika;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -519,19 +518,6 @@ public final class UI {
     public static Pair<String, String> doCreateSymLinkDialog() {
         CreateSymLinkDialog symLinkDialog = new CreateSymLinkDialog();
         return symLinkDialog.showAndGetEntry();
-    }
-
-    /**
-     * Retrieves the parent of the provided path
-     * @param filePath the path to get the parent of
-     * @return the parent path
-     */
-    public static String getParentPath(String filePath) {
-        String parentPath = new File(filePath).getParent();
-        String windowsParent;
-        parentPath = parentPath == null ? ((windowsParent = System.getenv("SystemDrive")) != null ? windowsParent:"/"):parentPath; // if windows, find the root
-
-        return parentPath;
     }
 
     /**

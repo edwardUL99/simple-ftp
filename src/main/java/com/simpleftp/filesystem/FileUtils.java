@@ -67,4 +67,34 @@ public final class FileUtils {
 
         return path;
     }
+
+    /**
+     * Retrieves the parent path of the provided path. If it is already, root, it is returned
+     * @param path the path to find parent of
+     * @param local true if local path false if not
+     * @return the parent path
+     */
+    public static String getParentPath(String path, boolean local) {
+        if (local) {
+            String parentPath = new LocalFile(path).getParent();
+            String windowsParent;
+            parentPath = parentPath == null ? ((windowsParent = System.getenv("SystemDrive")) != null ? windowsParent:"/"):parentPath; // if windows, find the root
+
+            return parentPath;
+        } else {
+            String fileSeparator = "/";
+            if (path.equals(fileSeparator)) {
+                return path;
+            }
+
+            path = path.endsWith(fileSeparator) ? path.substring(0, path.length() - 1):path;
+
+            int lastSepIndex = path.lastIndexOf(fileSeparator);
+            if (lastSepIndex != -1 && lastSepIndex != 0) {
+                return path.substring(0, lastSepIndex);
+            } else {
+                return fileSeparator;
+            }
+        }
+    }
 }

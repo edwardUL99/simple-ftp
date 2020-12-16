@@ -78,7 +78,7 @@ final class RemoteFilePanel extends FilePanel {
      * @throws IOException if a local error occurs
      */
     private boolean createRemoteNormalFile(String path, FTPConnection connection) throws FTPException, IOException {
-        String parentPath = UI.getParentPath(path);
+        String parentPath = FileUtils.getParentPath(path, false);
         // need to make a local file first and then upload
         if (!connection.remotePathExists(path, false)) {
             String fileName = new File(path).getName();
@@ -120,7 +120,7 @@ final class RemoteFilePanel extends FilePanel {
             String currentPath = file.getFilePath();
             FTPConnection connection = directoryPane.getFileSystem().getFTPConnection();
 
-            String parentPath = UI.getParentPath(resolvedPath);
+            String parentPath = FileUtils.getParentPath(resolvedPath, false);
             boolean existsAsDir = connection.remotePathExists(parentPath, true);
 
             if (!existsAsDir) {
@@ -227,7 +227,7 @@ final class RemoteFilePanel extends FilePanel {
             if (symbolicPath == null)
                 return; // this is a rare case. UI.resolveSymbolicPath would have shown an error dialog
 
-            RemoteFile remoteFile = new RemoteFile(symbolicPath, connection, null);
+            RemoteFile remoteFile = new RemoteFile(symbolicPath, connection, RemoteFile.getSymbolicFile(connection, symbolicPath)); // attempt to initialise with the file just in case it is symbolic and is listed as doesn't exist due to limitations with symbolic links on the server
 
             if (!remoteFile.exists())
                 throw new FTPRemotePathNotFoundException("The path " + symbolicPath + " does not exist", symbolicPath);
@@ -242,14 +242,21 @@ final class RemoteFilePanel extends FilePanel {
                 directoryPane.setDirectory(remoteFile);
                 directoryPane.refresh();
             } else if (remoteFile.isNormalFile()) {
-                LineEntry lineEntry = LineEntry.newInstance(remoteFile, directoryPane); // for a file opening it doesn't matter if it's link or not because it doesn't change directory
+                LineEntry lineEntry = LineEntry.newInstance(remoteFile, directoryPane); // we are not sure the path is a sym link, so use this work around in case. See the JavaDoc for that method to see why it is a workaround
                 if (lineEntry != null)
                     directoryPane.openLineEntry(lineEntry);
             } else {
                 UI.doError("Path does not exist", "The path: " + remoteFile.getFilePath() + " does not exist or it is not a directory");
             }
-        } catch (FTPException ex) {
-            checkFTPConnectionException(ex);
+        } catch (Exception ex) {
+            if (ex instanceof FTPException) {
+                checkFTPConnectionException((FTPException)ex);
+            } else if (ex instanceof FileSystemException) {
+                Throwable cause = ex.getCause();
+                if (cause instanceof FTPException)
+                    checkFTPConnectionException((FTPException)cause);
+            }
+
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
     }

@@ -93,7 +93,7 @@ final class LocalFilePanel extends FilePanel {
     private boolean createLocalFile(String resolvedPath, boolean directory) {
         String currentDirectory = directoryPane.getCurrentWorkingDirectory();
 
-        String parentPath = UI.getParentPath(resolvedPath);
+        String parentPath = FileUtils.getParentPath(resolvedPath, true);
         boolean existsAsDir = new LocalFile(parentPath).isDirectory();
 
         if (!existsAsDir) {
@@ -229,7 +229,7 @@ final class LocalFilePanel extends FilePanel {
                     if (Files.exists(result)) {
                         UI.doInfo("Symbolic Link Created", "The Symbolic link " + namePath + " has been successfully created to point to " + targetPath);
 
-                        if (UI.getParentPath(resolvedNamePath).equals(directoryPane.getCurrentWorkingDirectory()))
+                        if (FileUtils.getParentPath(resolvedNamePath, true).equals(directoryPane.getCurrentWorkingDirectory()))
                             directoryPane.refresh();
                     } else {
                         UI.doError("Symbolic Link Not Created", "The Symbolic link was not created successfully");

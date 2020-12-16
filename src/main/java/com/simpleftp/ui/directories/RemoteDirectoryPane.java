@@ -27,8 +27,8 @@ import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.files.LineEntry;
+import org.apache.commons.net.ftp.FTPFile;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -180,6 +180,40 @@ final class RemoteDirectoryPane extends DirectoryPane {
     }
 
     /**
+     * This method manually deletes the FileSystem remove method as there is a limitation when it comes to symbolic files, that the file system remove emthod fails
+     * @param file the file to manually remove
+     * @return the result
+     * @throws FTPException if any FTPException is thrown
+     */
+    private boolean manuallyRemoveFile(RemoteFile file) throws FTPException {
+        FTPConnection connection = fileSystem.getFTPConnection();
+        return connection.removeFile(file.getFilePath());
+    }
+
+    /**
+     * Does the remove action for the file. Removal of a file may differ between local and remote file panels, hence why abstract
+     *
+     * @param commonFile the file to remove
+     * @return the result
+     */
+    @Override
+    boolean doRemove(CommonFile commonFile) throws Exception {
+        RemoteFile remoteFile = (RemoteFile)commonFile;
+
+        if (remoteFile.isSymbolicLink()) {
+            String filePath = remoteFile.getFilePath();
+            FTPFile symLinkFile = RemoteFile.getSymbolicFile(fileSystem.getFTPConnection(), filePath);
+            if (symLinkFile == null)
+                return false;
+            remoteFile = new RemoteFile(remoteFile.getFilePath(), fileSystem.getFTPConnection(), symLinkFile);
+
+            return manuallyRemoveFile(remoteFile);
+        } else {
+            return fileSystem.removeFile(remoteFile);
+        }
+    }
+
+    /**
      * Constructs the list of line entries to display
      *
      * @return the list of constructed line entries
@@ -211,7 +245,7 @@ final class RemoteDirectoryPane extends DirectoryPane {
      * @throws FileSystemException if an exception occurs
      */
     private void changeToRemoteParent() throws FileSystemException {
-        String parentPath = UI.getParentPath(directory.getFilePath()); // the directory's path should be the current one
+        String parentPath = FileUtils.getParentPath(directory.getFilePath(), false); // the directory's path should be the current one
         RemoteFile parentFile = new RemoteFile(parentPath);
         setDirectory(parentFile);
         refresh();
