@@ -202,10 +202,9 @@ final class RemoteDirectoryPane extends DirectoryPane {
 
         if (remoteFile.isSymbolicLink()) {
             String filePath = remoteFile.getFilePath();
-            FTPFile symLinkFile = RemoteFile.getSymbolicFile(fileSystem.getFTPConnection(), filePath);
-            if (symLinkFile == null)
+            remoteFile = RemoteFile.getSymbolicFile(fileSystem.getFTPConnection(), filePath);
+            if (remoteFile == null)
                 return false;
-            remoteFile = new RemoteFile(remoteFile.getFilePath(), fileSystem.getFTPConnection(), symLinkFile);
 
             return manuallyRemoveFile(remoteFile);
         } else {

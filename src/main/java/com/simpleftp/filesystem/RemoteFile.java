@@ -32,6 +32,7 @@ import org.apache.commons.net.ftp.FTPFile;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.Optional;
 
 /**
  * Represents a remote file associated with the provided FTPConnection instance
@@ -106,7 +107,7 @@ public class RemoteFile implements CommonFile {
      * @return the FTPFile found, null if not found
      * @throws Exception if any exception from the connection is thrown
      */
-    public static FTPFile getSymbolicFile(FTPConnection connection, String filePath) throws Exception {
+    /*public static FTPFile getSymbolicFile(FTPConnection connection, String filePath) throws Exception {
         RemoteFile remoteFile = new RemoteFile(filePath);
         String parentPath = FileUtils.getParentPath(filePath, false);
 
@@ -115,6 +116,33 @@ public class RemoteFile implements CommonFile {
                 .filter(file -> file.getName().equals(remoteFile.getName()))
                 .findFirst()
                 .orElse(null);
+    }*/
+
+    /**
+     * Retrieves a RemoteFile representing the symbolic file for the specified file path if it is symbolic from the listing, as listing the path itself produces an error.
+     * Apache FTPClient has a limitation where if you listFiles on a symbolic link file, it returns no file, so this method is a workaround.
+     * See the wiki Symbolic Links for the known issues.
+     * @param connection the connection used to list the file
+     * @param filePath the file path
+     * @return the FTPFile found, null if not found
+     * @throws Exception if any exception from the connection is thrown
+     */
+    public static RemoteFile getSymbolicFile(FTPConnection connection, String filePath) throws Exception {
+        RemoteFile remoteFile = new RemoteFile(filePath);
+        String parentPath = FileUtils.getParentPath(filePath, false);
+
+        FTPFile[] files = connection.listFiles(parentPath);
+
+        FTPFile file = Arrays.stream(files)
+                .filter(file1 -> file1.getName().equals(remoteFile.getName()))
+                .findFirst()
+                .orElse(null);
+
+        if (file != null) {
+            return new RemoteFile(filePath, connection, file);
+        }
+
+        return null;
     }
 
     /**
@@ -123,7 +151,9 @@ public class RemoteFile implements CommonFile {
      * @return the found file, null if not found
      */
     private FTPFile getSymbolicFile() throws Exception {
-        return getSymbolicFile(connection, absolutePath);
+        return Optional.ofNullable(getSymbolicFile(connection, absolutePath))
+                .map(file -> file.ftpFile)
+                .orElse(null);
     }
 
     /**

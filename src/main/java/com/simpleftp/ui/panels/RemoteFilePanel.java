@@ -227,7 +227,12 @@ final class RemoteFilePanel extends FilePanel {
             if (symbolicPath == null)
                 return; // this is a rare case. UI.resolveSymbolicPath would have shown an error dialog
 
-            RemoteFile remoteFile = new RemoteFile(symbolicPath, connection, RemoteFile.getSymbolicFile(connection, symbolicPath)); // attempt to initialise with the file just in case it is symbolic and is listed as doesn't exist due to limitations with symbolic links on the server
+            RemoteFile remoteFile = RemoteFile.getSymbolicFile(connection, symbolicPath); // attempt to initialise with the file just in case it is symbolic and is listed as doesn't exist due to limitations with symbolic links on the server
+
+            if (remoteFile == null) {
+                UI.doError("Path does not exist", "The path: " + remoteFile.getFilePath() + " does not exist or it is not a directory");
+                return;
+            }
 
             if (!remoteFile.exists())
                 throw new FTPRemotePathNotFoundException("The path " + symbolicPath + " does not exist", symbolicPath);
