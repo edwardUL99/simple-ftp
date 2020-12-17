@@ -35,7 +35,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamWriter;
 import java.io.File;
 import java.io.IOException;
 
@@ -84,7 +83,7 @@ public class SessionSavingIntegrationTest {
     private SessionFileTestable getFTPSessionFile() {
         SessionFileTestable file = new SessionFileTestable(FILE_NAME);
         Session.LastSession lastSession = new Session.LastSession("/last/remote/dir", "/last/local/dir");
-        Server server = new Server("ftp.server.com", "user", "Tester", Server.DEFAULT_PORT);
+        Server server = new Server("ftp.server.com", "user", "Tester", Server.DEFAULT_FTP_PORT);
         FTPConnectionDetails connectionDetails = new FTPConnectionDetails(2, 100);
         Session session = new SessionTestable(TEST_ID, server, connectionDetails, lastSession);
         file.addSession(session);

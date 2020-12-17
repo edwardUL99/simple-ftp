@@ -92,6 +92,10 @@ public abstract class FilePanel extends VBox {
      */
     private Button maskButton;
     /**
+     * The button for opening a properties window
+     */
+    private Button propertiesButton;
+    /**
      * A button to take you to symbolic link destination. Should be the last button on the toolbar
      */
     private Button symLinkDestButton;
@@ -121,7 +125,7 @@ public abstract class FilePanel extends VBox {
         setDirectoryPane(directoryPane);
         initButtons();
 
-        toolBar.getChildren().addAll(new Label("Files: "), comboBox, delete, open, gotoButton, hideHiddenFiles, createButton, maskButton, symLinkDestButton);
+        toolBar.getChildren().addAll(new Label("Files: "), comboBox, delete, open, gotoButton, hideHiddenFiles, createButton, maskButton, propertiesButton, symLinkDestButton);
         setKeyBindings();
     }
 
@@ -181,6 +185,13 @@ public abstract class FilePanel extends VBox {
         maskButton.setMnemonicParsing(true);
         maskButton.setText("File _Mask");
         initMaskButton();
+
+        propertiesButton = new Button();
+        propertiesButton.setMnemonicParsing(true);
+        propertiesButton.setText("_Properties");
+        propertiesButton.setOnAction(e -> openPropertiesWindow());
+        propertiesButton.managedProperty().bind(propertiesButton.visibleProperty()); // if hidden, re-arrange toolbar. But for best effects, keep the button as the second last button so ToolBar doesn't keep chopping and changing
+        propertiesButton.setVisible(false);
 
         initSymLinkButton();
     }
@@ -295,6 +306,17 @@ public abstract class FilePanel extends VBox {
     }
 
     /**
+     * Opens the property window for the selected file in the ComboBox
+     */
+    private void openPropertiesWindow() {
+        LineEntry lineEntry = getLineEntryFromComboBox();
+
+        if (lineEntry != null) {
+            directoryPane.openPropertiesWindow(lineEntry);
+        }
+    }
+
+    /**
      * Goes to the target of a symbolic link
      */
     private void goToSymLinkTarget() {
@@ -322,8 +344,10 @@ public abstract class FilePanel extends VBox {
         if (lineEntry != null) {
             CommonFile file = lineEntry.getFile();
             symLinkDestButton.setVisible(file.isSymbolicLink());
+            propertiesButton.setVisible(true);
         } else {
             symLinkDestButton.setVisible(false);
+            propertiesButton.setVisible(false);
         }
     }
 
@@ -440,10 +464,10 @@ public abstract class FilePanel extends VBox {
 
     /**
      * Sets the combobox to represent this line entry if the name of it is inside the combo box in the first place
-     * @param lineEntry the line entry to display
+     * @param lineEntry the line entry to display, if null, it basically unsets any currently set file
      */
     public void setComboBoxSelection(final LineEntry lineEntry) {
-        String name = lineEntry.getFile().getName();
+        String name = lineEntry != null ? lineEntry.getFile().getName():"";
 
         if (comboBox.getItems().contains(name)) {
             comboBox.setValue(name);

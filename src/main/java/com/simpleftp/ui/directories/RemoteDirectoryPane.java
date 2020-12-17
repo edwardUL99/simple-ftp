@@ -27,7 +27,6 @@ import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.files.LineEntry;
-import org.apache.commons.net.ftp.FTPFile;
 
 import java.util.ArrayList;
 import java.util.Collections;

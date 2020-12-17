@@ -31,9 +31,6 @@ import com.simpleftp.ui.UI;
 import com.simpleftp.ui.exceptions.UIException;
 import com.simpleftp.ui.views.PanelView;
 import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.concurrent.Service;
-import javafx.concurrent.Task;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
@@ -49,10 +46,12 @@ public class FTPClient extends Application {
     private void initialiseConnection() throws FTPException {
         try {
             String password = PasswordEncryption.encrypt(System.getenv("SIMPLEFTP_TEST_PASSWORD"));
-            System.setProperty("ftp-server", "pi");
-            System.setProperty("ftp-user", "pi");
+            System.setProperty("ftp-server", System.getenv("SIMPLEFTP_TEST_SERVER"));
+            System.setProperty("ftp-user",  System.getenv("SIMPLEFTP_TEST_USER"));
             System.setProperty("ftp-pass", password);
-            System.setProperty("ftp-port", "" + Server.DEFAULT_PORT);
+            String port = System.getenv("SIMPLEFTP_TEST_PORT");
+            port = port == null ? "" + Server.DEFAULT_FTP_PORT :port;
+            System.setProperty("ftp-port", port);
 
             FTPConnection connection = FTPConnection.createSharedConnection(FTPSystem.getPropertiesDefinedDetails(), new FTPConnectionDetails(100, 200));
             connection.connect();
@@ -81,43 +80,6 @@ public class FTPClient extends Application {
         if (connection.isConnected() && connection.isLoggedIn())
             panelView.createRemotePanel(new RemoteFile("/"));
 
-        Service<Void> service = new Service<>() {
-            @Override
-            protected Task<Void> createTask() {
-                return new Task<>() {
-                    @Override
-                    protected Void call() throws Exception {
-                        Thread.sleep(10000);
-                        Platform.runLater(panelView::emptyRemotePanel);
-                        return null;
-                    }
-                };
-            }
-        };
-        service.start();
-
-        service = new Service<>() {
-            @Override
-            protected Task<Void> createTask() {
-                return new Task<>() {
-                    @Override
-                    protected Void call() throws Exception {
-                        Thread.sleep(20000);
-                        Platform.runLater(() -> {
-                            try {
-                                panelView.createRemotePanel(new RemoteFile(panelView.getRemotePanel().getDirectoryPane().getCurrentWorkingDirectory()));
-                            } catch (FileSystemException | UIException ex) {
-                            }
-                        });
-
-                        return null;
-                    }
-                };
-            }
-        };
-
-        service.start();
-
         Scene scene = new Scene(panelView, UI.PANEL_VIEW_WIDTH, UI.PANEL_VIEW_HEIGHT);
         primaryStage.setScene(scene);
         primaryStage.setTitle("Test");
@@ -125,7 +87,7 @@ public class FTPClient extends Application {
         primaryStage.show();
         primaryStage.setOnCloseRequest(e -> {
             UI.doQuit();
-            e.consume(); // consume so you don't close
+            e.consume(); // consume so you don't close if user doesn't want to quit
         });
     }
 }

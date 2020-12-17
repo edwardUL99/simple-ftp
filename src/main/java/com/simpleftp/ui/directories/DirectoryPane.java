@@ -37,6 +37,7 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
@@ -147,6 +148,16 @@ public abstract class DirectoryPane extends VBox {
         initFileSystem();
         initDirectory(directory);
         initEmptyFolderPane();
+        setOnMouseClicked(this::unselectFile);
+    }
+
+    /**
+     * Unselects the presently selected file if the DirectoryPane is clicked and the target is not a LineEntry
+     * @param mouseEvent the mouse event to query
+     */
+    private void unselectFile(MouseEvent mouseEvent) {
+        if (mouseEvent.getTarget() instanceof VBox)
+            filePanel.setComboBoxSelection(null); // unselect the currently selected file
     }
 
     /**
@@ -496,20 +507,26 @@ public abstract class DirectoryPane extends VBox {
                                                              // as a consequence, this method also checks if the file is open or not. If this call is to be changed to this.delete(), add the isOpen check and confirmation dialog to that method
                                                             // this.delete doesn't remove the file from the combo box anyway (although refresh would get that)
         MenuItem menuItem4 = new MenuItem("Properties");
-        menuItem4.setOnAction(e -> {
-            try {
-                new FilePropertyWindow(lineEntry).show();
-            } catch (FileSystemException ex) {
-                if (FTPSystem.isDebugEnabled())
-                    ex.printStackTrace();
-                UI.doError("Properties Window Failure", "Failed to open the properties window for file " + lineEntry.getFilePath() + ".");
-            }
-        });
+        menuItem4.setOnAction(e -> openPropertiesWindow(lineEntry));
         contextMenu.getItems().addAll(menuItem1, menuItem2, menuItem3, menuItem4);
 
         lineEntry.setOnContextMenuRequested(e -> contextMenu.show(lineEntry, e.getScreenX(), e.getScreenY()));
 
         return lineEntry;
+    }
+
+    /**
+     * Opens a property window for the specified line entry
+     * @param lineEntry the line entry to open the properties window for
+     */
+    public void openPropertiesWindow(LineEntry lineEntry) {
+        try {
+            new FilePropertyWindow(lineEntry).show();
+        } catch (FileSystemException ex) {
+            if (FTPSystem.isDebugEnabled())
+                ex.printStackTrace();
+            UI.doError("Properties Window Failure", "Failed to open the properties window for file " + lineEntry.getFilePath() + ".");
+        }
     }
 
     /**

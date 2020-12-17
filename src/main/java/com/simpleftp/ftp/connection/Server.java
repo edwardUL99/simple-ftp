@@ -37,7 +37,7 @@ public class Server {
     /**
      * The default port for FTP
      */
-    public static final int DEFAULT_PORT = 21;
+    public static final int DEFAULT_FTP_PORT = 21;
 
     /**
      * Initialises every field to empty string or 0
