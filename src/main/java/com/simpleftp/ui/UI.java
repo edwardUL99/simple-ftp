@@ -246,7 +246,7 @@ public final class UI {
             } else if (ex instanceof UIException) {
                 handleUIException(ex);
             } else {
-                doError("Unknown Error occurred", "AN unknown error has occurred with the message: " + ex.getMessage());
+                doException(ex, ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled()); // we have an unknown exception, show an exception dialog
             }
         }
     }

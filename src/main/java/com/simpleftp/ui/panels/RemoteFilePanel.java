@@ -216,7 +216,7 @@ final class RemoteFilePanel extends FilePanel {
      * Takes the given path and attempts to go the the location in the remote file system identified by it
      * @param path the path to go to
      */
-    private void goToRemotePath(String path) throws FileSystemException {
+    private void goToRemotePath(String path) {
         FileSystem fileSystem = directoryPane.getFileSystem();
         FTPConnection connection = fileSystem.getFTPConnection();
 
@@ -227,10 +227,11 @@ final class RemoteFilePanel extends FilePanel {
             if (symbolicPath == null)
                 return; // this is a rare case. UI.resolveSymbolicPath would have shown an error dialog
 
-            RemoteFile remoteFile = RemoteFile.getSymbolicFile(connection, symbolicPath); // attempt to initialise with the file just in case it is symbolic and is listed as doesn't exist due to limitations with symbolic links on the server
+            // if the path is not /, we do not know it is a symbolic link or not, so use the workaround just in case
+            RemoteFile remoteFile = !symbolicPath.equals("/") ? RemoteFile.getSymbolicFile(connection, symbolicPath):new RemoteFile(symbolicPath);
 
             if (remoteFile == null) {
-                UI.doError("Path does not exist", "The path: " + remoteFile.getFilePath() + " does not exist or it is not a directory");
+                UI.doError("Path does not exist", "The path: " + symbolicPath + " does not exist or it is not a directory");
                 return;
             }
 
@@ -239,7 +240,7 @@ final class RemoteFilePanel extends FilePanel {
 
             boolean canonicalize = remoteFile.isADirectory() && (!remoteFile.isSymbolicLink() || !UI.doSymbolicPathDialog(symbolicPath)); // only open dialog if it a directory, opening a file doesn't matter
             if (canonicalize) {
-                path = UI.resolveRemotePath(path, currWorkingDir, true, fileSystem.getFTPConnection());
+                path = UI.resolveRemotePath(symbolicPath, currWorkingDir, true, fileSystem.getFTPConnection());
                 remoteFile = new RemoteFile(path, connection, null);
             }
 
@@ -251,6 +252,7 @@ final class RemoteFilePanel extends FilePanel {
                 if (lineEntry != null)
                     directoryPane.openLineEntry(lineEntry);
             } else {
+                // this should be caught above, but it is here defensively
                 UI.doError("Path does not exist", "The path: " + remoteFile.getFilePath() + " does not exist or it is not a directory");
             }
         } catch (Exception ex) {
@@ -273,16 +275,7 @@ final class RemoteFilePanel extends FilePanel {
     void gotoPath() {
         String path = UI.doPathDialog();
 
-        if (path != null) {
-            try {
-                goToRemotePath(path);
-            } catch (FileSystemException ex) {
-                Throwable cause = ex.getCause();
-                if (cause instanceof FTPException)
-                    checkFTPConnectionException((FTPException)cause);
-
-                UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-            }
-        }
+        if (path != null)
+            goToRemotePath(path);
     }
 }
