@@ -22,7 +22,6 @@ import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
-import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ftp.exceptions.FTPNotConnectedException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
@@ -210,7 +209,6 @@ public abstract class FileEditorWindow extends VBox implements Window {
 
                 return true;
             } catch (Exception ex) {
-                checkExceptionForFTP(ex);
                 ex.printStackTrace();
                 UI.doError("File not saved", "An error occurred saving the file: " + ex.getMessage());
             }
@@ -309,21 +307,6 @@ public abstract class FileEditorWindow extends VBox implements Window {
     }
 
     /**
-     * Checks if the exception is either a FileSystemException, (if so checks the cause) or checks if it is a FTPException and calls creatingPane#checkFTPConnectionException
-     * @param ex the exception to check
-     */
-    private void checkExceptionForFTP(Exception ex) {
-        if (ex instanceof FileSystemException) {
-            Throwable cause = ex.getCause();
-
-            if (cause instanceof FTPException)
-                creatingPane.checkFTPConnectionException((FTPException)cause);
-        } else if (ex instanceof FTPException) {
-            creatingPane.checkFTPConnectionException((FTPException)ex);
-        }
-    }
-
-    /**
      * Manages the exception that could be thrown when closing the window
      * @param ex the exception to handle
      * @return true if you should still exit false if not
@@ -363,7 +346,6 @@ public abstract class FileEditorWindow extends VBox implements Window {
                     e.consume();
             });
         } catch (Exception ex) {
-            checkExceptionForFTP(ex);
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
     }

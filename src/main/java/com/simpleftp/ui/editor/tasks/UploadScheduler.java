@@ -43,7 +43,7 @@ public class UploadScheduler {
      * This class is supposed to be used only statically without instances.
      * Prevent instantiation
      */
-    private UploadScheduler() {};
+    private UploadScheduler() {}
 
     static {
         initScheduler();

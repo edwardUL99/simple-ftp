@@ -123,14 +123,11 @@ public final class Sessions {
         currentSession = null;
         initialised = false;
     }
-    // TODO maybe refactor this method to make it smaller
-    /**
-     * Initialises the Sessions class for saving of sessions.
-     * @param deleteExisting set this to true to delete any existing session file and start with a new session file. This could be useful if you are getting an exception trying to initialise when a file already exists
-     */
-    public static void initialise(boolean deleteExisting) {
-        initialiseVariables();
 
+    /**
+     * Intiialises the session file path
+     */
+    private static void initialiseSessionFilePath() {
         String sessionFileDirectory = System.getProperty("user.home") + PATH_SEPARATOR + ".simple-ftp";
         LocalFile file = new LocalFile(sessionFileDirectory);
 
@@ -145,8 +142,15 @@ public final class Sessions {
         }
 
         sessionFilePath = sessionFileDirectory + PATH_SEPARATOR + "sessions.xml";
+    }
 
-        file = new LocalFile(sessionFilePath);
+    /**
+     * Initialises the session file and the savers and loaders for it.
+     * This is the final initialisation method and this sets the value for the flag initialised as that flag surrounds the fact that session file is initialised and so are the session saver and loader
+     * @param deleteExisting true to delete the existing session file if it failed to load
+     */
+    private static void initialiseSessionFile(boolean deleteExisting) {
+        LocalFile file = new LocalFile(sessionFilePath);
 
         if (file.isDirectory()) {
             throw new SessionInitialisationException("The session file " + sessionFilePath + " already exists as a directory");
@@ -181,6 +185,16 @@ public final class Sessions {
         }
 
         initialised = true;
+    }
+
+    /**
+     * Initialises the Sessions class for saving of sessions.
+     * @param deleteExisting set this to true to delete any existing session file and start with a new session file. This could be useful if you are getting an exception trying to initialise when a file already exists
+     */
+    public static void initialise(boolean deleteExisting) {
+        initialiseVariables();
+        initialiseSessionFilePath();
+        initialiseSessionFile(deleteExisting);
     }
 
     /**

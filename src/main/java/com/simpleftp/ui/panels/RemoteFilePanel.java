@@ -146,7 +146,6 @@ final class RemoteFilePanel extends FilePanel {
                return true;
             }
         } catch (FTPException ex) {
-            checkFTPConnectionException(ex);
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         } catch (IOException ex) {
             UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
@@ -169,13 +168,6 @@ final class RemoteFilePanel extends FilePanel {
                     directoryPane.openLineEntry(LineEntry.newInstance(new RemoteFile(resolvedPath), directoryPane));
             }
         } catch (FTPException | FileSystemException ex) {
-            if (ex instanceof FileSystemException) {
-                Throwable cause = ex.getCause();
-                if (cause instanceof FTPException)
-                    checkFTPConnectionException((FTPException) cause);
-            } else {
-                checkFTPConnectionException((FTPException)ex);
-            }
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
     }
@@ -199,7 +191,6 @@ final class RemoteFilePanel extends FilePanel {
                 }
             }
         } catch (FTPException ex) {
-            checkFTPConnectionException(ex);
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
     }
@@ -256,14 +247,6 @@ final class RemoteFilePanel extends FilePanel {
                 UI.doError("Path does not exist", "The path: " + remoteFile.getFilePath() + " does not exist or it is not a directory");
             }
         } catch (Exception ex) {
-            if (ex instanceof FTPException) {
-                checkFTPConnectionException((FTPException)ex);
-            } else if (ex instanceof FileSystemException) {
-                Throwable cause = ex.getCause();
-                if (cause instanceof FTPException)
-                    checkFTPConnectionException((FTPException)cause);
-            }
-
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
     }

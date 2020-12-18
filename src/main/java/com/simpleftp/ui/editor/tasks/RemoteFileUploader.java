@@ -119,10 +119,6 @@ final class RemoteFileUploader extends FileUploader {
         try {
             if (uploadingConnection.remotePathExists(filePath, false)) { // should always be a file
                 String backupPath = getBackupPath(filePath);
-                /*if (uploadingConnection.remotePathExists(backupPath)) { TODO decide to keep this code or remove it. some servers mighn't allow an overwrite so maybe append .1~, if that exists .2~, and so on. Maybe the getBackupPath should do this and be made abstract too as implementations may vary for local and remote. All these files then should be cleaned after successful save.
-                    if (!uploadingConnection.removeFile(backupPath)) // TODO with that code you shouldn't have to do this check if the backup exists and shouldn't have to remove. That should be done in getBackupPath. do more testing
-                        return null; // return null as we haven't removed our backup. // the back
-                }*/
 
                 if (uploadingConnection.renameFile(filePath, backupPath)) {
                     return backupPath;

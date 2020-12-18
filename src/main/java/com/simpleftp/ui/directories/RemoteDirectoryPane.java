@@ -70,7 +70,6 @@ final class RemoteDirectoryPane extends DirectoryPane {
                     UI.doError("Error changing directory", "Current directory may not have been changed successfully. FTP Reply: " + connection.getReplyString());
                 }
             } catch (FTPException ex) {
-                checkFTPConnectionException(ex);
                 UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
             }
         }
@@ -105,13 +104,6 @@ final class RemoteDirectoryPane extends DirectoryPane {
                     }
                 }
             } catch (FTPException | FileSystemException ex) {
-                if (ex instanceof FileSystemException) {
-                    Throwable cause = ex.getCause();
-                    if (cause instanceof FTPException)
-                        checkFTPConnectionException((FTPException)cause);
-                } else {
-                    checkFTPConnectionException((FTPException)ex);
-                }
                 UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
             }
         }
@@ -169,10 +161,6 @@ final class RemoteDirectoryPane extends DirectoryPane {
                 }
             }
         } catch (FileSystemException ex) {
-            Throwable cause = ex.getCause();
-
-            if (cause instanceof FTPException)
-                checkFTPConnectionException((FTPException)cause);
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
             lineEntries.clear();
         }
@@ -258,11 +246,6 @@ final class RemoteDirectoryPane extends DirectoryPane {
             try {
                 changeToRemoteParent();
             } catch (FileSystemException ex) {
-                Throwable cause = ex.getCause();
-
-                if (cause instanceof FTPException)
-                    checkFTPConnectionException((FTPException)cause);
-
                 UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
             }
         }

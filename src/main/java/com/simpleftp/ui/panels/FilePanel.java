@@ -18,11 +18,8 @@
 package com.simpleftp.ui.panels;
 
 import com.simpleftp.filesystem.LocalFile;
-import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.interfaces.CommonFile;
-import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
-import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.files.LineEntry;
@@ -325,12 +322,6 @@ public abstract class FilePanel extends VBox {
             try {
                 directoryPane.openSymbolicLink(lineEntry.getFile());
             } catch (Exception ex) {
-                if (ex instanceof FileSystemException) {
-                    Throwable cause = ex.getCause();
-                    if (cause instanceof FTPException) {
-                        checkFTPConnectionException((FTPException)cause);
-                    }
-                }
                 UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
             }
         }
@@ -514,14 +505,5 @@ public abstract class FilePanel extends VBox {
             return new LocalFilePanel(directoryPane);
         else
             return new RemoteFilePanel(directoryPane);
-    }
-
-    /**
-     * Checks the given FTPException and determines if the exception is a FTPConnectionFailedException, if so, it "kills" the remote panel in the panel view
-     * @param exception the exception to check
-     */
-    void checkFTPConnectionException(FTPException exception) {
-        if (exception instanceof FTPConnectionFailedException && panelView != null)
-            panelView.emptyRemotePanel();
     }
 }

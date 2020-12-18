@@ -26,8 +26,6 @@ import org.apache.commons.net.ftp.*;
 import org.apache.commons.net.io.CopyStreamException;
 
 import java.io.*;
-import java.util.Timer;
-import java.util.TimerTask;
 
 /**
  * This is the main class used for provided a client connection to a FTP server
@@ -81,8 +79,6 @@ public class FTPConnection {
     @Getter
     protected boolean loggedIn;
 
-    private NoopDriver noopDriver;
-
     /**
      * Constructs a default object
      */
@@ -93,17 +89,17 @@ public class FTPConnection {
         ftpLookup = new FTPLookup(ftpClient);
         server = new Server();
         ftpConnectionDetails = new FTPConnectionDetails();
-        setNoopDriver();
         setTimeoutTime();
     }
 
     /**
      * Constructs a connection object with the specified parameters.
      * Can be used if you want to specify a different FTPClient rather than a default one
-     * @param ftpClient the client object to back this connection
-     * @param server the object storing the server parameters
+     *
+     * @param ftpClient            the client object to back this connection
+     * @param server               the object storing the server parameters
      * @param ftpConnectionDetails the object storing the connection details
-     * @param ftpLookup the ftp lookup object to use
+     * @param ftpLookup            the ftp lookup object to use
      */
     protected FTPConnection(FTPClient ftpClient, Server server, FTPConnectionDetails ftpConnectionDetails, FTPLookup ftpLookup) {
         this.ftpClient = ftpClient;
@@ -111,15 +107,15 @@ public class FTPConnection {
             ftpClient.setListHiddenFiles(true); // show hidden files and leave it up to UI to hide them or not
         this.ftpLookup = ftpLookup;
         this.server = server;
-        this.ftpConnectionDetails = ftpConnectionDetails == null ? new FTPConnectionDetails():ftpConnectionDetails;
-        setNoopDriver();
+        this.ftpConnectionDetails = ftpConnectionDetails == null ? new FTPConnectionDetails() : ftpConnectionDetails;
         setTimeoutTime();
     }
 
     /**
      * Constructs a FTPConnection object with the specified ftp server details and connection details.
      * This is the constructor that guarantees the most correct functionality
-     * @param server the object storing the server parameters
+     *
+     * @param server               the object storing the server parameters
      * @param ftpConnectionDetails the object storing the connection details
      */
     protected FTPConnection(Server server, FTPConnectionDetails ftpConnectionDetails) {
@@ -128,8 +124,7 @@ public class FTPConnection {
             ftpClient.setListHiddenFiles(true); // show hidden files and leave it up to UI to hide them or not
         this.ftpLookup = new FTPLookup(ftpClient);
         this.server = server;
-        this.ftpConnectionDetails = ftpConnectionDetails == null ? new FTPConnectionDetails():ftpConnectionDetails;
-        setNoopDriver();
+        this.ftpConnectionDetails = ftpConnectionDetails == null ? new FTPConnectionDetails() : ftpConnectionDetails;
         setTimeoutTime();
     }
 
@@ -138,17 +133,9 @@ public class FTPConnection {
             log.debug(message, options);
     }
 
-    private void setNoopDriver() {
-        int timeout = ftpConnectionDetails.getTimeout();
-        if (timeout == 0) {
-            timeout = 300;
-        }
-
-        noopDriver = new NoopDriver(timeout);
-    }
-
     /**
      * Connects to the FTP Server using the details specified in this object's Server field
+     *
      * @return true if it was successful and false only and only if isConnected() returns true, other errors throw exceptions
      * @throws FTPConnectionFailedException if an error occurs during connection
      */
@@ -198,9 +185,10 @@ public class FTPConnection {
 
     /**
      * Disconnects from the server, making this FTPConnection inactive
-     * @throws FTPNotConnectedException if this operation is attempted when not connected to the server
+     *
+     * @throws FTPNotConnectedException     if this operation is attempted when not connected to the server
      * @throws FTPConnectionFailedException if the connection failed during disconnect
-     * @throws FTPCommandFailedException if an error occurs when disconnecting from the server
+     * @throws FTPCommandFailedException    if an error occurs when disconnecting from the server
      */
     public void disconnect() throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
@@ -227,10 +215,11 @@ public class FTPConnection {
 
     /**
      * Attempts to login to the Server using the details found in the passed in Server object
+     *
      * @return login success
-     * @throws FTPNotConnectedException if login is called when isConnected() returns false
+     * @throws FTPNotConnectedException     if login is called when isConnected() returns false
      * @throws FTPConnectionFailedException if a connection failure occurs during the login process
-     * @throws FTPCommandFailedException if an error occurs sending the login command or retrieving a reply
+     * @throws FTPCommandFailedException    if an error occurs sending the login command or retrieving a reply
      */
     public boolean login() throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         String user = server.getUser();
@@ -247,8 +236,6 @@ public class FTPConnection {
                 loggedIn = ftpClient.login(user, server.getPassword());
                 if (loggedIn) {
                     logDebug("User {} logged into the ftp Server", user);
-                    if (!FTPSystem.isSystemTesting())
-                        noopDriver.start();
                     return true;
                 }
             }
@@ -271,13 +258,14 @@ public class FTPConnection {
      *     <li>To login, in the first place, you must be connected to the server. If not, you will never be logged in and this will be a no-op</li>
      *     <li>If disconnect() is called and a user is logged in, the user is logged out. Thus, this method won't do anything, as it will again be a no-op</li>
      * </ul>
-     *
+     * <p>
      * However, the method is still configured to throw the exception JUST IN CASE, it ever happens that somehow, a login was processed without being connected, then you have to catch that
      * This is a bug if that exception is thrown though, so if it's ever come across, you need to raise a bug report. Included to support defensive programming however
+     *
      * @return true if logout was a success, false otherwise. If the user is not logged in, this is a no-op
-     * @throws FTPNotConnectedException if isConnected() returns false but isLoggedIn() returns true (should never happen, if it does, a bug should be raised). If this is thrown, the method sets loggedIn to false, to try and resume with a normal state
+     * @throws FTPNotConnectedException     if isConnected() returns false but isLoggedIn() returns true (should never happen, if it does, a bug should be raised). If this is thrown, the method sets loggedIn to false, to try and resume with a normal state
      * @throws FTPConnectionFailedException if a connection error occurs when trying to logout
-     * @throws FTPCommandFailedException if an error occurred sending the logout command or receiving a response from the server
+     * @throws FTPCommandFailedException    if an error occurred sending the logout command or receiving a response from the server
      */
     public boolean logout() throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (loggedIn) {
@@ -290,8 +278,6 @@ public class FTPConnection {
             try {
                 loggedIn = !ftpClient.logout();
                 logDebug("Status of login to the server is {}", loggedIn);
-                if (!FTPSystem.isSystemTesting())
-                    noopDriver.stop();
                 return !loggedIn;
             } catch (FTPConnectionClosedException cl) {
                 log.error("The FTPConnection unexpectedly closed while logging out");
@@ -310,11 +296,12 @@ public class FTPConnection {
     /**
      * Attempts to change the current directory to the directory specified by the path
      * login() must be called before running this method or else it will (intuitively as you cannot change a directory if not logged in) always return false
+     *
      * @param path the path of the working directory to switch to
      * @return true if the operation was successful, false if no
-     * @throws FTPNotConnectedException if this is attempted when isConnected() returns false
+     * @throws FTPNotConnectedException     if this is attempted when isConnected() returns false
      * @throws FTPConnectionFailedException if a connection error occurs
-     * @throws FTPCommandFailedException if an error occurs sending the command or receiving a reply from the server
+     * @throws FTPCommandFailedException    if an error occurs sending the command or receiving a reply from the server
      */
     public boolean changeWorkingDirectory(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
@@ -344,10 +331,11 @@ public class FTPConnection {
     /**
      * Attempts to change to the parent directory of the current working directory.
      * Expected to check if the path exists before calling this method
+     *
      * @return true if the operation was successful
-     * @throws FTPNotConnectedException if this is attempted when isConnected() returns false
+     * @throws FTPNotConnectedException     if this is attempted when isConnected() returns false
      * @throws FTPConnectionFailedException if a connection error occurs
-     * @throws FTPCommandFailedException if an error occurs executing the command
+     * @throws FTPCommandFailedException    if an error occurs executing the command
      */
     public boolean changeToParentDirectory() throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
@@ -376,10 +364,11 @@ public class FTPConnection {
 
     /**
      * Retrieves the current working directory on the FTP server
+     *
      * @return current ftp working directory, null if cannot be determined
-     * @throws FTPNotConnectedException if isConnected() returns false when this is called
+     * @throws FTPNotConnectedException     if isConnected() returns false when this is called
      * @throws FTPConnectionFailedException if a connection error occurs on execution of this command
-     * @throws FTPCommandFailedException if an error occurs sending the command
+     * @throws FTPCommandFailedException    if an error occurs sending the command
      */
     public String getWorkingDirectory() throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
@@ -409,11 +398,12 @@ public class FTPConnection {
 
     /**
      * Attempts to retrieve the FTP File specified at the path. If path is not found, it returns null
+     *
      * @param path the path to the file
      * @return a FTPFile object representing the specified path, or null if not found
-     * @throws FTPNotConnectedException if isConnected() returns false when this is connected
+     * @throws FTPNotConnectedException     if isConnected() returns false when this is connected
      * @throws FTPConnectionFailedException if a connection error occurs
-     * @throws FTPCommandFailedException if an error occurs executing the command
+     * @throws FTPCommandFailedException    if an error occurs executing the command
      */
     public FTPFile getFTPFile(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
@@ -442,11 +432,12 @@ public class FTPConnection {
 
     /**
      * Lists files in the given path
+     *
      * @param path the path to list
      * @return the array of retrieved files, null if path doesn't exist or not logged in
-     * @throws FTPNotConnectedException if isConnected() returns false
+     * @throws FTPNotConnectedException     if isConnected() returns false
      * @throws FTPConnectionFailedException if connection fails
-     * @throws FTPCommandFailedException if an error occurs sending or receiving the command
+     * @throws FTPCommandFailedException    if an error occurs sending or receiving the command
      */
     public FTPFile[] listFiles(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
@@ -474,6 +465,7 @@ public class FTPConnection {
 
     /**
      * Writes the specified file locally to remote path
+     *
      * @param file the local file
      * @param path the path to store the file on
      * @return the FTPFile representing the uploaded file
@@ -502,18 +494,19 @@ public class FTPConnection {
 
     /**
      * Saves the file specified to the path on the server and returns the FTPFile representation of it
+     *
      * @param file the standard Java IO file to add to the server
      * @param path the path to store the file in (directory)
      * @return FTPFile representation of uploaded file, null if the file provided doesn't exist/is a directory, path doesn't exist or user not logged in
-     * @throws FTPNotConnectedException if this is called when isConnected() returns false
+     * @throws FTPNotConnectedException     if this is called when isConnected() returns false
      * @throws FTPConnectionFailedException if an error occurred
-     * @throws FTPError if an error occurs when uploading files
-     * @throws FTPCommandFailedException if the upload failed
+     * @throws FTPError                     if an error occurs when uploading files
+     * @throws FTPCommandFailedException    if the upload failed
      */
     public FTPFile uploadFile(LocalFile file, String path) throws FTPNotConnectedException,
-                                                             FTPConnectionFailedException,
-                                                             FTPError,
-                                                             FTPCommandFailedException {
+            FTPConnectionFailedException,
+            FTPError,
+            FTPCommandFailedException {
         String name = file.getName();
 
         if (!connected) {
@@ -523,7 +516,7 @@ public class FTPConnection {
         }
 
         try {
-            if (!file.exists() || file.isDirectory() || !ftpLookup.remotePathExists(path, true)  || !loggedIn) {
+            if (!file.exists() || file.isDirectory() || !ftpLookup.remotePathExists(path, true) || !loggedIn) {
                 logDebug("Local file does not exist or is a directory, or user is not logged in or the remote path doesn't exist, aborting upload");
                 return null;
             }
@@ -547,23 +540,25 @@ public class FTPConnection {
 
     /**
      * Overloaded version of uploadFile(java.io.File, java.lang.String) but converts localPath to file and calls the other method
+     *
      * @param localPath the path to the local file
-     * @param path the path on the server to store the file in
+     * @param path      the path on the server to store the file in
      * @return the FTPFile representation of the uploaded file, will be null if local file doesn't exist/is a directory, path doesn't exist or user isn't logged in
-     * @throws FTPNotConnectedException if called when isConnected() returns false
+     * @throws FTPNotConnectedException     if called when isConnected() returns false
      * @throws FTPConnectionFailedException if a connection error occurs
-     * @throws FTPError if an error occurs in transferring the file
-     * @throws FTPCommandFailedException if an error occurs executing the command
+     * @throws FTPError                     if an error occurs in transferring the file
+     * @throws FTPCommandFailedException    if an error occurs executing the command
      */
     public FTPFile uploadFile(String localPath, String path) throws FTPNotConnectedException,
-                                                                    FTPConnectionFailedException,
-                                                                    FTPError,
-                                                                    FTPCommandFailedException {
+            FTPConnectionFailedException,
+            FTPError,
+            FTPCommandFailedException {
         return uploadFile(new LocalFile(localPath), path);
     }
 
     /**
      * Gets the basename of the file, i.e. name without path
+     *
      * @param file the file to get the name of
      * @return the name of the file
      * @throws FTPError if an unknown error occurs
@@ -588,8 +583,9 @@ public class FTPConnection {
 
     /**
      * Adds the name of the file to the local directory path
+     *
      * @param localPath the name of the directory the file will be stored in locally
-     * @param file the file to store locally
+     * @param file      the file to store locally
      * @return the path to the local file that will be created
      * @throws FTPError if an error occurs
      */
@@ -602,8 +598,9 @@ public class FTPConnection {
 
     /**
      * Writes a remote file to the local path specified
+     *
      * @param remotePath the path of the remote file to write locally
-     * @param localPath the path where to store the file locally
+     * @param localPath  the path where to store the file locally
      * @return the file representing the written local file
      * @throws IOException if any FTP or IO exception occurs
      */
@@ -626,18 +623,19 @@ public class FTPConnection {
      * It then returns a java IO File object representing the downloaded file
      * You need to be logged in, otherwise this will always return null
      * If either remotePath or localPath does not exist, this method will return null
+     *
      * @param remotePath the path to the remote file
-     * @param localPath the path to where to save the remote file to locally (without filename, i.e. directory)
+     * @param localPath  the path to where to save the remote file to locally (without filename, i.e. directory)
      * @return a File object representing the local file that was downloaded
-     * @throws FTPNotConnectedException if isConnected() returns false when called
+     * @throws FTPNotConnectedException     if isConnected() returns false when called
      * @throws FTPConnectionFailedException if a connection error occurs
-     * @throws FTPError if an error occurs determining if remotePath exists
-     * @throws FTPCommandFailedException if an error occurs sending the command
+     * @throws FTPError                     if an error occurs determining if remotePath exists
+     * @throws FTPCommandFailedException    if an error occurs sending the command
      */
     public LocalFile downloadFile(String remotePath, String localPath) throws FTPNotConnectedException,
-                                                                    FTPConnectionFailedException,
-                                                                    FTPError,
-                                                                    FTPCommandFailedException {
+            FTPConnectionFailedException,
+            FTPError,
+            FTPCommandFailedException {
         if (!connected) {
             log.error("FTPConnection is not connected to the server, cannot get file from remote path {}", remotePath);
             loggedIn = false;
@@ -680,12 +678,13 @@ public class FTPConnection {
     /**
      * Attempts to make a directory specified by the path provided. Expected in the format path/to/[directory-name] or as an abstract path
      * If the path already exists as either a directory or a file, this returns false.
+     *
      * @param path the path for the new directory
      * @return true if successful, false if not
-     * @throws FTPNotConnectedException if called when isConnected() returns false
+     * @throws FTPNotConnectedException     if called when isConnected() returns false
      * @throws FTPConnectionFailedException if a connection error occurs
-     * @throws FTPCommandFailedException if an error occurs sending the command or receiving a reply
-     * @throws FTPError if a general ftp error occurs
+     * @throws FTPCommandFailedException    if an error occurs sending the command or receiving a reply
+     * @throws FTPError                     if a general ftp error occurs
      */
     public boolean makeDirectory(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException, FTPError {
         if (!connected) {
@@ -719,12 +718,13 @@ public class FTPConnection {
 
     /**
      * Renames the file specified by from to the name specified by to
+     *
      * @param from the old path/name (abstract)
-     * @param to the new path/name (abstract)
+     * @param to   the new path/name (abstract)
      * @return true if successful, false if not
-     * @throws FTPNotConnectedException if isConnected() returns false when this is called
+     * @throws FTPNotConnectedException     if isConnected() returns false when this is called
      * @throws FTPConnectionFailedException if a connection error occurs
-     * @throws FTPCommandFailedException if an error occurs sending or receiving a reply from the server
+     * @throws FTPCommandFailedException    if an error occurs sending or receiving a reply from the server
      */
     public boolean renameFile(String from, String to) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
@@ -753,11 +753,12 @@ public class FTPConnection {
 
     /**
      * Attempts to remove the file specified by the path from the FTP server
+     *
      * @param filePath the path to the file on the server
      * @return true if the operation was a success
-     * @throws FTPNotConnectedException if isConnected() returns false when this operation is called
+     * @throws FTPNotConnectedException     if isConnected() returns false when this operation is called
      * @throws FTPConnectionFailedException if a connection error occurs
-     * @throws FTPCommandFailedException if an error occurs executing the command
+     * @throws FTPCommandFailedException    if an error occurs executing the command
      */
     public boolean removeFile(String filePath) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
@@ -788,11 +789,12 @@ public class FTPConnection {
 
     /**
      * Attempts to remove a directory if it is empty
+     *
      * @param path the path to the empty directory
      * @return true if successful, false if not
-     * @throws FTPNotConnectedException if isConnected() returns false when this is called
+     * @throws FTPNotConnectedException     if isConnected() returns false when this is called
      * @throws FTPConnectionFailedException if a connection error occurs when removing the directory
-     * @throws FTPCommandFailedException if an error occurs sending the command or receiving a reply
+     * @throws FTPCommandFailedException    if an error occurs sending the command or receiving a reply
      */
     public boolean removeDirectory(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
@@ -821,18 +823,19 @@ public class FTPConnection {
 
     /**
      * Checks if the specified remote path exists and returns the outcome
+     *
      * @param remotePath the remote path to check
-     * @param dir true if this path is a directory
+     * @param dir        true if this path is a directory
      * @return true if path exists, false otherwise
-     * @throws FTPNotConnectedException if this is called when isConnected() returns true
+     * @throws FTPNotConnectedException     if this is called when isConnected() returns true
      * @throws FTPConnectionFailedException if a connection error occurs
-     * @throws FTPError if the existence of the remote path cannot be determined
-     * @throws FTPCommandFailedException if an error occurs sending the command
+     * @throws FTPError                     if the existence of the remote path cannot be determined
+     * @throws FTPCommandFailedException    if an error occurs sending the command
      */
     public boolean remotePathExists(String remotePath, boolean dir) throws FTPNotConnectedException,
-                                                                           FTPConnectionFailedException,
-                                                                           FTPError,
-                                                                           FTPCommandFailedException {
+            FTPConnectionFailedException,
+            FTPError,
+            FTPCommandFailedException {
         if (!connected) {
             log.error("FTPConnection not connected to the server, cannot check if path {} exists", remotePath);
             loggedIn = false;
@@ -860,26 +863,28 @@ public class FTPConnection {
 
     /**
      * Checks for general existence of a file and not specifically as a directory or file
+     *
      * @param remotePath the path to check
      * @return true if the path exists
-     * @throws FTPNotConnectedException if this is called when isConnected returns false
+     * @throws FTPNotConnectedException     if this is called when isConnected returns false
      * @throws FTPConnectionFailedException if a connection error occurs
-     * @throws FTPError if a general error occurs
-     * @throws FTPCommandFailedException if an error occurs sending or receiving the command
+     * @throws FTPError                     if a general error occurs
+     * @throws FTPCommandFailedException    if an error occurs sending or receiving the command
      */
     public boolean remotePathExists(String remotePath) throws FTPNotConnectedException,
-                                                              FTPConnectionFailedException,
-                                                              FTPError,
-                                                              FTPCommandFailedException {
+            FTPConnectionFailedException,
+            FTPError,
+            FTPCommandFailedException {
         return remotePathExists(remotePath, true) || remotePathExists(remotePath, false);
     }
 
     /**
      * Retrieves the status of the FTP server this connection is connected to
+     *
      * @return the status of the FTP server this connection is connected to
-     * @throws FTPNotConnectedException if isConnected() returns false
+     * @throws FTPNotConnectedException     if isConnected() returns false
      * @throws FTPConnectionFailedException if a connection error occurs
-     * @throws FTPCommandFailedException if an error occurs sending the command
+     * @throws FTPCommandFailedException    if an error occurs sending the command
      */
     public String getStatus() throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
@@ -908,11 +913,12 @@ public class FTPConnection {
 
     /**
      * Retrieves the file status of the file specified by the path
+     *
      * @param filePath the path of the file to query the status of
      * @return status for the specified file
-     * @throws FTPNotConnectedException if isConnected() returns false
+     * @throws FTPNotConnectedException     if isConnected() returns false
      * @throws FTPConnectionFailedException if a connection error occurred during retrieval of file status
-     * @throws FTPCommandFailedException if an error occurred retrieving the status
+     * @throws FTPCommandFailedException    if an error occurred retrieving the status
      */
     public String getFileStatus(String filePath) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
@@ -941,11 +947,12 @@ public class FTPConnection {
 
     /**
      * Gets the size of the file specified by the path
+     *
      * @param path the path to the file
      * @return the size of the file specified by the path on the server
-     * @throws FTPNotConnectedException if isConnected() returns false
+     * @throws FTPNotConnectedException     if isConnected() returns false
      * @throws FTPConnectionFailedException if a connection error occurs retrieving the file size
-     * @throws FTPCommandFailedException if an error occurs executing the command
+     * @throws FTPCommandFailedException    if an error occurs executing the command
      */
     public String getFileSize(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
@@ -974,11 +981,12 @@ public class FTPConnection {
 
     /**
      * Returns the modification time for the file specified by the path
+     *
      * @param path the path of the file
      * @return last modified time of the file specified by path in the format HH:mm:ss dd/MM/yyyy
-     * @throws FTPNotConnectedException if isConnected() returns false
+     * @throws FTPNotConnectedException     if isConnected() returns false
      * @throws FTPConnectionFailedException if a connection error occurred retrieving modification time
-     * @throws FTPCommandFailedException if an error occurs executing the command
+     * @throws FTPCommandFailedException    if an error occurs executing the command
      */
     public String getModificationTime(String path) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         if (!connected) {
@@ -1008,11 +1016,12 @@ public class FTPConnection {
     /**
      * Gets a FTPPathStats object for the specified path
      * This is the equivalent to calling getFileStatus(filePath), getFileSize(filePath) and getModificationTime(filePath) at once and return it as one object
+     *
      * @param filePath the path to query
      * @return a FTPPathStats object for the specified file path
-     * @throws FTPNotConnectedException if isConnected() returns false
+     * @throws FTPNotConnectedException     if isConnected() returns false
      * @throws FTPConnectionFailedException if a connection error occurs
-     * @throws FTPCommandFailedException if an error occurs
+     * @throws FTPCommandFailedException    if an error occurs
      */
     public FTPPathStats getPathStats(String filePath) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         try {
@@ -1042,11 +1051,11 @@ public class FTPConnection {
     /**
      * Sets the timeout time for this server
      * This timeout time is for all possible time outs with a FTP server
-     *
+     * <p>
      * If isConnected() returns true, this is a no-op, You should call disconnect() and then set the time out
-     *
+     * <p>
      * SHOULD BE CALLED BEFORE connect(), if not the server may time out too soon or have unexpected behaviour
-     *
+     * <p>
      * This client uses keep alive with this timeout
      * Uses the seconds from FTPConnectionDetails. This can be called if it was changed and to refresh it after disconnecting
      */
@@ -1060,7 +1069,6 @@ public class FTPConnection {
 
             int seconds = ftpConnectionDetails.getTimeout();
             logDebug("Setting FTPConnection timeout time to {} seconds", seconds);
-            noopDriver.timeoutSecs = seconds;
             int mSeconds = seconds * 1000;
 
             ftpClient.setDefaultTimeout(mSeconds);
@@ -1072,6 +1080,7 @@ public class FTPConnection {
 
     /**
      * Returns the reply code of the last command called. This is a code that is defined in the org.apache.commons.net.ftp.FTPReply class
+     *
      * @return reply code of the last command
      */
     public int getReplyCode() {
@@ -1081,6 +1090,7 @@ public class FTPConnection {
 
     /**
      * Returns the reply string from the previously executed command
+     *
      * @return reply string from last command
      */
     public String getReplyString() {
@@ -1090,6 +1100,7 @@ public class FTPConnection {
 
     /**
      * This should be used with a true value when editing text files to ensure line endings get transformed for the appropriate system.
+     *
      * @param textTransfer true to set text transfer(Ascii mode on), false if not
      * @return success of operation
      */
@@ -1121,7 +1132,21 @@ public class FTPConnection {
     }
 
     /**
+     * This can be used to send a noop to determine connection status
+     */
+    public void sendNoop() throws FTPException {
+        try {
+            ftpClient.sendNoOp();
+        } catch (IOException ex) {
+            log.debug("IOException occurred sending no-op");
+            resetConnectionValues();
+            throw new FTPCommandFailedException("Command no-op failed to be sent", ftpClient.getReplyString(), ex);
+        }
+    }
+
+    /**
      * Checks if the FTPSystem.getConnection matches the server details provided
+     *
      * @param ftpServer the server details
      * @return true if matches, false if not
      */
@@ -1138,7 +1163,8 @@ public class FTPConnection {
 
     /**
      * This method sets the connection, but doesn't connect or log in
-     * @param server the details to create the connection with
+     *
+     * @param server            the details to create the connection with
      * @param connectionDetails the connection details to use
      * @return the created connection
      */
@@ -1154,13 +1180,14 @@ public class FTPConnection {
      * This should be used for when you want a connection to be shared among filesystem classes as the default constructors for the files and file systems uses the FTPSystem connection
      * It checks if the system's connection already matches the server details and returns that, if not, it creates a new one.
      * It does not connect or log it in.
-     * @param serverDetails the server details to check/create a connection with
+     *
+     * @param serverDetails     the server details to check/create a connection with
      * @param connectionDetails the connection details without timeout time etc
      * @return the created connection. This connection should equal FTPSystem.getConnection
      */
     public static FTPConnection createSharedConnection(Server serverDetails, FTPConnectionDetails connectionDetails) {
-        serverDetails = serverDetails == null ? new Server():serverDetails;
-        connectionDetails = connectionDetails == null ? new FTPConnectionDetails():connectionDetails;
+        serverDetails = serverDetails == null ? new Server() : serverDetails;
+        connectionDetails = connectionDetails == null ? new FTPConnectionDetails() : connectionDetails;
         if (!connectionMatches(serverDetails)) {
             return createConnection(serverDetails, connectionDetails);
         } else {
@@ -1171,6 +1198,7 @@ public class FTPConnection {
     /**
      * Creates a temporary FTPConnection based on the provided connection.
      * This doesn't share it with other classes. Useful for creating a separate connection for upload/download but based on the same details
+     *
      * @param connectionBasis the connection to base the temporary connection on
      * @return the temporary connection
      */
@@ -1181,82 +1209,13 @@ public class FTPConnection {
     /**
      * This allows creating a temporary FTPConnection not shared with other classes from the provided details.
      * This could be useful for creating an uploading/downloading connection as another temporary user
-     * @param server the Server object containing the login details
+     *
+     * @param server               the Server object containing the login details
      * @param ftpConnectionDetails the details for timeout etc.
      * @return the temporary connection
      */
     public static FTPConnection createTemporaryConnection(Server server, FTPConnectionDetails ftpConnectionDetails) {
         return new FTPConnection(server, ftpConnectionDetails);
-    }
-
-    /**
-     * This class is responsible for periodically sending a no-op to the server
-     */
-    private class NoopDriver {
-        /**
-         * The time the timer should run at
-         */
-        private int timeoutSecs;
-        /**
-         * The timer driving the noops
-         */
-        private Timer timer;
-        /**
-         * True if the timer has been started
-         */
-        private boolean started = false;
-        /**
-         * A flag to detect if a thread has been cancelled and on the next run, it should stop
-         */
-        private boolean cancelled = false;
-
-        /**
-         * Creates the NoopDriver
-         * @param timeoutSecs the timeout seconds at which to send the noop
-         */
-        private NoopDriver(int timeoutSecs) {
-            this.timeoutSecs = timeoutSecs;
-            timer = new Timer();
-        }
-
-        /**
-         * Starts the timer
-         */
-        private void start() {
-            if (!started) {
-                if (cancelled) {
-                    timer = new Timer();
-                    cancelled = false;
-                }
-
-                started = true;
-                timer.scheduleAtFixedRate(new TimerTask() {
-                    @Override
-                    public void run() {
-                        if (cancelled) {
-                            cancel();
-                            timer.cancel();
-                            started = false;
-                        } else {
-                            try {
-                                logDebug("Sending no-op to server");
-                                ftpClient.noop();
-                            } catch (IOException ex) {
-                                log.warn("An exception occurred sending a no-op, server may time-out");
-                            }
-                        }
-                    }
-                }, 10000, timeoutSecs * 1000);
-            }
-        }
-
-        /**
-         * Sets the cancelled flag to true, so that on the next run, the timer should stop
-         */
-        private void stop() {
-            if (started)
-                cancelled = true;
-        }
     }
 }
 

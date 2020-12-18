@@ -476,11 +476,7 @@ public class RemoteFile implements CommonFile {
      */
     @Override
     public void refresh() throws FileSystemException {
-        try {
-            exists();
-        } catch (FileSystemException ex) {
-            throw new FileSystemException("Failed to refresh the file", ex);
-        }
+        exists();
     }
 
     /**

@@ -26,6 +26,7 @@ import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.exceptions.UIException;
 import com.simpleftp.ui.panels.FilePanel;
+import com.simpleftp.ui.views.tasks.ConnectionMonitor;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
@@ -53,6 +54,10 @@ public class PanelView extends VBox {
      * The boc containing the 2 panels
      */
     private final HBox panelsBox;
+    /**
+     * The monitor that will check the status of our connection
+     */
+    private final ConnectionMonitor connectionMonitor;
 
     /**
      * Constructs the view, initialising the LocalPanel.
@@ -67,6 +72,8 @@ public class PanelView extends VBox {
         panelsBox.setPrefWidth(UI.FILE_PANEL_WIDTH);
         setMaxHeight(UI.PANEL_VIEW_HEIGHT);
         setMaxWidth(UI.PANEL_VIEW_WIDTH);
+
+        connectionMonitor = new ConnectionMonitor(this, UI.CONNECTION_MONITOR_INTERVAL);
 
         initialiseLocalPanel(localDirectory);
         createEmptyRemotePanel();
@@ -208,6 +215,8 @@ public class PanelView extends VBox {
 
             if (localFileSystem.getFTPConnection() == null) // a connection was established, set the local file system with the same connection
                 localFileSystem.setFTPConnection(remotePanel.getDirectoryPane().getFileSystem().getFTPConnection());
+
+            connectionMonitor.start();
         } catch (FileSystemException ex) {
             throw new UIException("A FileSystemException was thrown initialising the Remote Panel of the PanelView", ex);
         }

@@ -24,14 +24,12 @@ import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.filesystem.interfaces.FileSystem;
-import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.tasks.FileStringDownloader;
 import com.simpleftp.ui.files.FilePropertyWindow;
 import com.simpleftp.ui.files.LineEntry;
 import com.simpleftp.ui.panels.FilePanel;
-import com.simpleftp.ui.views.PanelView;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -96,7 +94,7 @@ public abstract class DirectoryPane extends VBox {
      * The DirectoryPane that is holding this DirectoryPane
      */
     @Getter
-    private FilePanel filePanel;
+    protected FilePanel filePanel;
     /**
      * The ScrollPane that will provide scrolling functionality for the entriesBox
      */
@@ -624,7 +622,6 @@ public abstract class DirectoryPane extends VBox {
                         doubleClickFileEntry(lineEntry);
                         UI.openFile(filePath, local); // only open it if an error doesn't occur
                     } catch (FTPException ex) {
-                        checkFTPConnectionException(ex);
                         UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
                     }
                 } else if (file.isADirectory()) {
@@ -637,11 +634,6 @@ public abstract class DirectoryPane extends VBox {
                 UI.doInfo("File Open", "The file " + filePath + " is already opened");
             }
         } catch (FileSystemException ex) {
-            Throwable cause = ex.getCause();
-
-            if (cause instanceof FTPException)
-                checkFTPConnectionException((FTPException)cause);
-
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
     }
@@ -761,7 +753,7 @@ public abstract class DirectoryPane extends VBox {
      * Creates an instance of DirectoryPane based on the given symbolicLink
      * @param directory the symbolicLink to initialise with
      * @return the constructed file panel
-     * @throws NullPointerException if symbolicLink is null
+     * @throws NullPointerException if directory is null
      */
     public static DirectoryPane newInstance(CommonFile directory) throws FileSystemException {
         if (directory == null)
@@ -771,17 +763,5 @@ public abstract class DirectoryPane extends VBox {
             return new LocalDirectoryPane((LocalFile)directory);
         else
             return new RemoteDirectoryPane((RemoteFile)directory);
-    }
-
-    /**
-     * Checks the given FTPException and determines if the exception is a FTPConnectionFailedException, if so, it "kills" the remote panel in the panel view
-     * @param exception the exception to check
-     */
-    public void checkFTPConnectionException(FTPException exception) {
-        if (filePanel != null) {
-            PanelView panelView = filePanel.getPanelView();
-            if (exception instanceof FTPConnectionFailedException && panelView != null)
-                panelView.emptyRemotePanel();
-        }
     }
 }
