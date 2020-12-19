@@ -100,25 +100,6 @@ public class RemoteFile implements CommonFile {
     }
 
     /**
-     * Retrieves the symbolic FTPFile for the specified file path if it is symbolic from the listing.
-     * Apache FTPClient has a limitation where if you listFiles on a symbolic link file, it returns no file, so this method is a workaround
-     * @param connection the connection used to list the file
-     * @param filePath the file path
-     * @return the FTPFile found, null if not found
-     * @throws Exception if any exception from the connection is thrown
-     */
-    /*public static FTPFile getSymbolicFile(FTPConnection connection, String filePath) throws Exception {
-        RemoteFile remoteFile = new RemoteFile(filePath);
-        String parentPath = FileUtils.getParentPath(filePath, false);
-
-        FTPFile[] files = connection.listFiles(parentPath);
-        return Arrays.stream(files)
-                .filter(file -> file.getName().equals(remoteFile.getName()))
-                .findFirst()
-                .orElse(null);
-    }*/
-
-    /**
      * Retrieves a RemoteFile representing the symbolic file for the specified file path if it is symbolic from the listing, as listing the path itself produces an error.
      * Apache FTPClient has a limitation where if you listFiles on a symbolic link file, it returns no file, so this method is a workaround.
      * See the wiki Symbolic Links for the known issues.

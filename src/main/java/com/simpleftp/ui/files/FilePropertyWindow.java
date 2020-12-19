@@ -273,7 +273,7 @@ public class FilePropertyWindow extends VBox {
          * Sets the units of the size label
          * @param sizeUnit the size unit to change to
          */
-        private void setSizeUnits(SizeUnit sizeUnit) throws Exception {
+        private void setSizeUnits(SizeUnit sizeUnit) {
             String sizeStr;
 
             try {

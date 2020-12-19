@@ -65,9 +65,8 @@ public interface CommonFile {
     /**
      * Gets the permissions as a string in the unix form of ls command. For Non-posix systems, this just displays the permissions for the user running the program
      * @return the permissions as a string
-     * @throws FileSystemException if an error occurs
      */
-    String getPermissions() throws FileSystemException;
+    String getPermissions();
 
     /**
      * Gets the modification time as a formatted String in the form of Month Day Hour:Minute, e.g Jan 01 12:50

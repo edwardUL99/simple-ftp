@@ -1880,4 +1880,42 @@ class FTPConnectionUnitTest {
         assertEquals(connection.getServer(), server);
         assertEquals(connection.getFtpConnectionDetails(), connectionDetails);
     }
+
+    @Test
+    void shouldSendNoopSuccessfully() throws Exception {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        given(ftpClient.sendNoOp())
+                .willReturn(true);
+
+        boolean result = ftpConnection.sendNoop();
+
+        assertTrue(result);
+        verify(ftpClient).sendNoOp();
+    }
+
+    @Test
+    void noopShouldReturnFalseWhenLoggedOut() throws Exception {
+        ftpConnection.setConnected(true);
+
+        assertFalse(ftpConnection.sendNoop());
+        verify(ftpClient, times(0)).sendNoOp();
+    }
+
+    @Test
+    void noopShouldThrowIfNotConnected() {
+        assertThrows(FTPNotConnectedException.class, () -> ftpConnection.sendNoop());
+    }
+
+    @Test
+    void noopShouldThrowIfAnErrorOccurs() throws Exception {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+
+        doThrow(FTPConnectionClosedException.class).when(ftpClient).sendNoOp();
+
+        assertThrows(FTPCommandFailedException.class, () -> ftpConnection.sendNoop());
+        assertFalse(ftpConnection.isConnected());
+        assertFalse(ftpConnection.isLoggedIn());
+    }
 }

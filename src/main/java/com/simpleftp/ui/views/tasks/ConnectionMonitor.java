@@ -65,9 +65,9 @@ public class ConnectionMonitor extends Service<Void> {
             @Override
             protected Void call() throws Exception {
                 boolean monitor = true;
-                FTPConnection connection = FTPSystem.getConnection();
 
                 while (monitor) {
+                    FTPConnection connection = FTPSystem.getConnection();
                     try {
                         monitor = connection.isConnected() && connection.isLoggedIn(); // when we break out of this loop, we lost connection and will call the succeeded code
                         Thread.sleep(checkInterval);

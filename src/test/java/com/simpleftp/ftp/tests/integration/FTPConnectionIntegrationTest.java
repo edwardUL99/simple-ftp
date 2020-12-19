@@ -368,6 +368,13 @@ public class FTPConnectionIntegrationTest {
         assertTrue(ftpConnection.login());
         assertTrue(ftpConnection.setTextTransferMode(false));
     }
+
+    @Test
+    void shouldSendNoopSuccessfully() throws Exception {
+        assertTrue(ftpConnection.connect());
+        assertTrue(ftpConnection.login());
+        assertTrue(ftpConnection.sendNoop());
+    }
 }
 
 class MDTMHandler extends AbstractCommandHandler {
