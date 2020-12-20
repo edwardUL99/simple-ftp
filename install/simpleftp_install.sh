@@ -193,7 +193,7 @@ if [ "$succeeded" -ne "0" ]; then
   exit 6
 fi
 
-echo "Changed to $output_dir successfully"
+echo "Changed to $output_dir jar_listingfully"
 
 echo -e "\n\t[Download Artifacts]\n"
 
@@ -288,7 +288,7 @@ do
 done
 
 if [ "${#files[@]}" -eq "0" ]; then
-  echo "No pre-existing simple-ftp JARs found"
+  echo "No pre-existing simple-ftp JARs passencrypt_found"
 fi
 
 if [ -n "$jar_file" ]; then
@@ -324,6 +324,7 @@ if [ -n "$jar_file" ]; then
 
   add_command=""
   list_command=""
+  properties_extract_command=""
   zip_used="false"
 
   jar_command=$(command -v jar)
@@ -333,9 +334,11 @@ if [ -n "$jar_file" ]; then
   if [ -n "$jar_command" ]; then
     add_command="$jar_command -uf $jar_file password.encrypt"
     list_command="$jar_command -tf $jar_file | grep -x password.encrypt"
+    properties_extract_command="$jar_command -xf $jar_file $output_dir/simpleftp.properties"
   elif [ -n "$zip_command" ] && [ -n "$unzip_command" ]; then
     add_command="$zip_command -u $jar_file password.encrypt"
     list_command="$unzip_command -l $jar_file"
+    properties_extract_command="$unzip_command -p $jar_file simpleftp.properties > $output_dir/simpleftp.properties"
     zip_used="true"
   else
     echo "Missing commands required for installing JAR file. At a minimum, if you don't have a JDK, you need zip and unzip commands, exiting..."
@@ -352,16 +355,16 @@ if [ -n "$jar_file" ]; then
     exit 12
   fi
 
-  success=$($list_command)
-  found=""
+  jar_listing=$($list_command)
+  passEncrypt_found=""
 
   if [ "$zip_used" == "false" ]; then
-    found=$(echo "$success" | grep -x password.encrypt)
+    passEncrypt_found=$(echo "$jar_listing" | grep -x password.encrypt)
   else
-    found=$(echo "$success" | awk '{print $4}' | grep -x password.encrypt)
+    passEncrypt_found=$(echo "$jar_listing" | awk '{print $4}' | grep -x password.encrypt)
   fi
 
-  if [ -z "$found" ]; then
+  if [ -z "$passEncrypt_found" ]; then
     echo "password.encrypt file could not be found inside $jar_file, exiting..."
 
     unsuccessfulCleanUp $jar_file password.encrypt
@@ -377,15 +380,26 @@ if [ -n "$jar_file" ]; then
 
     echo -e "\n\t[Runtime properties setup]\n"
 
-    properties_set="false"
+    properties_path="$(pwd)/simpleftp.properties"
 
-    if [ -n "$debug_param" ]; then
-      properties_set="true"
-        echo "Setting the -Dsimpleftp.debug property"
+    if [ -f "$properties_path" ]; then
+      echo "A properties file already exists, backing up to $properties_path~"
+      cp "$properties_path" "$properties_path~"
     fi
 
-    if [ "$properties_set" == "false" ]; then
-      echo "No properties to set"
+    echo "Extracting simpleftp.properties from JAR to $output_dir"
+    $properties_extract_command
+    succeeded=$?
+
+    if [ "$succeeded" -ne "0" ]; then
+      echo "Failed to extract properties file, exiting..."
+      exit 16
+    fi
+
+    echo "Properties installed to $properties_path"
+
+    if [ -n "$debug_param" ]; then
+      echo "Setting the -Dsimpleftp.debug property"
     fi
 
     echo -e "\n\t[JavaFX Runtime Setup]\n"
@@ -410,11 +424,13 @@ if [ -n "$jar_file" ]; then
       echo "Using JavaFX Runtime specified by PATH_TO_FX"
     fi
 
-    export PATH_TO_FX="$javafx_install"
-
     if [ "$install_fx_runtime" == "true" ] || [ "$use_installed_sdk" == "true" ]; then
-      echo "Setting PATH_TO_FX to local installation temporarily"
-      export PATH_TO_FX="$(pwd)/javafx-sdk-$javafx_version/lib"
+      local_install="$(pwd)/javafx-sdk-$javafx_version/lib"
+      echo "Setting JavaFX installation path locally to $local_install"
+      export PATH_TO_FX="$local_install"
+    else
+      echo "Setting JavaFX installation path to $javafx_install"
+      export PATH_TO_FX="$javafx_install"
     fi
 
     echo -e "\n\t[Script Installation]\n"
@@ -422,7 +438,7 @@ if [ -n "$jar_file" ]; then
     run_script="$(pwd)/simple_ftp"
 
     echo "Creating simple_ftp run script"
-    echo -e "#! /usr/bin/bash\n\n# This run-script is generated automatically by the simpleftp_install.sh script\n\njava --module-path $PATH_TO_FX --add-modules=javafx.controls $debug_param -jar $jar_file" > "$run_script"
+    echo -e "#! /usr/bin/bash\n\n# This run-script is generated automatically by the simpleftp_install.sh script\n\njava --module-path $PATH_TO_FX --add-modules=javafx.controls $debug_param -Dsimpleftp.properties=$properties_path -jar $jar_file" > "$run_script"
     succeeded="$?"
 
     if [ "$succeeded" -ne "0" ]; then
