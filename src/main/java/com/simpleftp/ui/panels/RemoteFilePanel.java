@@ -214,7 +214,7 @@ final class RemoteFilePanel extends FilePanel {
         try {
             String currWorkingDir = directoryPane.getCurrentWorkingDirectory();
             path = !path.startsWith("/") ? FileUtils.addPwdToPath(currWorkingDir, path, "/"):path;
-            String symbolicPath = UI.resolveSymbolicPath(path, UI.PATH_SEPARATOR, null); // do symbolic path, first, in case it doesn't exist. Local file resolves .. for the not found dialog, this would do the same here
+            String symbolicPath = UI.resolveSymbolicPath(path, "/", null); // do symbolic path, first, in case it doesn't exist. Local file resolves .. for the not found dialog, this would do the same here
             if (symbolicPath == null)
                 return; // this is a rare case. UI.resolveSymbolicPath would have shown an error dialog
 

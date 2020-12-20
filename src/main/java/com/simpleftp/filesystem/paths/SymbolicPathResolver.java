@@ -105,7 +105,10 @@ public class SymbolicPathResolver implements PathResolver {
         }
 
         pathComponents.forEach(e -> path.append(e).append(pathSeparator));
-        path.deleteCharAt(path.length() - 1);
+        int pathLength = path.length();
+
+        if (pathLength > 1 && path.charAt(pathLength - 1) == pathSeparator.charAt(0))
+            path.deleteCharAt(path.length() - 1); // remove last path separator
 
         return path.toString();
     }
