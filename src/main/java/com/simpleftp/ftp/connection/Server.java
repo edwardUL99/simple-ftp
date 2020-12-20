@@ -18,14 +18,17 @@
 
 package com.simpleftp.ftp.connection;
 
+import com.simpleftp.ftp.FTPSystem;
 import lombok.*;
 
-//This will represent a FTP server
+/**
+ * This class encapsulates the details required for connecting to a server
+ */
 @AllArgsConstructor
 @With
 @Data
 @EqualsAndHashCode
-public class Server {
+public class Server implements Cloneable {
     @NonNull
     private String server;
     @NonNull
@@ -54,5 +57,18 @@ public class Server {
     @Override
     public String toString() {
         return "Server Host: " + server + ", User: " + user + ", Port: " + port;
+    }
+
+    /**
+     * Creates and returns a copy of this object
+     * @return cloned Server, null if clone fails
+     */
+    @Override
+    public Server clone() {
+        try {
+            return (Server) super.clone();
+        } catch (CloneNotSupportedException ex) {
+            return null;
+        }
     }
 }

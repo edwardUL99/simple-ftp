@@ -20,6 +20,7 @@ package com.simpleftp.ftp.connection;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.exceptions.FTPError;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.net.ftp.FTPClient;
@@ -39,9 +40,9 @@ import java.util.Arrays;
  * All exceptions here are expected to be caught by the FTPConnection class.
  * All IOExceptions are either FTPConnectionClosedExceptions or IOExceptions.
  * <p>
- * This class is thread-safe.
+ * This class is thread-safe. It is intended to be only used as a helper class for FTPConnection and thus, FTPLookup's constructor is protected
  */
-@RequiredArgsConstructor
+@RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 @Log4j2
 public class FTPLookup {
     /**

@@ -1215,18 +1215,23 @@ public class FTPConnection {
 
     /**
      * Creates a temporary FTPConnection based on the provided connection.
-     * This doesn't share it with other classes. Useful for creating a separate connection for upload/download but based on the same details
+     * This doesn't share it with other classes. Useful for creating a separate connection for upload/download but based on the same details.
+     *
+     * This method clones the connectionBasis' Server and FTPConnectionDetails objects
      *
      * @param connectionBasis the connection to base the temporary connection on
      * @return the temporary connection
      */
     public static FTPConnection createTemporaryConnection(FTPConnection connectionBasis) {
-        return new FTPConnection(connectionBasis.server, connectionBasis.ftpConnectionDetails);
+        return new FTPConnection(connectionBasis.server.clone(), connectionBasis.ftpConnectionDetails.clone());
     }
 
     /**
      * This allows creating a temporary FTPConnection not shared with other classes from the provided details.
-     * This could be useful for creating an uploading/downloading connection as another temporary user
+     * This could be useful for creating an uploading/downloading connection as another temporary user.
+     *
+     * This method leaves it up to the programmer to clone the Server and FTPConnectionDetails classses before passing them into this
+     * method.
      *
      * @param server               the Server object containing the login details
      * @param ftpConnectionDetails the details for timeout etc.

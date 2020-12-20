@@ -1697,7 +1697,6 @@ class FTPConnectionUnitTest {
         }
         assertFalse(ftpConnection.isConnected());
         assertFalse(ftpConnection.isLoggedIn());
-        ;
 
         reset(ftpClient);
         /*
@@ -1861,11 +1860,22 @@ class FTPConnectionUnitTest {
         FTPConnectionDetails connectionDetails = getTestConnectionDetails();
 
         FTPConnection connection = FTPConnection.createSharedConnection(server, connectionDetails);
-        assertEquals(connection, FTPSystem.getConnection());
         FTPConnection connection1 = FTPConnection.createTemporaryConnection(connection);
+        Server server1 = connection1.getServer();
+        FTPConnectionDetails connectionDetails1 = connection1.getFtpConnectionDetails();
+
+        assertEquals(connection, FTPSystem.getConnection());
         assertNotSame(connection, connection1);
-        assertEquals(server, connection1.getServer());
-        assertEquals(connectionDetails, connection1.getFtpConnectionDetails());
+        /*
+          Should be equal by equals() method
+         */
+        assertEquals(server, server1);
+        assertEquals(connectionDetails, connectionDetails1);
+        /*
+            Shouldn't be reference equal, i.e. the objects should be cloned, so should be different objects
+         */
+        assertNotSame(server, server1);
+        assertNotSame(connectionDetails, connectionDetails1);
     }
 
     @Test
@@ -1876,9 +1886,17 @@ class FTPConnectionUnitTest {
         FTPConnectionDetails connectionDetails = getTestConnectionDetails();
 
         FTPConnection connection = FTPConnection.createTemporaryConnection(server, connectionDetails);
+        Server server1 = connection.getServer();
+        FTPConnectionDetails connectionDetails1 = connection.getFtpConnectionDetails();
+
         assertNull(FTPSystem.getConnection());
-        assertEquals(connection.getServer(), server);
-        assertEquals(connection.getFtpConnectionDetails(), connectionDetails);
+        assertEquals(server, server1);
+        assertEquals(connectionDetails, connectionDetails1);
+        /*
+        Here they should be the same objects as this method doesn't clone them
+         */
+        assertSame(server, server1);
+        assertSame(connectionDetails, connectionDetails1);
     }
 
     @Test

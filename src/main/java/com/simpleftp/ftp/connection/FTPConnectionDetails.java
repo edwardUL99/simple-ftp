@@ -28,7 +28,7 @@ import lombok.*;
 @With
 @Data
 @EqualsAndHashCode
-public class FTPConnectionDetails {
+public class FTPConnectionDetails implements Cloneable {
     /**
      * The page size for listing files in the server
      */
@@ -39,4 +39,18 @@ public class FTPConnectionDetails {
      */
     private int timeout = 300;
     //this will be added to
+
+
+    /**
+     * Creates and returns a copy of this object
+     * @return a clone of this instance, null if clone fails
+     */
+    @Override
+    public FTPConnectionDetails clone() {
+        try {
+            return (FTPConnectionDetails)super.clone();
+        } catch (CloneNotSupportedException ex) {
+            return null;
+        }
+    }
 }
