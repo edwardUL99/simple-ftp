@@ -193,7 +193,7 @@ if [ "$succeeded" -ne "0" ]; then
   exit 6
 fi
 
-echo "Changed to $output_dir jar_listingfully"
+echo "Changed to $output_dir successfully"
 
 echo -e "\n\t[Download Artifacts]\n"
 
