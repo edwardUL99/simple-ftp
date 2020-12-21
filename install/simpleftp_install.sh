@@ -331,18 +331,20 @@ if [ -n "$jar_file" ]; then
   zip_command=$(command -v zip)
   unzip_command=$(command -v unzip)
 
+  properties_path="$(pwd)/simpleftp.properties"
+
   if [ -n "$jar_command" ]; then
     add_command="$jar_command -uf $jar_file password.encrypt"
     list_command="$jar_command -tf $jar_file | grep -x password.encrypt"
-    properties_extract_command="$jar_command -xf $jar_file $output_dir/simpleftp.properties"
+    properties_extract_command="$jar_command -xf $jar_file simpleftp.properties"
   elif [ -n "$zip_command" ] && [ -n "$unzip_command" ]; then
     add_command="$zip_command -u $jar_file password.encrypt"
     list_command="$unzip_command -l $jar_file"
-    properties_extract_command="$unzip_command -p $jar_file simpleftp.properties > $output_dir/simpleftp.properties"
+    properties_extract_command="$unzip_command $jar_file simpleftp.properties"
     zip_used="true"
   else
     echo "Missing commands required for installing JAR file. At a minimum, if you don't have a JDK, you need zip and unzip commands, exiting..."
-    unsuccessfulCleanUp $jar_file password.encrypt
+    unsuccessfulCleanUp "$jar_file" password.encrypt
     exit 11
   fi
 
@@ -379,8 +381,6 @@ if [ -n "$jar_file" ]; then
     echo "JAR file $jar_file successfully initialised with password.encrypt file"
 
     echo -e "\n\t[Runtime properties setup]\n"
-
-    properties_path="$(pwd)/simpleftp.properties"
 
     if [ -f "$properties_path" ]; then
       echo "A properties file already exists, backing up to $properties_path~"
