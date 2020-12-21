@@ -26,8 +26,10 @@ import com.simpleftp.ftp.exceptions.FTPNotConnectedException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.interfaces.Window;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
@@ -75,15 +77,19 @@ public abstract class FileEditorWindow extends VBox implements Window {
     /**
      * The button that will save the file
      */
-    private Button save;
+    private final Button save;
     /**
      * The button to reset the file back to original state
      */
-    private Button reset;
+    private final Button reset;
     /**
      * The HBox holding the buttons
      */
-    private HBox buttonBar;
+    private final HBox buttonBar;
+    /**
+     * A label displaying if the file is currently being saved
+     */
+    private final Label savingLabel;
     /**
      * The file contents that the reset button brings us back to
      */
@@ -118,7 +124,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
         save.setMnemonicParsing(true);
         save.setText("_Save");
         save.setOnAction(e -> save());
-        reset = new Button("Reset"); // don't have mnemonic for rest as it is destructive
+        reset = new Button("Reset"); // don't have mnemonic for reset as it is destructive
         reset.setTooltip(new Tooltip("This will discard all your changes"));
         reset.setOnAction(e -> reset());
         setOnKeyPressed(e -> {
@@ -129,7 +135,12 @@ public abstract class FileEditorWindow extends VBox implements Window {
                 close();
             }
         });
+
         initButtonBar();
+
+        savingLabel = new Label("Saving...");
+        savingLabel.setVisible(false);
+        buttonBar.getChildren().add(savingLabel);
     }
 
     /**
@@ -140,6 +151,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
         buttonBar.getChildren().addAll(save, reset);
         buttonBar.setBorder(new Border(new BorderStroke(Paint.valueOf("BLACK"), BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));
         buttonBar.setStyle(UI.GREY_BACKGROUND);
+        buttonBar.setAlignment(Pos.CENTER_LEFT);
     }
 
     /**
@@ -203,6 +215,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
                 String text = editor.getText();
                 FileSaver saver = new FileSaver(this);
                 String filePath = getSaveFilePath();
+                displaySavingLabel(true);
                 saver.saveFile(filePath, text);
                 setSave(true);
                 editor.requestFocus();
@@ -262,6 +275,14 @@ public abstract class FileEditorWindow extends VBox implements Window {
         }
 
         this.saved = saved;
+    }
+
+    /**
+     * Sets the visibility of the "Saving..." label based on the display value
+     * @param display the value for whether saving should be displayed or not
+     */
+    public void displaySavingLabel(boolean display) {
+        savingLabel.setVisible(display);
     }
 
     /**
