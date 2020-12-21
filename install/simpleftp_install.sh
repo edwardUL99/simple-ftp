@@ -38,7 +38,7 @@ function printHelp() {
   printf "\t-j\t<jar_file>\tAn existing JAR file that you want to install\n"
   printf "\t-o\t[output_dir]\tWhere to place the installed jar. Defaults to current working directory\n"
   printf "\t-h\t\t\tPrints this help info\n"
-  printf "\t-javafx\t[directory]\tThe directory where JavaFX runtime is installed, this is not needed if using JDK11 or less as java -jar <jar> will run without it\n\t\t\t\tIf you get errors running the simple_ftp.jdk11 script like module path requires module specification, try explicitly stating the path here\n\t\t\t\tOtherwise attempts to use PATH_TO_FX\n"
+  printf "\t-javafx\t[directory]\tThe directory where JavaFX runtime is installed\n\t\t\t\tIf you get errors running the simple_ftp script like module path requires module specification, try explicitly stating the path here\n\t\t\t\tOtherwise attempts to use PATH_TO_FX\n"
   printf "\t-d\tEnables debugging to be enabled in the running program\n"
   printf "\t-i\tInstalls the JavaFX runtime to the same directory as the JAR file and the script\n"
   printf "\nIf -v or -j are specified, only one of each other may be used. If neither are specified, this downloads the latest release\n"
