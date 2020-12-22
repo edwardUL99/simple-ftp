@@ -18,7 +18,6 @@
 package com.simpleftp.sessions;
 
 import com.simpleftp.filesystem.LocalFile;
-import com.simpleftp.ftp.connection.FTPConnectionDetails;
 import com.simpleftp.ftp.connection.Server;
 import com.simpleftp.sessions.exceptions.SessionInitialisationException;
 import com.simpleftp.sessions.exceptions.SessionLoadException;
@@ -291,17 +290,15 @@ public final class Sessions {
     }
 
     /**
-     * Attempts to find a session with the same server details and connection details (excluding password) and returns it if found.
+     * Attempts to find a session with the same server details (excluding password) and returns it if found.
      * If not found, it returns null.
      * @param serverDetails the server details to match
-     * @param connectionDetails the connection details to match
      * @return the found session, or null if not found
      */
-    private static Session matchSession(Server serverDetails, FTPConnectionDetails connectionDetails) {
+    private static Session matchSession(Server serverDetails) {
         return sessionFile.getSessions()
                 .stream()
-                .filter(session -> session.getServerDetails().equals(serverDetails)
-                        && session.getFtpConnectionDetails().equals(connectionDetails))
+                .filter(session -> session.getServerDetails().equals(serverDetails))
                 .findFirst()
                 .orElse(null);
     }
@@ -329,16 +326,15 @@ public final class Sessions {
     /**
      * Creates a new session with the provided details
      * @param serverDetails the server details to save the file with
-     * @param connectionDetails the connection details
      * @return the created session
      */
-    private static Session createNewSession(Server serverDetails, FTPConnectionDetails connectionDetails) {
+    private static Session createNewSession(Server serverDetails) {
         int sessionId = getLastId();
-        return new Session(++sessionId, serverDetails, connectionDetails, new Session.LastSession());
+        return new Session(++sessionId, serverDetails, new Session.LastSession());
     }
 
     /**
-     * This is the operation to get a Session object representing/matching the provided details.
+     * This is the operation to get a Session object for the given user on the provided server.
      * It attempts to match an existing session with this one based on server host, user, port and matching connection details. If a match is found,
      * it returns that session. If a match could not be found, the match is returned (with password updated to the one in server details if provided).
      *
@@ -348,15 +344,14 @@ public final class Sessions {
      * This method does not save the created session to file. You would need to call save on the returned session
      *
      * @param serverDetails to construct/match the session with
-     * @param connectionDetails the details to construct/match the session with
      * @return the constructed session if doesn't exist on file, or the matched session
      */
-    public static Session getSession(Server serverDetails, FTPConnectionDetails connectionDetails) {
+    public static Session getSession(Server serverDetails) {
         checkInitialisation();
-        Session session = matchSession(serverDetails, connectionDetails);
+        Session session = matchSession(serverDetails);
 
         if (session == null) {
-            session = createNewSession(serverDetails, connectionDetails);
+            session = createNewSession(serverDetails);
             sessionFile.addSession(session);
         } else {
             session.getServerDetails().setPassword(serverDetails.getPassword()); // set the password in case they are different

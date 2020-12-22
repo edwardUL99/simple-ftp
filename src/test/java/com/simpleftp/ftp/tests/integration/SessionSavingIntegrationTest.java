@@ -18,7 +18,6 @@
 package com.simpleftp.ftp.tests.integration;
 
 import com.simpleftp.ftp.FTPSystem;
-import com.simpleftp.ftp.connection.FTPConnectionDetails;
 import com.simpleftp.ftp.connection.Server;
 import com.simpleftp.ftp.tests.testable.SessionFileTestable;
 import com.simpleftp.ftp.tests.testable.SessionTestable;
@@ -83,9 +82,8 @@ public class SessionSavingIntegrationTest {
     private SessionFileTestable getFTPSessionFile() {
         SessionFileTestable file = new SessionFileTestable(FILE_NAME);
         Session.LastSession lastSession = new Session.LastSession("/last/remote/dir", "/last/local/dir");
-        Server server = new Server("ftp.server.com", "user", "Tester", Server.DEFAULT_FTP_PORT);
-        FTPConnectionDetails connectionDetails = new FTPConnectionDetails(2, 100);
-        Session session = new SessionTestable(TEST_ID, server, connectionDetails, lastSession);
+        Server server = new Server("ftp.server.com", "user", "Tester", Server.DEFAULT_FTP_PORT, 200);
+        Session session = new SessionTestable(TEST_ID, server, lastSession);
         file.addSession(session);
 
         return file;

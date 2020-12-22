@@ -17,7 +17,6 @@
 
 package com.simpleftp.sessions;
 
-import com.simpleftp.ftp.connection.FTPConnectionDetails;
 import com.simpleftp.ftp.connection.Server;
 import com.simpleftp.sessions.exceptions.SessionSaveException;
 import lombok.*;
@@ -40,7 +39,6 @@ public class Session {
      */
     private int sessionId;
     private Server serverDetails;
-    private FTPConnectionDetails ftpConnectionDetails;
     private LastSession lastSession;
     private LocalDateTime savedTime;
 
@@ -48,13 +46,11 @@ public class Session {
      * Constructs a Session with the provided parameters
      * @param sessionId the session id to use for this session
      * @param serverDetails the server details to use
-     * @param ftpConnectionDetails the connection details to use
      * @param lastSession the last session object
      */
-    protected Session(int sessionId, Server serverDetails, FTPConnectionDetails ftpConnectionDetails, LastSession lastSession) {
+    protected Session(int sessionId, Server serverDetails, LastSession lastSession) {
         this.sessionId = sessionId;
         this.serverDetails = serverDetails;
-        this.ftpConnectionDetails = ftpConnectionDetails;
         this.lastSession = lastSession;
         this.savedTime = LocalDateTime.now();
     }

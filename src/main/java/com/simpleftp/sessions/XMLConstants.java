@@ -55,17 +55,9 @@ public final class XMLConstants {
      */
     public static final String SERVER_PORT = "Port";
     /**
-     * The tag representing Connection Details
-     */
-    public static final String CONNECTION_DETAILS = "ConnectionDetails";
-    /**
-     * The tag representing Connection Details page size
-     */
-    public static final String CONNECTION_DETAILS_PAGE_SIZE = "PageSize";
-    /**
      * The tag representing Connection Details timeout
      */
-    public static final String CONNECTION_DETAILS_TIMEOUT = "Timeout";
+    public static final String SERVER_TIMEOUT = "Timeout";
     /**
      * The tag representing Last Session details
      */

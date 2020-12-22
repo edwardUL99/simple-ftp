@@ -26,7 +26,7 @@
     </xs:simpleType>
     <xs:simpleType name="HostNameText">
         <xs:restriction base="xs:string">
-            <xs:pattern value="[A-Za-z0-9][A-Za-z0-9.\-]{1,80}"/>
+            <xs:pattern value="[A-Za-z0-9][A-Za-z0-9.\-]{1,255}"/>
         </xs:restriction>
     </xs:simpleType>
     <xs:complexType name="ServerV01">
@@ -35,13 +35,7 @@
             <xs:element name="User" type="tns:Max80Text"/>
             <xs:element name="Password" type="tns:Max80Text"/>
             <xs:element name="Port" type="xs:integer"/>
-        </xs:sequence>
-    </xs:complexType>
-    <xs:complexType name="ConnectionDetailsV01">
-        <xs:sequence>
-            <xs:element name="PageSize" type="xs:integer"/>
             <xs:element name="Timeout" type="xs:integer"/>
-            <!-- will  be adding more here -->
         </xs:sequence>
     </xs:complexType>
     <xs:complexType name="LastSessionV01">
@@ -72,7 +66,6 @@
                 </xs:annotation>
             </xs:element>
             <xs:element name="Server" type="tns:ServerV01"/>
-            <xs:element name="ConnectionDetails" type="tns:ConnectionDetailsV01"/>
             <xs:element name="LastSession" type="tns:LastSessionV01"/>
             <!-- other elements will go here -->
         </xs:sequence>

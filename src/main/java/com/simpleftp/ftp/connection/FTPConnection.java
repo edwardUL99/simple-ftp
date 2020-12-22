@@ -47,7 +47,7 @@ import java.io.*;
  * This class is thread safe
  */
 @Log4j2
-@EqualsAndHashCode(of = {"server", "ftpConnectionDetails", "connected", "loggedIn"})
+@EqualsAndHashCode(of = {"server", "connected", "loggedIn"})
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class FTPConnection {
     /**
@@ -67,12 +67,6 @@ public class FTPConnection {
     @Setter
     private Server server;
     /**
-     * Provides details to this connection like page size etc
-     */
-    @Getter
-    @Setter
-    private FTPConnectionDetails ftpConnectionDetails;
-    /**
      * A boolean flag to indicate if this connection is actively connected or not
      */
     @Getter
@@ -89,7 +83,6 @@ public class FTPConnection {
             ftpClient.setListHiddenFiles(true); // show hidden files and leave it up to UI to hide them or not
         ftpLookup = new FTPLookup(ftpClient);
         server = new Server();
-        ftpConnectionDetails = new FTPConnectionDetails();
         setTimeoutTime();
     }
 
@@ -99,16 +92,14 @@ public class FTPConnection {
      *
      * @param ftpClient            the client object to back this connection
      * @param server               the object storing the server parameters
-     * @param ftpConnectionDetails the object storing the connection details
      * @param ftpLookup            the ftp lookup object to use
      */
-    protected FTPConnection(FTPClient ftpClient, Server server, FTPConnectionDetails ftpConnectionDetails, FTPLookup ftpLookup) {
+    protected FTPConnection(FTPClient ftpClient, Server server, FTPLookup ftpLookup) {
         this.ftpClient = ftpClient;
         if (!FTPSystem.isSystemTesting()) // dont enable as if under test, hidden files causes issues
             ftpClient.setListHiddenFiles(true); // show hidden files and leave it up to UI to hide them or not
         this.ftpLookup = ftpLookup;
         this.server = server;
-        this.ftpConnectionDetails = ftpConnectionDetails == null ? new FTPConnectionDetails() : ftpConnectionDetails;
         setTimeoutTime();
     }
 
@@ -117,15 +108,13 @@ public class FTPConnection {
      * This is the constructor that guarantees the most correct functionality
      *
      * @param server               the object storing the server parameters
-     * @param ftpConnectionDetails the object storing the connection details
      */
-    protected FTPConnection(Server server, FTPConnectionDetails ftpConnectionDetails) {
+    protected FTPConnection(Server server) {
         this.ftpClient = new FTPClient();
         if (!FTPSystem.isSystemTesting()) // dont enable as if under test, hidden files causes issues
             ftpClient.setListHiddenFiles(true); // show hidden files and leave it up to UI to hide them or not
         this.ftpLookup = new FTPLookup(ftpClient);
         this.server = server;
-        this.ftpConnectionDetails = ftpConnectionDetails == null ? new FTPConnectionDetails() : ftpConnectionDetails;
         setTimeoutTime();
     }
 
@@ -1066,11 +1055,7 @@ public class FTPConnection {
         if (!connected) {
             loggedIn = false;
 
-            if (ftpConnectionDetails == null) {
-                ftpConnectionDetails = new FTPConnectionDetails();
-            }
-
-            int seconds = ftpConnectionDetails.getTimeout();
+            int seconds = server.getTimeout();
             logDebug("Setting FTPConnection timeout time to {} seconds", seconds);
             int mSeconds = seconds * 1000;
 
@@ -1183,11 +1168,10 @@ public class FTPConnection {
      * This method sets the connection, but doesn't connect or log in
      *
      * @param server            the details to create the connection with
-     * @param connectionDetails the connection details to use
      * @return the created connection
      */
-    private static FTPConnection createConnection(Server server, FTPConnectionDetails connectionDetails) {
-        FTPConnection connection = new FTPConnection(server, connectionDetails);
+    private static FTPConnection createConnection(Server server) {
+        FTPConnection connection = new FTPConnection(server);
         ConnectionFTPSystem.setConnection(connection);
 
         return connection;
@@ -1200,14 +1184,12 @@ public class FTPConnection {
      * It does not connect or log it in.
      *
      * @param serverDetails     the server details to check/create a connection with
-     * @param connectionDetails the connection details without timeout time etc
      * @return the created connection. This connection should equal FTPSystem.getConnection
      */
-    public static FTPConnection createSharedConnection(Server serverDetails, FTPConnectionDetails connectionDetails) {
+    public static FTPConnection createSharedConnection(Server serverDetails) {
         serverDetails = serverDetails == null ? new Server() : serverDetails;
-        connectionDetails = connectionDetails == null ? new FTPConnectionDetails() : connectionDetails;
         if (!connectionMatches(serverDetails)) {
-            return createConnection(serverDetails, connectionDetails);
+            return createConnection(serverDetails);
         } else {
             return FTPSystem.getConnection();
         }
@@ -1223,7 +1205,7 @@ public class FTPConnection {
      * @return the temporary connection
      */
     public static FTPConnection createTemporaryConnection(FTPConnection connectionBasis) {
-        return new FTPConnection(connectionBasis.server.clone(), connectionBasis.ftpConnectionDetails.clone());
+        return new FTPConnection(connectionBasis.server.clone());
     }
 
     /**
@@ -1234,11 +1216,10 @@ public class FTPConnection {
      * method.
      *
      * @param server               the Server object containing the login details
-     * @param ftpConnectionDetails the details for timeout etc.
      * @return the temporary connection
      */
-    public static FTPConnection createTemporaryConnection(Server server, FTPConnectionDetails ftpConnectionDetails) {
-        return new FTPConnection(server, ftpConnectionDetails);
+    public static FTPConnection createTemporaryConnection(Server server) {
+        return new FTPConnection(server);
     }
 }
 

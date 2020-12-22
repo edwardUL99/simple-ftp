@@ -17,7 +17,6 @@
 
 package com.simpleftp.ftp.tests.testable;
 
-import com.simpleftp.ftp.connection.FTPConnectionDetails;
 import com.simpleftp.ftp.connection.Server;
 import com.simpleftp.sessions.Session;
 
@@ -36,10 +35,9 @@ public class SessionTestable extends Session {
      * All arg constructor
      * @param id the id to use
      * @param server the server details
-     * @param connectionDetails the connection details to use
      * @param lastSession the last sessions object
      */
-    public SessionTestable(int id, Server server, FTPConnectionDetails connectionDetails, LastSession lastSession) {
-        super(id, server, connectionDetails, lastSession);
+    public SessionTestable(int id, Server server, LastSession lastSession) {
+        super(id, server, lastSession);
     }
 }

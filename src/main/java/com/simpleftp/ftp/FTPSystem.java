@@ -18,12 +18,8 @@
 package com.simpleftp.ftp;
 
 import com.simpleftp.ftp.connection.FTPConnection;
-import com.simpleftp.ftp.connection.Server;
-import com.simpleftp.security.PasswordEncryption;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.util.Properties;
 
 /**
  * This class is to be used to keep track of many different static variables/objects used throughout the FTP program
@@ -70,21 +66,5 @@ public class FTPSystem {
      */
     public static boolean isDebugEnabled() {
         return debug;
-    }
-
-    /**
-     * Returns the Server object populated with the properties of ftp-server, ftp-user, ftp-pass (decrypted), ftp-port. If any of these aren't found, it returns null
-     * @return the Server defined by the system properties
-     */
-    public static Server getPropertiesDefinedDetails() {
-        Properties properties = System.getProperties();
-        if (!properties.containsKey("ftp-server") || !properties.containsKey("ftp-user") || !properties.containsKey("ftp-pass") || !properties.containsKey("ftp-port")) {
-            return null;
-        }
-
-        return new Server().withServer(properties.getProperty("ftp-server"))
-                .withUser(properties.getProperty("ftp-user"))
-                .withPassword(PasswordEncryption.decrypt(properties.getProperty("ftp-pass")))
-                .withPort(Integer.parseInt(properties.getProperty("ftp-port")));
     }
 }

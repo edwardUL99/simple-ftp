@@ -21,11 +21,9 @@ import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.ftp.FTPSystem;
-import com.simpleftp.ftp.connection.FTPConnectionDetails;
 import com.simpleftp.ftp.connection.Server;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
-import com.simpleftp.security.PasswordEncryption;
 import com.simpleftp.security.exceptions.PasswordEncryptionException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.exceptions.UIException;
@@ -45,15 +43,11 @@ public class FTPClient extends Application {
 
     private void initialiseConnection() throws FTPException {
         try {
-            String password = PasswordEncryption.encrypt(System.getenv("SIMPLEFTP_TEST_PASSWORD"));
-            System.setProperty("ftp-server", System.getenv("SIMPLEFTP_TEST_SERVER"));
-            System.setProperty("ftp-user",  System.getenv("SIMPLEFTP_TEST_USER"));
-            System.setProperty("ftp-pass", password);
-            String port = System.getenv("SIMPLEFTP_TEST_PORT");
-            port = port == null ? "" + Server.DEFAULT_FTP_PORT :port;
-            System.setProperty("ftp-port", port);
+            String password = System.getenv("SIMPLEFTP_TEST_PASSWORD");
+            String portString = System.getenv("SIMPLEFTP_TEST_PORT");
+            int port = portString == null ? Server.DEFAULT_FTP_PORT:Integer.parseInt(portString);
 
-            FTPConnection connection = FTPConnection.createSharedConnection(FTPSystem.getPropertiesDefinedDetails(), new FTPConnectionDetails(100, 200));
+            FTPConnection connection = FTPConnection.createSharedConnection(new Server(System.getenv("SIMPLEFTP_TEST_SERVER"), System.getenv("SIMPLEFTP_TEST_USER"), password, port, 200));
             connection.connect();
             connection.login();
         } catch (PasswordEncryptionException ex) {

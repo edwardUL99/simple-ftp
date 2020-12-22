@@ -29,17 +29,7 @@ import java.util.Arrays;
 
 /**
  * Represents a remote file system "linked" to a remote FTP Connection.
- * This connection is configured by setting system properties (programatically at runtime preferably).
- * Set the following properties
- *        ftp-user=<username>
- *        ftp-pass=<password>
- *        ftp-server=<host>
- *        ftp-port=<port>
  *
- * Password is expected to be result of PasswordEncryption.encrypt()
- *
- * These should be set before calling this class by using System.setProperty.
- * The connection should be created by calling FTPConnection.createSharedConnection where the server object represents the above properties (i.e. FTPSystem.getPropertiesDefinedDetails())
  * For a RemoteFileSystem, it must be connected and logged in before use
  */
 public class RemoteFileSystem implements FileSystem {

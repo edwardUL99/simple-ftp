@@ -28,6 +28,9 @@ import lombok.*;
 @Data
 @EqualsAndHashCode
 public class Server implements Cloneable {
+    /**
+     * Server can be 1-255 characters, can contain symbols but must not start with -
+     */
     @NonNull
     private String server;
     @NonNull
@@ -36,6 +39,7 @@ public class Server implements Cloneable {
     @EqualsAndHashCode.Exclude
     private String password;
     private int port;
+    private int timeout;
     /**
      * The default port for FTP
      */
@@ -47,6 +51,7 @@ public class Server implements Cloneable {
     public Server() {
         server = user = password = "";
         port = 0;
+        timeout = 300;
     }
 
     /**

@@ -19,7 +19,6 @@ package com.simpleftp.sessions;
 
 import static com.simpleftp.sessions.XMLConstants.*;
 import com.ctc.wstx.stax.WstxInputFactory;
-import com.simpleftp.ftp.connection.FTPConnectionDetails;
 import com.simpleftp.ftp.connection.Server;
 import com.simpleftp.security.PasswordEncryption;
 import com.simpleftp.sessions.exceptions.SessionLoadException;
@@ -117,6 +116,9 @@ public class SessionLoader {
                         case SERVER_PORT:
                             server.setPort(Integer.parseInt(text));
                             break;
+                        case SERVER_TIMEOUT:
+                            server.setTimeout(Integer.parseInt(text));
+                            break;
                     }
                 }
             } else if (event == XMLEvent.END_ELEMENT) {
@@ -127,39 +129,6 @@ public class SessionLoader {
         }
 
         return server;
-    }
-
-    /**
-     * Reads the connection details from the file
-     * @return the read in connection details object
-     * @throws XMLStreamException if read fails
-     */
-    private FTPConnectionDetails readConnectionDetails() throws XMLStreamException {
-        FTPConnectionDetails connectionDetails = new FTPConnectionDetails();
-        String tag = "";
-
-        while (reader.hasNext()) {
-            int event = reader.next();
-
-            if (event == XMLEvent.START_ELEMENT) {
-                tag = reader.getLocalName();
-            } else if (event == XMLEvent.CHARACTERS) {
-                String text = reader.getText();
-                if (isText(text)) {
-                    if (tag.equals(CONNECTION_DETAILS_PAGE_SIZE)) {
-                        connectionDetails.setPageSize(Integer.parseInt(text));
-                    } else if (tag.equals(CONNECTION_DETAILS_TIMEOUT)) {
-                        connectionDetails.setTimeout(Integer.parseInt(text));
-                    }
-                }
-            } else if (event == XMLEvent.END_ELEMENT) {
-                if (reader.getLocalName().equals(CONNECTION_DETAILS))
-                    break; // you've reached end of this tag
-                tag = "";
-            }
-        }
-
-        return connectionDetails;
     }
 
     /**
@@ -227,9 +196,6 @@ public class SessionLoader {
                         break;
                     case SERVER:
                         session.setServerDetails(readServer());
-                        break;
-                    case CONNECTION_DETAILS:
-                        session.setFtpConnectionDetails(readConnectionDetails());
                         break;
                     case LAST_SESSION:
                         session.setLastSession(readLastSession());

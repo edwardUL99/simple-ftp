@@ -74,7 +74,7 @@ public class FTPConnectionIntegrationTest {
 
         ftpServer.start();
 
-        Server serverDetails = new Server("localhost", TEST_SERVER_USER, TEST_SERVER_PASSWORD, TEST_SERVER_PORT);
+        Server serverDetails = new Server("localhost", TEST_SERVER_USER, TEST_SERVER_PASSWORD, TEST_SERVER_PORT, 200);
         FTPSystem.setSystemTesting(true);
         ftpConnection = new FTPConnectionTestable();
         ftpConnection.setServer(serverDetails);

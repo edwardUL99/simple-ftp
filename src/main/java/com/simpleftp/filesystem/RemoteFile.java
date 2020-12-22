@@ -36,15 +36,6 @@ import java.util.Optional;
 
 /**
  * Represents a remote file associated with the provided FTPConnection instance
- * Attempts to connect to a FTP server using details from system properties:
- *      ftp-user=<username>
- *      ftp-pass=<password>
- *      ftp-server=<host>
- *      ftp-port=<port>
- * Password is expected to be result of PasswordEncryption.encrypt()
- *
- * These should be set before calling this class by using System.setProperty
- * FTPConnection.createSharedConnection should be called with a Server object representing the above properties. It must also be connected and logged in before creating this class
  */
 @AllArgsConstructor
 public class RemoteFile implements CommonFile {

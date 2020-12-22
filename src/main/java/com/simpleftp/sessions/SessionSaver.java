@@ -18,7 +18,6 @@
 package com.simpleftp.sessions;
 
 import com.ctc.wstx.stax.WstxOutputFactory;
-import com.simpleftp.ftp.connection.FTPConnectionDetails;
 import com.simpleftp.ftp.connection.Server;
 import com.simpleftp.security.PasswordEncryption;
 import com.simpleftp.sessions.exceptions.SessionSaveException;
@@ -122,9 +121,9 @@ public class SessionSaver {
      * @throws XMLStreamException if write fails
      */
     private void writeServer(Server server) throws XMLStreamException {
-        String[] tags = {SERVER, SERVER_HOST, SERVER_USER, SERVER_PASSWORD, SERVER_PORT};
+        String[] tags = {SERVER, SERVER_HOST, SERVER_USER, SERVER_PASSWORD, SERVER_PORT, SERVER_TIMEOUT};
         String password = PasswordEncryption.encrypt(server.getPassword());
-        String[] values = {server.getServer(), server.getUser(), password, "" + server.getPort()};
+        String[] values = {server.getServer(), server.getUser(), password, "" + server.getPort(), "" + server.getTimeout()};
         int valuesIndex = 0;
 
         for (String s : tags) {
@@ -137,28 +136,6 @@ public class SessionSaver {
         }
 
         writer.writeEndElement(); //close off Server
-    }
-
-    /**
-     * Writes the connection details to the file
-     * @param ftpConnectionDetails connection details to write
-     * @throws XMLStreamException if write fails
-     */
-    private void writeConnectionDetails(FTPConnectionDetails ftpConnectionDetails) throws XMLStreamException {
-        String[] tags = {CONNECTION_DETAILS, CONNECTION_DETAILS_PAGE_SIZE, CONNECTION_DETAILS_TIMEOUT};
-        String[] values = {"" + ftpConnectionDetails.getPageSize(), "" + ftpConnectionDetails.getTimeout()};
-        int valuesIndex = 0;
-
-        for (String s : tags) {
-            writer.writeStartElement(s);
-
-            if (!s.equals(CONNECTION_DETAILS)) {
-                writer.writeCharacters(values[valuesIndex++]);
-                writer.writeEndElement();
-            }
-        }
-
-        writer.writeEndElement(); //close off ConnectionDetails
     }
 
     /**
@@ -207,7 +184,6 @@ public class SessionSaver {
     private void writeSession(Session session) throws XMLStreamException {
         writeStartSessionElement(session);
         writeServer(session.getServerDetails());
-        writeConnectionDetails(session.getFtpConnectionDetails());
         writeLastSession(session.getLastSession());
         writer.writeEndElement();
     }

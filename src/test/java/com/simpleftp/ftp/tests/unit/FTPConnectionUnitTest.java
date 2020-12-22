@@ -1630,7 +1630,7 @@ class FTPConnectionUnitTest {
         doCallRealMethod().when(ftpClient).getControlKeepAliveTimeout();
 
         ftpConnection.setTimeoutTime();
-        assertEquals(ftpConnection.getFtpConnectionDetails().getTimeout(), expectedSecs);
+        assertEquals(ftpConnection.getServer().getTimeout(), expectedSecs);
         assertEquals(ftpClient.getControlKeepAliveTimeout(), expectedSecs);
         verify(ftpClient, times(2)).setDefaultTimeout(expectedMillis); // once at construction, again on calling it
         verify(ftpClient, times(2)).setControlKeepAliveTimeout(expectedSecs);
@@ -1789,16 +1789,12 @@ class FTPConnectionUnitTest {
                 .withPort(TEST_SERVER_PORT);
     }
 
-    private FTPConnectionDetails getTestConnectionDetails() {
-        return new FTPConnectionDetails().withTimeout(TEST_TIMEOUT_SECS);
-    }
-
     @Test
     void shouldCreateSharedConnectionSuccessfully() {
         FTPSystem.reset();
         assertNull(FTPSystem.getConnection());
 
-        FTPConnection connection = FTPConnection.createSharedConnection(getTestFTPServer(), getTestConnectionDetails());
+        FTPConnection connection = FTPConnection.createSharedConnection(getTestFTPServer());
 
         assertEquals(connection, FTPSystem.getConnection());
     }
@@ -1809,13 +1805,10 @@ class FTPConnectionUnitTest {
         assertNull(FTPSystem.getConnection());
 
         Server testServer = getTestFTPServer();
-        FTPConnectionDetails connectionDetails = getTestConnectionDetails();
-
-        FTPConnection connection = FTPConnection.createSharedConnection(testServer, connectionDetails);
+        FTPConnection connection = FTPConnection.createSharedConnection(testServer);
+        FTPConnection connection1 = FTPConnection.createSharedConnection(testServer);
 
         assertEquals(connection, FTPSystem.getConnection());
-
-        FTPConnection connection1 = FTPConnection.createSharedConnection(testServer, connectionDetails);
         assertEquals(connection1, FTPSystem.getConnection()); // should be the same
         assertSame(connection, connection1); // should be exact same address
     }
@@ -1826,14 +1819,13 @@ class FTPConnectionUnitTest {
         assertNull(FTPSystem.getConnection());
 
         Server testServer = getTestFTPServer();
-        FTPConnectionDetails connectionDetails = getTestConnectionDetails();
 
-        FTPConnection connection = FTPConnection.createSharedConnection(testServer, connectionDetails);
+        FTPConnection connection = FTPConnection.createSharedConnection(testServer);
 
         assertEquals(connection, FTPSystem.getConnection());
 
-        Server newServer = new Server("newServer", "user", "pass", 22);
-        FTPConnection connection1 = FTPConnection.createSharedConnection(newServer, connectionDetails);
+        Server newServer = new Server("newServer", "user", "pass", 22, 200);
+        FTPConnection connection1 = FTPConnection.createSharedConnection(newServer);
 
         assertEquals(connection1, FTPSystem.getConnection());
         assertNotEquals(connection, FTPSystem.getConnection());
@@ -1845,11 +1837,10 @@ class FTPConnectionUnitTest {
         FTPSystem.reset();
         assertNull(FTPSystem.getConnection());
 
-        FTPConnection connection = FTPConnection.createSharedConnection(null, null);
+        FTPConnection connection = FTPConnection.createSharedConnection(null);
 
         assertEquals(connection, FTPSystem.getConnection());
         assertNotNull(connection.getServer());
-        assertNotNull(connection.getFtpConnectionDetails());
     }
 
     @Test
@@ -1857,12 +1848,10 @@ class FTPConnectionUnitTest {
         FTPSystem.reset();
 
         Server server = getTestFTPServer();
-        FTPConnectionDetails connectionDetails = getTestConnectionDetails();
 
-        FTPConnection connection = FTPConnection.createSharedConnection(server, connectionDetails);
+        FTPConnection connection = FTPConnection.createSharedConnection(server);
         FTPConnection connection1 = FTPConnection.createTemporaryConnection(connection);
         Server server1 = connection1.getServer();
-        FTPConnectionDetails connectionDetails1 = connection1.getFtpConnectionDetails();
 
         assertEquals(connection, FTPSystem.getConnection());
         assertNotSame(connection, connection1);
@@ -1870,12 +1859,10 @@ class FTPConnectionUnitTest {
           Should be equal by equals() method
          */
         assertEquals(server, server1);
-        assertEquals(connectionDetails, connectionDetails1);
         /*
             Shouldn't be reference equal, i.e. the objects should be cloned, so should be different objects
          */
         assertNotSame(server, server1);
-        assertNotSame(connectionDetails, connectionDetails1);
     }
 
     @Test
@@ -1883,20 +1870,16 @@ class FTPConnectionUnitTest {
         FTPSystem.reset();
 
         Server server = getTestFTPServer();
-        FTPConnectionDetails connectionDetails = getTestConnectionDetails();
 
-        FTPConnection connection = FTPConnection.createTemporaryConnection(server, connectionDetails);
+        FTPConnection connection = FTPConnection.createTemporaryConnection(server);
         Server server1 = connection.getServer();
-        FTPConnectionDetails connectionDetails1 = connection.getFtpConnectionDetails();
 
         assertNull(FTPSystem.getConnection());
         assertEquals(server, server1);
-        assertEquals(connectionDetails, connectionDetails1);
         /*
         Here they should be the same objects as this method doesn't clone them
          */
         assertSame(server, server1);
-        assertSame(connectionDetails, connectionDetails1);
     }
 
     @Test
