@@ -75,6 +75,7 @@ class FTPConnectionUnitTest {
     @BeforeEach
     void init() {
         closeable = MockitoAnnotations.openMocks(this);
+        server.setTimeout(300);
         FTPSystem.setSystemTesting(true);
     }
 
@@ -125,7 +126,6 @@ class FTPConnectionUnitTest {
         ftpConnection.setConnected(true);
         boolean result = ftpConnection.connect();
         assertFalse(result);
-        verifyNoInteractions(server);
     }
 
     @Test
@@ -1628,12 +1628,14 @@ class FTPConnectionUnitTest {
         doCallRealMethod().when(ftpClient).setControlKeepAliveTimeout(expectedSecs);
         doCallRealMethod().when(ftpClient).getDefaultTimeout();
         doCallRealMethod().when(ftpClient).getControlKeepAliveTimeout();
+        given(server.getTimeout())
+                .willReturn(300);
 
         ftpConnection.setTimeoutTime();
         assertEquals(ftpConnection.getServer().getTimeout(), expectedSecs);
         assertEquals(ftpClient.getControlKeepAliveTimeout(), expectedSecs);
-        verify(ftpClient, times(2)).setDefaultTimeout(expectedMillis); // once at construction, again on calling it
-        verify(ftpClient, times(2)).setControlKeepAliveTimeout(expectedSecs);
+        verify(ftpClient).setDefaultTimeout(expectedMillis);
+        verify(ftpClient).setControlKeepAliveTimeout(expectedSecs);
     }
 
     @Test
