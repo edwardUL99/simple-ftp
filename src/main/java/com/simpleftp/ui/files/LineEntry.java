@@ -86,14 +86,11 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     protected LineEntry(String imageURL, CommonFile file, DirectoryPane owningPanel) throws FileSystemException {
         setSpacing(30);
         setStyle(UI.WHITE_BACKGROUND);
-        HBox imageNamePanel = new HBox();
-        imageNamePanel.setSpacing(30);
         image = new ImageView();
         image.setFitWidth(UI.FILE_ICON_SIZE);
         image.setFitHeight(UI.FILE_ICON_SIZE);
         image.setImage(new Image(imageURL));
         this.file = file;
-        imageNamePanel.getChildren().add(image);
 
         this.owningPanel = owningPanel;
 
@@ -130,7 +127,6 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
             }
             owningPanel.requestFocus();
         });
-        setPickOnBounds(true);
     }
 
     /**
@@ -246,5 +242,13 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
 
             return null;
         }
+    }
+
+    /**
+     * Use this method to determine if the LineEntry is local, or false if remote
+     * @return true if this LineEntry represents a local file, false if remote
+     */
+    public boolean isLocal() {
+        return owningPanel.isLocal();
     }
 }

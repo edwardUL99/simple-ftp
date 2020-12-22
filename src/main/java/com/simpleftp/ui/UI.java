@@ -31,17 +31,22 @@ import com.simpleftp.properties.Properties;
 import com.simpleftp.ui.background.BackgroundTask;
 import com.simpleftp.ui.dialogs.*;
 import com.simpleftp.ui.exceptions.UIException;
+import com.simpleftp.ui.files.LineEntry;
 import com.simpleftp.ui.interfaces.ActionHandler;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.editor.FileEditorWindow;
 import com.simpleftp.ui.interfaces.WindowActionHandler;
 import com.simpleftp.ui.interfaces.Window;
 import javafx.application.Platform;
+import javafx.event.EventTarget;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseEvent;
 import javafx.util.Pair;
 import org.apache.tika.Tika;
 
@@ -683,5 +688,44 @@ public final class UI {
      */
     public static void forEachOpenedWindow(WindowActionHandler actionHandler) {
         getOpenedWindows().forEach(actionHandler::doAction);
+    }
+
+    /**
+     * This class is used to provide static methods in the context of the UI for the help of processing Mouse events
+     */
+    public static final class MouseEvents {
+        /**
+         * This method attempts to select the LineEntry that may have been picked by the MouseEvent target.
+         * If the target is a LineEntry, it is returned. If it is not, the parent of it is checked to be a LineEntry.
+         * <p>
+         * If it cannot be determined, or the mouse event does not match a line entry, this returns null.
+         * <p>
+         * This was required as when clicking a LineEntry, most of the time the target would be the text (or image view) inside it.
+         * We need a method to determine the LineEntry that those clicked objects are a part of. This method provides the logic to do so.
+         * MouseEvents do not give enough control in picking the specific element so we need logic to "select" the LineEntry based on the actual object
+         * that was clicked inside in the LineEntry (since a LineEntry extends HBox, it can be a parent). For example,
+         * if the permissions string (a text object) is selected, the parent of that Text object will be the LineEntry. This
+         * method selects the LineEntry from the mouse event.
+         * <p>
+         * Whenever working with mouse events and Line entries, you should always call this method on the mouse event to get the LineEntry clicked.
+         *
+         * @param mouseEvent the mouse event to process
+         * @return the LineEntry if found, null if not
+         */
+        public static LineEntry selectLineEntry(MouseEvent mouseEvent) {
+            EventTarget target = mouseEvent.getTarget();
+
+            if (target instanceof LineEntry) {
+                return (LineEntry)target;
+            } else {
+                Parent parent = ((Node)target).getParent();
+
+                if (parent instanceof LineEntry) {
+                    return (LineEntry)parent;
+                } else {
+                    return null;
+                }
+            }
+        }
     }
 }

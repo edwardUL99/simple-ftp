@@ -18,7 +18,6 @@
 
 package com.simpleftp.ftp.connection;
 
-import com.simpleftp.ftp.FTPSystem;
 import lombok.*;
 
 /**

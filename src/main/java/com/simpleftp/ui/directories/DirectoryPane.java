@@ -154,8 +154,9 @@ public abstract class DirectoryPane extends VBox {
      * @param mouseEvent the mouse event to query
      */
     private void unselectFile(MouseEvent mouseEvent) {
-        if (mouseEvent.getTarget() instanceof VBox)
-            filePanel.setComboBoxSelection(null); // unselect the currently selected file
+        LineEntry lineEntry = UI.MouseEvents.selectLineEntry(mouseEvent); // attempt to "pick" the LineEntry out from the mouse selection. If null, we didn't select a line entry
+        if (lineEntry == null)
+            filePanel.setComboBoxSelection(null);
     }
 
     /**
