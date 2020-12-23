@@ -110,10 +110,9 @@ public class Session {
 
     /**
      * Deletes this session from the session file
-     * @throws SessionSaveException if an error occurs saving the file
+     * @throws Exception if an error occurs saving the file
      */
-    public void delete() throws SessionSaveException {
-        Sessions.getSessionFile().removeSession(this);
-        save();
+    public void delete() throws Exception {
+        Sessions.deleteSession(this);
     }
 }
