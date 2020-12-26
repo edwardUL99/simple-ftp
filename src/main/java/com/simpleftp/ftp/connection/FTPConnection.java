@@ -26,6 +26,7 @@ import org.apache.commons.net.ftp.*;
 import org.apache.commons.net.io.CopyStreamException;
 
 import java.io.*;
+import java.util.Arrays;
 
 /**
  * This is the main class used for provided a client connection to a FTP server.
@@ -1141,10 +1142,67 @@ public class FTPConnection {
                 return false;
             }
         } catch (IOException ex) {
-            logDebug("IOException occurred sending no-op, disconnection connection");
+            logDebug("IOException occurred sending no-op, disconnecting connection");
             resetConnectionValues();
             throw new FTPCommandFailedException("Command no-op failed to be sent", ftpClient.getReplyString(), ex);
         }
+    }
+
+    /**
+     * Sends a command to the server using the SITE command feature with a supported command.
+     * This can be used for chmod
+     * @param command the command to send (i.e. command name)
+     * @param args the arguments for the command
+     * @return true if succeeded, false if not or if not logged in
+     * @throws FTPNotConnectedException if isConnected returns false
+     * @throws FTPConnectionFailedException if the connection unexpectedly closes
+     * @throws FTPCommandFailedException if an I/O Exception occurs sending the command
+     */
+    public synchronized boolean sendSiteCommand(String command, String...args) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
+        if (!connected) {
+            log.error("Cannot send a SITE command when not connected");
+            throw new FTPNotConnectedException("FTPConnection not connected, cannot send SITE command", FTPNotConnectedException.ActionType.MODIFICATION);
+        }
+
+        try {
+            if (loggedIn) {
+                StringBuilder builtCommand = new StringBuilder(command + " ");
+                Arrays.asList(args)
+                        .forEach(e -> builtCommand.append(e).append(" "));
+                builtCommand.deleteCharAt(builtCommand.length() - 1); // remove trailing space
+
+                command = builtCommand.toString();
+                logDebug("Sending SITE command: " + command);
+
+                return ftpClient.sendSiteCommand(command);
+            }
+
+            logDebug("Not sending SITE command as user is not logged in");
+
+            return false;
+        } catch (FTPConnectionClosedException ex) {
+            log.error("FTPConnection unexpectedly closed the connection when sending a SITE command");
+            resetConnectionValues();
+            throw new FTPConnectionFailedException("When sending a SITE command, the FTPConnection unexpectedly lost the connection", getReplyString(), ex, server);
+        } catch (IOException ex) {
+            log.error("An IOException occurred when sending a SITE command");
+            throw new FTPCommandFailedException("Sending SITE command failed due to I/O Exception", getReplyString(), ex);
+        }
+    }
+
+    /**
+     * A convenience method for sending the SITE chmod command.
+     * Uses sendSiteCommand(chmod octalString filePath).
+     * This method does not verify if the octal number or file path is valid. The results aren't guaranteed if file path isn't absolute.
+     * @param options the options to be passed into chmod, may be +x for example or the octal string, e.g 777
+     * @param filePath the path of the file to chmod. Expected to be absolute.
+     * @return true if succeeded, false if not
+     * @throws FTPNotConnectedException if isConnected() returns false
+     * @throws FTPConnectionFailedException if connection is unexpectedly closed
+     * @throws FTPCommandFailedException if an I/O Exception occurs when sending the command
+     */
+    public synchronized boolean chmod(String options, String filePath) throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
+        return sendSiteCommand("chmod", options, filePath);
     }
 
     /**

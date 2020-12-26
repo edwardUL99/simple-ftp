@@ -448,7 +448,9 @@ public class RemoteFile implements CommonFile {
      */
     @Override
     public void refresh() throws FileSystemException {
-        exists();
+        if (exists()) {
+            initialiseFTPFile(null); // refresh permissions
+        }
     }
 
     /**

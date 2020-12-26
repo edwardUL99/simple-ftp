@@ -63,7 +63,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
      */
     @Getter
     @Setter
-    private DirectoryPane owningPanel;
+    private DirectoryPane owningPane;
     /**
      * Stores the retrieved file size so you are not making constant calls to the FTPConnection for opening property window etc
      */
@@ -81,9 +81,9 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
      * Creates a base LineEntry with the specified image URL (which is assumed to be in the jar), file and panel
      * @param imageURL the URL to the image (assumed to be in the JAR)
      * @param file the file this LineEntry represents
-     * @param owningPanel the DirectoryPane this LineEntry is a part of
+     * @param owningPane the DirectoryPane this LineEntry is a part of
      */
-    protected LineEntry(String imageURL, CommonFile file, DirectoryPane owningPanel) throws FileSystemException {
+    protected LineEntry(String imageURL, CommonFile file, DirectoryPane owningPane) throws FileSystemException {
         setSpacing(30);
         setStyle(UI.WHITE_BACKGROUND);
         image = new ImageView();
@@ -92,7 +92,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         image.setImage(new Image(imageURL));
         this.file = file;
 
-        this.owningPanel = owningPanel;
+        this.owningPane = owningPane;
 
         init();
     }
@@ -120,12 +120,12 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         setOnMouseClicked(e -> {
             if (!e.isConsumed()) {
                 if (e.getClickCount() == 1) {
-                    owningPanel.click(this);
+                    owningPane.click(this);
                 } else {
-                    owningPanel.openLineEntry(this);
+                    owningPane.openLineEntry(this);
                 }
             }
-            owningPanel.requestFocus();
+            owningPane.requestFocus();
         });
     }
 
@@ -249,6 +249,6 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
      * @return true if this LineEntry represents a local file, false if remote
      */
     public boolean isLocal() {
-        return owningPanel.isLocal();
+        return owningPane.isLocal();
     }
 }

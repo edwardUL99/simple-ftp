@@ -17,24 +17,33 @@
 
 package com.simpleftp.ui.files;
 
+import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ui.UI;
+import com.simpleftp.ui.directories.DirectoryPane;
+import com.simpleftp.ui.interfaces.Window;
+import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
+
 /**
  * This FilePropertyWindow shows a LineEntry object "graphically" as file properties with other properties
  */
-public class FilePropertyWindow extends VBox {
+public class FilePropertyWindow extends VBox implements Window {
     /**
      * The line entry this property window is displaying
      */
@@ -46,16 +55,35 @@ public class FilePropertyWindow extends VBox {
     private HBox namePanel;
 
     /**
+     * The properties panel displaying properties
+     */
+    private final PropertiesPanel propertiesPanel;
+
+    /**
+     * Display the permissions box or not
+     */
+    private final boolean displayPermissionsBox;
+    /**
+     * The stage used to show this window
+     */
+    private Stage stage;
+
+    /**
      * Max length for path before abbreviating
      */
     private static final int MAX_PATH_LENGTH = 25;
 
+    /**
+     * Size Units to display file size in
+     */
     enum SizeUnit {
         BYTES,
         KILOBYTES,
         MEGABYTES,
         GIGABYTES
     }
+
+    // TODO Needs more testing with permissions and may need code tidy up
 
     /**
      * Constructs a FilePropertyWindow with the provided container and line entry
@@ -69,9 +97,24 @@ public class FilePropertyWindow extends VBox {
         initNamePanel();
         Separator separator = new Separator();
         separator.setOrientation(Orientation.HORIZONTAL);
-        PropertiesPanel propertiesPanel = new PropertiesPanel();
+        propertiesPanel = new PropertiesPanel();
 
         getChildren().addAll(namePanel, separator, propertiesPanel);
+
+        String osName = UI.OS_NAME.toLowerCase();
+        displayPermissionsBox = osName.contains("nix") || osName.contains("nux") || osName.contains("aix") || !lineEntry.isLocal();
+
+        if (displayPermissionsBox) {
+            // we have a linux (or remote window) os, show properties editing
+            separator = new Separator();
+            separator.setOrientation(Orientation.HORIZONTAL);
+            getChildren().addAll(separator, new PermissionsBox());
+        }
+
+        setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ESCAPE)
+                close();
+        });
     }
 
     /**
@@ -114,15 +157,29 @@ public class FilePropertyWindow extends VBox {
      */
     public void show() {
         boolean symLink = lineEntry.file.isSymbolicLink();
-        int height = symLink ? UI.PROPERTIES_WINDOW_HEIGHT + 30:UI.PROPERTIES_WINDOW_HEIGHT;
+        int height = displayPermissionsBox ? UI.PROPERTIES_WINDOW_HEIGHT_PERMISSIONS:UI.PROPERTIES_WINDOW_HEIGHT;
+        height = symLink ? height + 30:height;
         Scene scene = new Scene(this, UI.PROPERTIES_WINDOW_WIDTH, height);
-        Stage stage = new Stage();
+        stage = new Stage();
         stage.setTitle(lineEntry.file.getName() + " Properties");
         stage.setResizable(false);
         stage.setScene(scene);
         stage.show();
     }
 
+    /**
+     * Defines the basic operation of closing a window.
+     * This usually entails doing some clean up and then calling the stage that was opened to close.
+     */
+    @Override
+    public void close() {
+        if (stage != null)
+            stage.close();
+    }
+
+    /**
+     * This class represents the panel of properties
+     */
     private class PropertiesPanel extends VBox {
         /**
          * The dynamic label where the size units can change
@@ -132,6 +189,10 @@ public class FilePropertyWindow extends VBox {
          * The fileSize of the line entry
          */
         private Long fileSize;
+        /**
+         * The permissions string to display for permissions
+         */
+        private Label permissionsString;
 
         /**
          * Creates a properties panel
@@ -242,13 +303,16 @@ public class FilePropertyWindow extends VBox {
          * Initialises the size, permissions and modification time
          */
         private void initFileStats() {
-            Label permissions = new Label("Permissions:");
+            HBox permissionsBox = new HBox();
+            Label permissions = new Label("Permissions:\t\t\t\t\t");
+            permissionsString = new Label();
+            permissionsBox.getChildren().addAll(permissions, permissionsString);
             Label modificationTime = new Label("Modification Time:");
             sizeLabel = new Label("Size:");
 
             try {
                 CommonFile file = lineEntry.file;
-                permissions.setText("Permissions:\t\t\t\t\t" + file.getPermissions());
+                permissionsString.setText(file.getPermissions());
                 modificationTime.setText("Modification Time:\t\t\t\t" + lineEntry.getModificationTime());
                 initFileSize();
                 sizeLabel.setText("Size:\t\t\t\t\t\t\t" + fileSize + "B");
@@ -257,7 +321,7 @@ public class FilePropertyWindow extends VBox {
                     ex.printStackTrace();
             }
 
-            getChildren().addAll(permissions, modificationTime, sizeLabel);
+            getChildren().addAll(permissionsBox, modificationTime, sizeLabel);
         }
 
         /**
@@ -363,6 +427,178 @@ public class FilePropertyWindow extends VBox {
             buttonsPanel.getChildren().addAll(bytes, kilos, mega, giga);
             sizeOptionsPanel.getChildren().add(buttonsPanel);
             getChildren().add(sizeOptionsPanel);
+        }
+    }
+
+    /**
+     * This class represents the box to change file permissions in the property window
+     */
+    private class PermissionsBox extends VBox {
+        /**
+         * The text field containing the permissions octal number
+         */
+        private final TextField permissionsField;
+        /**
+         * The button to submit changes
+         */
+        private final Button submit;
+        /**
+         * A button to preview what the resulting permission would be
+         */
+        private final Button preview;
+        /**
+         * The last octal before a permissions change
+         */
+        private String currentOctal;
+
+        /**
+         * Constructs the PermissionsBox object
+         */
+        public PermissionsBox() {
+            currentOctal = FileUtils.permissionsToOctal(lineEntry.getFile().getPermissions());
+            permissionsField = new TextField(currentOctal);
+            permissionsField.setTooltip(new Tooltip("Enter new permissions value as a 3 digit octal notation number"));
+            permissionsField.setOnAction(e -> submitPermissions());
+
+            submit = new Button("Submit");
+            submit.setOnAction(e -> submitPermissions());
+            submit.setTooltip(new Tooltip("Submit permissions changes"));
+
+            preview = new Button("Preview");
+            preview.setOnAction(e -> previewPermissions());
+            preview.setTooltip(new Tooltip("Preview the resulting permissions from the entered octal notation"));
+
+            initLayout();
+        }
+
+        /**
+         * Initialises the layout of the components
+         */
+        private void initLayout() {
+            Label label = new Label("Change Permissions: ");
+            setSpacing(5);
+            setPadding(new Insets(0, 0, 0, 5));
+
+            HBox permissionsBox = new HBox();
+            permissionsBox.setAlignment(Pos.CENTER);
+            permissionsBox.getChildren().add(permissionsField);
+
+            HBox buttonBox = new HBox();
+            buttonBox.setSpacing(5);
+            buttonBox.setAlignment(Pos.CENTER);
+            buttonBox.getChildren().addAll(preview, submit);
+
+            setAlignment(Pos.CENTER_LEFT);
+            getChildren().addAll(label, permissionsBox, buttonBox);
+        }
+
+        /**
+         * Displays an error message stating why the octal is not valid and resets the text field
+         * @param octal the octal that is invalid
+         * @param errorMessage the error message to display
+         * @param resetPermissionsField true to reset permissions field to the current octal
+         */
+        private void doInvalidOctalMessage(String octal, String errorMessage, boolean resetPermissionsField) {
+            UI.doError("Invalid Octal Notation", "The octal notation " + octal + " is not valid because: " + errorMessage
+                    + ". Please fix the error and submit again");
+            if (resetPermissionsField)
+                permissionsField.setText(currentOctal);
+        }
+
+        /**
+         * Changes permissions on a local file
+         * @param chmodOctal the octal permissions
+         * @return true if successful, false if not
+         * @throws Exception if any exception occurs
+         */
+        private boolean changeLocalPermissions(String chmodOctal) throws Exception {
+            Path path = Files.setPosixFilePermissions(Path.of(lineEntry.getFilePath()), PosixFilePermissions.fromString(FileUtils.convertOctalToPermissions(chmodOctal)));
+            return Files.exists(path);
+        }
+
+        /**
+         * Changes permissions on a remote file
+         * @param chmodOctal the octal permissions
+         * @return true if successful, false if not
+         * @throws Exception if any exception occurs
+         */
+        private boolean changeRemotePermissions(String chmodOctal) throws Exception {
+            String path = lineEntry.getFilePath();
+
+            return lineEntry.getOwningPane()
+                    .getFileSystem()
+                    .getFTPConnection()
+                    .chmod(chmodOctal, path);
+        }
+
+        /**
+         * Attempts to submit the permissions change
+         * @param chmodOctal the octal permissions string
+         * @return true if succeeded, false if not
+         */
+        private boolean changePermissions(String chmodOctal) throws Exception {
+            boolean local = lineEntry.isLocal();
+
+            if (local)
+                return changeLocalPermissions(chmodOctal);
+            else
+                return changeRemotePermissions(chmodOctal);
+        }
+
+        /**
+         * The handler for submitting permissions changes
+         */
+        private void submitPermissions() {
+            String permissions = permissionsField.getText();
+
+            if (!permissions.equals(currentOctal)) {
+                Object[] validity = FileUtils.isValidOctal(permissions);
+                boolean valid = (boolean) validity[0];
+
+                if (!valid) {
+                    doInvalidOctalMessage(permissions, (String)validity[1], true);
+                } else {
+                    try {
+                        if (changePermissions(permissions)) {
+                            permissionsField.setText(permissions);
+                            String lastOctal = currentOctal;
+                            currentOctal = permissions;
+                            CommonFile file = lineEntry.getFile();
+                            file.refresh();
+                            propertiesPanel.permissionsString.setText(file.getPermissions());
+                            UI.doInfo("Permissions Changed", "Permissions have been changed successfully from " + lastOctal + " to " + permissions);
+
+                            DirectoryPane directoryPane = lineEntry.getOwningPane();
+                            if (directoryPane.getCurrentWorkingDirectory().equals(FileUtils.getParentPath(file.getFilePath(), lineEntry.isLocal())))
+                                directoryPane.refresh();
+
+                        }
+                    } catch (Exception ex) {
+                        if (FTPSystem.isDebugEnabled())
+                            ex.printStackTrace();
+                        UI.doError("Permissions Change Exception", "Failed to change permissions due to an exception with the message: " + ex.getMessage());
+                        permissionsField.setText(currentOctal);
+                    }
+                }
+            }
+        }
+
+        /**
+         * Allows to preview the resulting permissions from the entered octal
+         */
+        private void previewPermissions() {
+            String enteredPermissions = permissionsField.getText();
+            Object[] validity = FileUtils.isValidOctal(enteredPermissions);
+            boolean valid = (boolean)validity[0];
+
+            if (valid) {
+                char firstChar = lineEntry.getFile().getPermissions().charAt(0);
+                UI.doInfo("Permissions Preview", "The permissions that would be produced for octal notation "
+                    + enteredPermissions + " is: " + (firstChar + FileUtils.convertOctalToPermissions(enteredPermissions))
+                    + (enteredPermissions.equals(currentOctal) ? ". This operation will not result in any changes as the octal permissions given equals the current permissions":""));
+            } else {
+                doInvalidOctalMessage(enteredPermissions, (String)validity[1], false);
+            }
         }
     }
 }

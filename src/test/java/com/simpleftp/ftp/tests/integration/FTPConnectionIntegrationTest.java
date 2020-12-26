@@ -59,6 +59,9 @@ public class FTPConnectionIntegrationTest {
     private static final String TEST_FTP_FILE_RENAMED = "/test/path/test-ftp-file.txt";
     private static final String TEST_DIR1 = "/test/path/dir1";
     private static final String TEST_DIR2 = "dir2";
+    private static final String TEST_COMMAND = "chmod";
+    private static final String TEST_ARG1 = "777";
+    private static final String TEST_ARG2 = "/test/path";
 
     @BeforeEach
     void setup() {
@@ -374,6 +377,20 @@ public class FTPConnectionIntegrationTest {
         assertTrue(ftpConnection.connect());
         assertTrue(ftpConnection.login());
         assertTrue(ftpConnection.sendNoop());
+    }
+
+    @Test
+    void shouldSendSiteCommandSuccessfully() throws Exception {
+        assertTrue(ftpConnection.connect());
+        assertTrue(ftpConnection.login());
+        assertTrue(ftpConnection.sendSiteCommand(TEST_COMMAND, TEST_ARG1, TEST_ARG2));
+    }
+
+    @Test
+    void shouldSendChmodSuccessfully() throws Exception {
+        assertTrue(ftpConnection.connect());
+        assertTrue(ftpConnection.login());
+        assertTrue(ftpConnection.chmod(TEST_ARG1, TEST_ARG2));
     }
 }
 

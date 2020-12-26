@@ -69,7 +69,11 @@ class FTPConnectionUnitTest {
     private static final String TEST_SIZE = "test-size";
     private static final String TEST_TIME = "test-time";
     private static final String TEST_FILE_STATUS = " test-file-status";
-    private final int TEST_TIMEOUT_SECS = 300;
+    private static final int TEST_TIMEOUT_SECS = 300;
+    private static final String TEST_COMMAND = "chmod";
+    private static final String TEST_ARG1 = "test_arg1";
+    private static final String TEST_ARG2 = "test_arg2";
+    private static final String TEST_COMMAND_ARGS = TEST_COMMAND + " " + TEST_ARG1 + " " + TEST_ARG2;
 
 
     @BeforeEach
@@ -83,9 +87,6 @@ class FTPConnectionUnitTest {
     void clean() throws Exception {
         closeable.close();
     }
-
-    // in all the shouldThrowIfNotConnected tests, logged in is set to true and then tested if false. This should ALWAYS pass since can't be logged in if not connected
-    // just done to catch in a test, if the assertion fails there is a bug somewhere
 
     @Test
     void shouldConnectSuccessfully() throws IOException, FTPConnectionFailedException {
@@ -1920,5 +1921,105 @@ class FTPConnectionUnitTest {
         assertThrows(FTPCommandFailedException.class, () -> ftpConnection.sendNoop());
         assertFalse(ftpConnection.isConnected());
         assertFalse(ftpConnection.isLoggedIn());
+    }
+
+    @Test
+    void shouldSendSiteCommandSuccessfully() throws Exception {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+
+        given(ftpClient.sendSiteCommand(TEST_COMMAND_ARGS))
+                .willReturn(true);
+
+        boolean result = ftpConnection.sendSiteCommand(TEST_COMMAND, TEST_ARG1, TEST_ARG2);
+
+        assertTrue(result);
+        verify(ftpClient).sendSiteCommand(TEST_COMMAND_ARGS);
+    }
+
+    @Test
+    void shouldNotSendSiteCommandIfNotLoggedIn() throws Exception {
+        ftpConnection.setConnected(true);
+
+        boolean result = ftpConnection.sendSiteCommand(TEST_COMMAND, TEST_ARG1, TEST_ARG2);
+
+        assertFalse(result);
+        verify(ftpClient, times(0)).sendSiteCommand(TEST_COMMAND_ARGS);
+    }
+
+    @Test
+    void shouldThrowIfNotConnectedOnSiteCommand() throws Exception {
+        assertThrows(FTPNotConnectedException.class, () -> ftpConnection.sendSiteCommand(TEST_COMMAND, TEST_ARG1, TEST_ARG2));
+        verify(ftpClient, times(0)).sendSiteCommand(TEST_COMMAND_ARGS);
+    }
+
+    @Test
+    void shouldThrowIfConnectionFailsOnSiteCommand() throws Exception {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        doThrow(FTPConnectionClosedException.class).when(ftpClient).sendSiteCommand(TEST_COMMAND_ARGS);
+
+        assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.sendSiteCommand(TEST_COMMAND, TEST_ARG1, TEST_ARG2));
+        assertFalse(ftpConnection.isConnected());
+        assertFalse(ftpConnection.isLoggedIn());
+    }
+
+    @Test
+    void shouldThrowIfCommandFailsOnSiteCommand() throws Exception {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        doThrow(IOException.class).when(ftpClient).sendSiteCommand(TEST_COMMAND_ARGS);
+
+        assertThrows(FTPCommandFailedException.class, () -> ftpConnection.sendSiteCommand(TEST_COMMAND, TEST_ARG1, TEST_ARG2));
+    }
+
+    @Test
+    void shouldChmodSuccessfully() throws Exception {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+
+        given(ftpClient.sendSiteCommand(TEST_COMMAND_ARGS))
+                .willReturn(true);
+
+        boolean result = ftpConnection.chmod(TEST_ARG1, TEST_ARG2);
+
+        assertTrue(result);
+        verify(ftpClient).sendSiteCommand(TEST_COMMAND_ARGS);
+    }
+
+    @Test
+    void shouldNotChmodIfNotLoggedIn() throws Exception {
+        ftpConnection.setConnected(true);
+
+        boolean result = ftpConnection.chmod(TEST_ARG1, TEST_ARG2);
+
+        assertFalse(result);
+        verify(ftpClient, times(0)).sendSiteCommand(TEST_COMMAND_ARGS);
+    }
+
+    @Test
+    void shouldThrowIfNotConnectedOnChmod() throws Exception {
+        assertThrows(FTPNotConnectedException.class, () -> ftpConnection.chmod(TEST_ARG1, TEST_ARG2));
+        verify(ftpClient, times(0)).sendSiteCommand(TEST_COMMAND_ARGS);
+    }
+
+    @Test
+    void shouldThrowIfConnectionFailsOnChmod() throws Exception {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        doThrow(FTPConnectionClosedException.class).when(ftpClient).sendSiteCommand(TEST_COMMAND_ARGS);
+
+        assertThrows(FTPConnectionFailedException.class, () -> ftpConnection.chmod(TEST_ARG1, TEST_ARG2));
+        assertFalse(ftpConnection.isConnected());
+        assertFalse(ftpConnection.isLoggedIn());
+    }
+
+    @Test
+    void shouldThrowIfCommandFailsOnChmod() throws Exception {
+        ftpConnection.setConnected(true);
+        ftpConnection.setLoggedIn(true);
+        doThrow(IOException.class).when(ftpClient).sendSiteCommand(TEST_COMMAND_ARGS);
+
+        assertThrows(FTPCommandFailedException.class, () -> ftpConnection.chmod(TEST_ARG1, TEST_ARG2));
     }
 }

@@ -139,9 +139,19 @@ public final class UI {
     public static final int PROPERTIES_WINDOW_WIDTH = 450;
 
     /**
-     * The height for the properties window
+     * The name of the operating system
+     */
+    public static final String OS_NAME = System.getProperty("os.name");
+
+    /**
+     * The height for the properties window without permissions
      */
     public static final int PROPERTIES_WINDOW_HEIGHT = 400;
+
+    /**
+     * The height for the properties window with permissions
+     */
+    public static final int PROPERTIES_WINDOW_HEIGHT_PERMISSIONS = PROPERTIES_WINDOW_HEIGHT + 120;
 
     /**
      * The most common insets used in the FilePropertyWindow
