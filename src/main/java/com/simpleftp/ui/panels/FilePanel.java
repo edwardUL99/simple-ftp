@@ -316,7 +316,7 @@ public abstract class FilePanel extends VBox {
     /**
      * Goes to the target of a symbolic link
      */
-    private void goToSymLinkTarget() {
+    public void goToSymLinkTarget() {
         LineEntry lineEntry = getLineEntryFromComboBox(); // the line entry in question
         if (lineEntry != null) {
             try {

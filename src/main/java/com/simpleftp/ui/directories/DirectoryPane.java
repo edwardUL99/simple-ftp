@@ -507,7 +507,14 @@ public abstract class DirectoryPane extends VBox {
                                                             // this.delete doesn't remove the file from the combo box anyway (although refresh would get that)
         MenuItem menuItem4 = new MenuItem("Properties");
         menuItem4.setOnAction(e -> openPropertiesWindow(lineEntry));
+
         contextMenu.getItems().addAll(menuItem1, menuItem2, menuItem3, menuItem4);
+
+        if (file.isSymbolicLink()) {
+            MenuItem menuItem5 = new MenuItem("Go to Target");
+            menuItem5.setOnAction(e -> filePanel.goToSymLinkTarget());
+            contextMenu.getItems().add(menuItem5);
+        }
 
         lineEntry.setOnContextMenuRequested(e -> contextMenu.show(lineEntry, e.getScreenX(), e.getScreenY()));
 

@@ -25,6 +25,7 @@ import com.simpleftp.filesystem.paths.PathResolverFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.text.SimpleDateFormat;
@@ -99,19 +100,7 @@ public class LocalFile extends File implements CommonFile {
         if (!isSymbolicLink()) {
             return length();
         } else {
-            try {
-                String parent = getParent();
-                String windowsParent;
-                parent = parent == null ? ((windowsParent = System.getenv("SystemDrive")) != null ? windowsParent:"/"):parent; // if windows, find the root
-
-                String canonicalPath = PathResolverFactory.newInstance()
-                        .setLocal(parent) // a symbolic link may be relative to the directory it's inside
-                        .build()
-                        .resolvePath(getSymbolicLinkTarget());
-                return new LocalFile(canonicalPath).getSize();
-            } catch (PathResolverException ex) {
-                throw new FileSystemException("Failed to retrieve size of file", ex);
-            }
+            return new LocalFile(getSymbolicLinkTarget()).getSize();
         }
     }
 
@@ -124,7 +113,7 @@ public class LocalFile extends File implements CommonFile {
 
         if (path.getFileSystem().supportedFileAttributeViews().contains("posix")) {
             try {
-                Set<PosixFilePermission> permissionsSet = Files.getPosixFilePermissions(path);
+                Set<PosixFilePermission> permissionsSet = Files.getPosixFilePermissions(path, LinkOption.NOFOLLOW_LINKS);
                 String[] permissionsStringArr = new String[9]; // first 3 indices, owner rwx, next 3, group, last 3 others
                 for (int i = 0; i < 9; i++)
                     permissionsStringArr[i] = "-";
@@ -257,12 +246,9 @@ public class LocalFile extends File implements CommonFile {
         if (isSymbolicLink()) {
             try {
                 String path = Files.readSymbolicLink(toPath()).toString();
-                String parent = getParent();
-                String windowsParent;
-                parent = parent == null ? ((windowsParent = System.getenv("SystemDrive")) != null ? windowsParent : "/") : parent; // if windows, find the root
 
                 return PathResolverFactory.newInstance()
-                        .setLocal(parent) // a symbolic link may be relative to the directory it's inside
+                        .setLocal(FileUtils.getParentPath(getFilePath(), true)) // a symbolic link may be relative to the directory it's inside
                         .build()
                         .resolvePath(path);
             } catch (IOException | PathResolverException ex) {

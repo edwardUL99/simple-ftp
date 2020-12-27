@@ -83,8 +83,6 @@ public class FilePropertyWindow extends VBox implements Window {
         GIGABYTES
     }
 
-    // TODO Needs more testing with permissions and may need code tidy up
-
     /**
      * Constructs a FilePropertyWindow with the provided container and line entry
      * @param lineEntry the LineEntry to display properties of
@@ -102,7 +100,7 @@ public class FilePropertyWindow extends VBox implements Window {
         getChildren().addAll(namePanel, separator, propertiesPanel);
 
         String osName = UI.OS_NAME.toLowerCase();
-        displayPermissionsBox = osName.contains("nix") || osName.contains("nux") || osName.contains("aix") || !lineEntry.isLocal();
+        displayPermissionsBox = !lineEntry.isLocal() || osName.contains("nix") || osName.contains("nux") || osName.contains("aix");
 
         if (displayPermissionsBox) {
             // we have a linux (or remote window) os, show properties editing
@@ -469,6 +467,7 @@ public class FilePropertyWindow extends VBox implements Window {
             preview.setTooltip(new Tooltip("Preview the resulting permissions from the entered octal notation"));
 
             initLayout();
+            initSymbolicMessage();
         }
 
         /**
@@ -490,6 +489,18 @@ public class FilePropertyWindow extends VBox implements Window {
 
             setAlignment(Pos.CENTER_LEFT);
             getChildren().addAll(label, permissionsBox, buttonBox);
+        }
+
+        /**
+         * Checks if the line entry represents a symbolic file and if so, disables the buttons and changes the tool tip
+         */
+        private void initSymbolicMessage() {
+            if (lineEntry.getFile().isSymbolicLink()) {
+                submit.setDisable(true);
+                preview.setDisable(true);
+                permissionsField.setEditable(false);
+                permissionsField.setTooltip(new Tooltip("To change symbolic link permissions, change the permissions of the target"));
+            }
         }
 
         /**
