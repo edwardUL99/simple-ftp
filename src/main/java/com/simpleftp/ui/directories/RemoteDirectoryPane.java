@@ -29,7 +29,6 @@ import com.simpleftp.ui.UI;
 import com.simpleftp.ui.files.LineEntry;
 
 import java.util.ArrayList;
-import java.util.Collections;
 
 /**
  * This DirectoryPane displays files on the remote file server
@@ -208,10 +207,6 @@ final class RemoteDirectoryPane extends DirectoryPane {
     ArrayList<LineEntry> constructListOfFiles() {
         ArrayList<LineEntry> lineEntries = new ArrayList<>();
         constructListOfRemoteFiles(lineEntries, (RemoteFile)directory);
-
-        if (lineEntries.size() > 0) {
-            Collections.sort(lineEntries);
-        }
 
         return lineEntries;
     }

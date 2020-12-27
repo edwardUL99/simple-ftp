@@ -43,7 +43,9 @@ import javafx.scene.text.FontWeight;
 import lombok.Getter;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /*
 The conditions for determining if an exception or error dialog show up may have to be reconsidered
@@ -550,10 +552,38 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
+     * Sorts the line entries so that directories appear in order before files
+     * @param lineEntries the list of LineEntries to solve
+     * @return the list of sorted line entries
+     */
+    private ArrayList<LineEntry> sortLineEntries(final ArrayList<LineEntry> lineEntries) {
+        ArrayList<LineEntry> directoryEntries = lineEntries.stream()
+                .filter(LineEntry::isDirectory)
+                .collect(Collectors.toCollection(ArrayList::new));
+        ArrayList<LineEntry> fileEntries = lineEntries.stream()
+                .filter(LineEntry::isFile)
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        // sort the lists
+        Collections.sort(directoryEntries);
+        Collections.sort(fileEntries);
+
+        ArrayList<LineEntry> sorted = new ArrayList<>(directoryEntries.size() + fileEntries.size());
+        sorted.addAll(directoryEntries);
+        sorted.addAll(fileEntries);
+
+        return sorted;
+    }
+
+    /**
      * Refreshes this file panel
      */
     public void refresh() {
         ArrayList<LineEntry> lineEntries = constructListOfFiles();
+        if (lineEntries.size() > 0) {
+            lineEntries = sortLineEntries(lineEntries);
+        }
+
         this.lineEntries.clear();
         getChildren().clear();
         getChildren().add(statusPanel);

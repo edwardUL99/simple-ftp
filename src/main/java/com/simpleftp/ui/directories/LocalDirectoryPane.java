@@ -28,7 +28,6 @@ import com.simpleftp.ui.files.LineEntry;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
 
 /**
  * This DirectoryPane is for use displaying local files
@@ -191,10 +190,6 @@ final class LocalDirectoryPane extends DirectoryPane {
     ArrayList<LineEntry> constructListOfFiles() {
         ArrayList<LineEntry> lineEntries = new ArrayList<>();
         constructListOfLocalFiles(lineEntries, (LocalFile)directory);
-
-        if (lineEntries.size() > 0) {
-            Collections.sort(lineEntries);
-        }
 
         return lineEntries;
     }

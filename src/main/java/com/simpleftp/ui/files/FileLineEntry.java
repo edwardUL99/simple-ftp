@@ -34,4 +34,24 @@ final class FileLineEntry extends LineEntry {
     FileLineEntry(CommonFile file, DirectoryPane owningPanel) throws FileSystemException {
         super(file.isSymbolicLink() ? "file_icon_symlink.png":"file_icon.png", file, owningPanel);
     }
+
+    /**
+     * Can be used to determine the type of this LineEntry
+     *
+     * @return true if the file this LineEntry represents is a file (could be a symlink too)
+     */
+    @Override
+    public boolean isFile() {
+        return true;
+    }
+
+    /**
+     * Can be used to determine the type of this LineEntry
+     *
+     * @return true if the file this LineEntry represents is a file (could be a symlink too)
+     */
+    @Override
+    public boolean isDirectory() {
+        return false;
+    }
 }

@@ -198,11 +198,23 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
      */
     public String getSymbolicLinkTarget() throws Exception {
         if (symLinkTarget == null && file.isSymbolicLink()) {
-            symLinkTarget = file.getSymbolicLinkTarget();//resolvePath(file.getSymbolicLinkTarget());
+            symLinkTarget = file.getSymbolicLinkTarget();
         }
 
         return symLinkTarget;
     }
+
+    /**
+     * Can be used to determine the type of this LineEntry
+     * @return true if the file this LineEntry represents is a file (could be a symlink too)
+     */
+    public abstract boolean isFile();
+
+    /**
+     * Can be used to determine the type of this LineEntry
+     * @return true if the file this LineEntry represents is a file (could be a symlink too)
+     */
+    public abstract boolean isDirectory();
 
     @Override
     public int compareTo(LineEntry other) {
@@ -218,8 +230,9 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         if (n2Ind != -1) {
             n2 = n2.substring(0, n2Ind);
         }
+
         // we want to compare without extensions
-        return n1.compareTo(n2);
+        return n1.compareToIgnoreCase(n2);
     }
 
     /**
