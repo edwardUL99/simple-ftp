@@ -499,7 +499,7 @@ public class FilePropertyWindow extends VBox implements Window {
                 submit.setDisable(true);
                 preview.setDisable(true);
                 permissionsField.setEditable(false);
-                permissionsField.setTooltip(new Tooltip("To change symbolic link permissions, change the permissions of the target"));
+                permissionsField.setTooltip(new Tooltip("Can only change permissions of the link's target"));
             }
         }
 
