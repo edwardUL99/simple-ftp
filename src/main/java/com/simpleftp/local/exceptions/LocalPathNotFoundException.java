@@ -17,13 +17,12 @@
 
 package com.simpleftp.local.exceptions;
 
-import com.simpleftp.ftp.exceptions.FTPException;
 import lombok.Getter;
 
 /**
  * This exception is to be thrown when a local path is given but it doesn't exist on the local file system
  */
-public class LocalPathNotFoundException extends FTPException {
+public class LocalPathNotFoundException extends Exception {
     /**
      * The path that was not found
      */
@@ -36,7 +35,7 @@ public class LocalPathNotFoundException extends FTPException {
      * @param localPath the local path that does not exist
      */
     public LocalPathNotFoundException(String message, String localPath) {
-        super(message, "");
+        super(message);
         this.localPath = localPath;
     }
 
@@ -47,7 +46,7 @@ public class LocalPathNotFoundException extends FTPException {
      * @param localPath the local path that does not exist
      */
     public LocalPathNotFoundException(String message, Exception ex, String localPath) {
-        super(message, "", ex);
+        super(message, ex);
         this.localPath = localPath;
     }
 }
