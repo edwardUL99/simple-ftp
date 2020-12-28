@@ -105,4 +105,10 @@ public interface CommonFile {
      * @throws FileSystemException if an error occurs
      */
     String getSymbolicLinkTarget() throws FileSystemException;
+
+    /**
+     * This file may be present locally or remotely. This method determines if it is local or remote
+     * @return true if local, false if remote
+     */
+    boolean isLocal();
 }

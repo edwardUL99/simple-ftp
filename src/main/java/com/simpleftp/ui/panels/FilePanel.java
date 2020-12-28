@@ -499,7 +499,7 @@ public abstract class FilePanel extends VBox {
         if (directoryPane == null)
             throw new NullPointerException("The provided DirectoryPane is null");
 
-        boolean local = directoryPane.getDirectory() instanceof LocalFile; // Because of the DirectoryPane.checkFileType method, it guarantees that the type will always match the type of panel
+        boolean local = directoryPane.isLocal();
 
         if (local)
             return new LocalFilePanel(directoryPane);

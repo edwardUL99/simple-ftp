@@ -797,7 +797,7 @@ public abstract class DirectoryPane extends VBox {
         if (directory == null)
             throw new NullPointerException("The CommonFile object passed in is null");
 
-        if (directory instanceof LocalFile)
+        if (directory.isLocal())
             return new LocalDirectoryPane((LocalFile)directory);
         else
             return new RemoteDirectoryPane((RemoteFile)directory);

@@ -258,4 +258,14 @@ public class LocalFile extends File implements CommonFile {
             return null;
         }
     }
+
+    /**
+     * This file may be present locally or remotely. This method determines if it is local or remote
+     *
+     * @return true if local, false if remote
+     */
+    @Override
+    public boolean isLocal() {
+        return true;
+    }
 }
