@@ -124,8 +124,10 @@ public abstract class FileEditorWindow extends VBox implements Window {
         save.setMnemonicParsing(true);
         save.setText("_Save");
         save.setOnAction(e -> save());
+        save.setTooltip(new Tooltip("Save all unsaved changes"));
+
         reset = new Button("Reset"); // don't have mnemonic for reset as it is destructive
-        reset.setTooltip(new Tooltip("This will discard all your changes"));
+        reset.setTooltip(new Tooltip("Reset any changes made since the last successful save"));
         reset.setOnAction(e -> reset());
         setOnKeyPressed(e -> {
             KeyCode code = e.getCode();

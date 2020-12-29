@@ -159,29 +159,35 @@ public abstract class FilePanel extends VBox {
         delete.setMnemonicParsing(true);
         delete.setText("_Delete");
         delete.setOnAction(e -> delete());
+        delete.setTooltip(new Tooltip("Deletes the selected file"));
 
         open = new Button();
         open.setMnemonicParsing(true);
         open.setText("_Open");
         open.setOnAction(e -> open());
+        open.setTooltip(new Tooltip("Opens the selected file (changes directory or opens text file)"));
 
         gotoButton = new Button();
         gotoButton.setMnemonicParsing(true);
         gotoButton.setText("_Go To");
         gotoButton.setOnAction(e -> gotoPath());
+        gotoButton.setTooltip(new Tooltip("Specify a path to open"));
 
         hideHiddenFiles = new Button();
         hideHiddenFiles.setMnemonicParsing(true);
         initHideButton();
+        hideHiddenFiles.setTooltip(new Tooltip("Toggle the flag to display/hide hidden files"));
 
         createButton = new MenuButton();
         createButton.setMnemonicParsing(true);
         initCreateButton();
+        createButton.setTooltip(new Tooltip("Choose a file type to create"));
 
         maskButton = new Button();
         maskButton.setMnemonicParsing(true);
         maskButton.setText("File _Mask");
         initMaskButton();
+        maskButton.setTooltip(new Tooltip("Specify a mask to filter the files displayed"));
 
         propertiesButton = new Button();
         propertiesButton.setMnemonicParsing(true);
@@ -189,8 +195,10 @@ public abstract class FilePanel extends VBox {
         propertiesButton.setOnAction(e -> openPropertiesWindow());
         propertiesButton.managedProperty().bind(propertiesButton.visibleProperty()); // if hidden, re-arrange toolbar. But for best effects, keep the button as the second last button so ToolBar doesn't keep chopping and changing
         propertiesButton.setVisible(false);
+        propertiesButton.setTooltip(new Tooltip("Display the properties window for the selected file"));
 
         initSymLinkButton();
+        symLinkDestButton.setTooltip(new Tooltip("Open symbolic link target (if a file, opens the parent directory of the target file)"));
     }
 
     /**

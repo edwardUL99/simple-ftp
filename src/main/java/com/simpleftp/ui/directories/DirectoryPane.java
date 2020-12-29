@@ -35,6 +35,8 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.Mnemonic;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Paint;
@@ -201,15 +203,14 @@ public abstract class DirectoryPane extends VBox {
         refresh = new Button();
         refresh.setMnemonicParsing(true);
         refresh.setText("_Refresh");
+        refresh.setTooltip(new Tooltip("Refresh the files listing on this panel"));
+        refresh.setOnAction(e -> refresh());
+
         up = new Button();
         up.setMnemonicParsing(true);
         up.setText("_Up");
-        refresh.setOnAction(e -> refresh());
-
+        up.setTooltip(new Tooltip("Move up to the parent directory"));
         up.setOnAction(e -> up());
-
-        up.setPickOnBounds(true);
-        refresh.setPickOnBounds(true);
     }
 
     /**
