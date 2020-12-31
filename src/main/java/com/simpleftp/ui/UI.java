@@ -297,17 +297,17 @@ public final class UI {
     private static void handleFTPException(Exception ex) {
         ErrorDialog errorDialog;
         String error = ((FTPException) ex).getReplyString();
-        if (error != null && error.equals(""))
-            error = "N/A";
+        String ftpErrorString = error != null ? "\nFTP Error: " + error:"";
+
         if (ex instanceof FTPConnectionFailedException) {
-            errorDialog = new ErrorDialog("FTP Connection Error", ex.getMessage() + "\nFTP Error: " + (error == null ? "FTP Connection failed":error));
+            errorDialog = new ErrorDialog("FTP Connection Error", ex.getMessage() + (ftpErrorString.equals("") ? "\nFTP Error: FTP Connection Failed":ftpErrorString));
         } else if (ex instanceof FTPCommandFailedException) {
-            errorDialog = new ErrorDialog("FTP Operation Error", ex.getMessage() + "\nFTP Error: " + error);
+            errorDialog = new ErrorDialog("FTP Operation Error", ex.getMessage() + ftpErrorString);
         } else if (ex instanceof FTPNotConnectedException) {
-            errorDialog = new ErrorDialog("Not Connected to FTP Server", ex.getMessage() + "\nFTP Error: " + error);
+            errorDialog = new ErrorDialog("Not Connected to FTP Server", ex.getMessage() + ftpErrorString);
         } else {
             // this is a FTPError
-            errorDialog = new ErrorDialog("General FTP Error", ex.getMessage() + "\nFTP Error: " + error);
+            errorDialog = new ErrorDialog("General FTP Error", ex.getMessage() + ftpErrorString);
         }
 
         errorDialog.showAndWait();

@@ -521,7 +521,7 @@ public class FTPConnection {
             throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while uploading file", ftpClient.getReplyString(), cl, server);
         } catch (FileNotFoundException fn) {
             log.error("File does not exist, cannot upload file");
-            throw new FTPError("An error occurred creating an input stream for the provided file", ftpClient.getReplyString(), fn);
+            throw new FTPError("An error occurred creating an input stream for the provided file", null, fn);
         } catch (CopyStreamException cs) {
             log.error("An error occurred transferring the file");
             throw new FTPError("An error occurred in file transmission", ftpClient.getReplyString(), cs);
@@ -567,7 +567,7 @@ public class FTPConnection {
             int index = name.lastIndexOf("/");
 
             if (index == -1) // defensive programming
-                throw new FTPError("Cannot determine the basename of the FTPFile. Is it a correct format? (i.e. path/to/file)", ftpClient.getReplyString());
+                throw new FTPError("Cannot determine the basename of the FTPFile. Is it a correct format? (i.e. path/to/file)", null);
             return name.substring(index + 1);
         } else {
             return name;
@@ -658,7 +658,7 @@ public class FTPConnection {
             throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while downloading the file", ftpClient.getReplyString(), cl, server);
         } catch (FileNotFoundException ex) {
             log.error("A file not found exception error occurred with creating an output stream for {}", localPath);
-            throw new FTPError("An output stream could not be created for local file", ftpClient.getReplyString(), ex);
+            throw new FTPError("An output stream could not be created for local file", null, ex);
         } catch (CopyStreamException cs) {
             log.error("An error occurred in transferring the file {} from server to local {}", remotePath, localPath);
             throw new FTPError("An error occurred transferring the file from server to local machine", ftpClient.getReplyString(), cs);

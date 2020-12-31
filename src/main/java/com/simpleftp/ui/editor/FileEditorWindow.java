@@ -322,10 +322,6 @@ public abstract class FileEditorWindow extends VBox implements Window {
             consumeEvent = true;
         }
 
-        if (!consumeEvent) {
-            UI.closeFile(file.getFilePath(), creatingPane.isLocal());
-        }
-
         return consumeEvent;
     }
 
@@ -367,6 +363,8 @@ public abstract class FileEditorWindow extends VBox implements Window {
 
                 if (consumeEvent)
                     e.consume();
+                else
+                    UI.closeFile(file.getFilePath(), creatingPane.isLocal());
             });
         } catch (Exception ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
@@ -386,8 +384,10 @@ public abstract class FileEditorWindow extends VBox implements Window {
                 closeStage = doExitException(ex);
             }
 
-            if (closeStage)
+            if (closeStage) {
                 stage.close();
+                UI.closeFile(file.getFilePath(), creatingPane.isLocal());
+            }
         }
     }
 

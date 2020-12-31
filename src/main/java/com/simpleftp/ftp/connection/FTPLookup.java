@@ -179,7 +179,7 @@ public class FTPLookup {
 
             if (currentWorkingDirectory == null) {
                 log.error("Cannot determine the current working directory, cannot proceed with checking if directory exists");
-                throw new FTPError("Cannot determine if remotePath exists on this server", ftpClient.getReplyString());
+                throw new FTPError("Cannot determine if remotePath exists on this server", null);
             }
 
             remotePathExists = ftpClient.changeWorkingDirectory(remotePath); // if you changed to the directory successfully, it exists
