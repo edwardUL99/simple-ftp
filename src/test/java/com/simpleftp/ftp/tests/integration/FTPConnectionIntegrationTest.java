@@ -210,7 +210,7 @@ public class FTPConnectionIntegrationTest {
     }
 
     @Test
-    void shouldMakeDirSuccessfullyAsAbstractPath() throws FTPConnectionFailedException, FTPError, FTPNotConnectedException, FTPCommandFailedException {
+    void shouldMakeDirSuccessfullyAsRelativePath() throws FTPConnectionFailedException, FTPError, FTPNotConnectedException, FTPCommandFailedException {
         assertTrue(ftpConnection.connect());
         assertTrue(ftpConnection.login());
         assertTrue(ftpConnection.makeDirectory(TEST_DIR2));
