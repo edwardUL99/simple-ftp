@@ -17,7 +17,6 @@
 
 package com.simpleftp.ui.panels;
 
-import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ui.UI;
