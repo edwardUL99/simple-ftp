@@ -254,7 +254,6 @@ public class RemoteFileSystem implements FileSystem {
             LocalFile localFile = new LocalFile(localPath);
             if (!localFile.exists())
                 throw new FileSystemException("Failed to local temp copy file");
-            localFile.deleteOnExit();
 
             recursivelyUploadDirectory(localPath, destinationDir, null, ftpConnection, true);
         } else {
