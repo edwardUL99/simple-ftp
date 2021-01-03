@@ -17,6 +17,7 @@
 
 package com.simpleftp.ui.directories.tasks;
 
+import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.LocalFileSystem;
 import com.simpleftp.filesystem.RemoteFile;
@@ -188,9 +189,9 @@ public class FileStringDownloader implements BackgroundTask {
                 LocalFile downloaded;
                 if (remoteFile.isSymbolicLink()) {
                     remoteFile = new RemoteFile(remoteFile.getSymbolicLinkTarget());
-                    downloaded = new LocalFile(UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + remoteFile.getName());
+                    downloaded = new LocalFile(FileUtils.TEMP_DIRECTORY + FileUtils.PATH_SEPARATOR + remoteFile.getName());
                 } else {
-                    downloaded = new LocalFile(UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + remoteFile.getName());
+                    downloaded = new LocalFile(FileUtils.TEMP_DIRECTORY + FileUtils.PATH_SEPARATOR + remoteFile.getName());
                 }
 
                 if (new LocalFileSystem(readingConnection).addFile(remoteFile, downloaded.getParentFile().getAbsolutePath())) { // download the file

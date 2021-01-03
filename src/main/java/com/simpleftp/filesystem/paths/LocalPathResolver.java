@@ -21,7 +21,6 @@ import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.exceptions.PathResolverException;
 import com.simpleftp.filesystem.paths.interfaces.PathResolver;
-import com.simpleftp.ui.UI;
 
 import java.io.IOException;
 
@@ -66,7 +65,7 @@ public class LocalPathResolver implements PathResolver {
         LocalFile file = new LocalFile(path);
         boolean absolute = file.isAbsolute();
         if (!absolute) {
-            path = FileUtils.addPwdToPath(currWorkingDir, path, UI.PATH_SEPARATOR);
+            path = FileUtils.addPwdToPath(currWorkingDir, path, FileUtils.PATH_SEPARATOR);
             file = new LocalFile(path);
         }
 

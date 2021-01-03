@@ -82,7 +82,7 @@ final class RemoteFilePanel extends FilePanel {
         // need to make a local file first and then upload
         if (!connection.remotePathExists(path, false)) {
             String fileName = new File(path).getName();
-            LocalFile localFile = new LocalFile(UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + fileName);
+            LocalFile localFile = new LocalFile(FileUtils.TEMP_DIRECTORY + FileUtils.PATH_SEPARATOR + fileName);
             if (localFile.exists())
                 localFile.delete(); // it's in a temp directory, so can be deleted
 

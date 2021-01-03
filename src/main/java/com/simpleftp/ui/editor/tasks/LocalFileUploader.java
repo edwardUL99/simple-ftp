@@ -17,11 +17,11 @@
 
 package com.simpleftp.ui.editor.tasks;
 
+import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.LocalFileSystem;
 import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
-import com.simpleftp.ui.UI;
 import com.simpleftp.ui.editor.FileEditorWindow;
 
 import java.io.File;
@@ -64,7 +64,7 @@ final class LocalFileUploader extends FileUploader {
      */
     @Override
     String getBackupPath(String filePath) {
-        String pathSeparator = UI.PATH_SEPARATOR;
+        String pathSeparator = FileUtils.PATH_SEPARATOR;
         String backupPath = "";
         if (filePath.endsWith(pathSeparator)) {
             filePath = filePath.substring(0, filePath.length() - 1);

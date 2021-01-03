@@ -60,8 +60,8 @@ public class RemoteFileSystem implements FileSystem {
     }
 
     /**
-     * Add the specified file to the file system
-     *
+     * Add the specified file to the file system. This method can only add a single file to the filesystem.
+     * To add multiple files, use copyFiles or moveFiles
      * @param file the representation of the file to add
      * @param path the path to the dir to add the file to on the system
      * @return true if it was a success, false if not
@@ -209,5 +209,258 @@ public class RemoteFileSystem implements FileSystem {
     @Override
     public void setFTPConnection(FTPConnection connection) {
         this.ftpConnection = connection;
+    }
+
+    /**
+     * This method determines the type of operation the source and destination parameters represent.
+     * Checks that the parameters match the criteria for a remote file system,
+     * throws an IllegalArgumentException if not met.
+     * @param source the source file passed into copy/move
+     * @param destination the destination file passed into copy/move
+     * @return the enum value representing the copy/move type taking place
+     */
+    private CopyMoveOperation determineCopyMoveOperation(CommonFile source, CommonFile destination) {
+        boolean sourceRemote = !source.isLocal(), sourceLocal = !sourceRemote;
+        boolean destinationRemote = !destination.isLocal();
+
+        if (sourceLocal && !destinationRemote)
+            throw new IllegalArgumentException("The source file and destination file for RemoteFileSystem cannot both be instances of LocalFile");
+        else if (!destinationRemote)
+            throw new IllegalArgumentException("The destination file for RemoteFileSystem should be an instance of RemoteFile");
+
+        if (sourceRemote)
+            return CopyMoveOperation.REMOTE_TO_REMOTE;
+        else
+            return CopyMoveOperation.LOCAL_TO_REMOTE;
+    }
+
+    /**
+     * This method is used to copy files remote to remote. It needs to do a download to local temp folder
+     * and then upload to the destination
+     * @param source the file representing the source
+     * @param destination the file representing the destination directory
+     * @return true if successful, false if not
+     * @throws FTPException if a FTP error occurs
+     */
+    private boolean copyRemoteToRemote(RemoteFile source, RemoteFile destination) throws FTPException, FileSystemException {
+        String sourceName = source.getName();
+        String destinationDir = destination.getFilePath();
+        String destPath = destinationDir + "/" + sourceName;
+
+        if (source.isADirectory()) {
+            String localPath = FileUtils.TEMP_DIRECTORY + FileUtils.PATH_SEPARATOR + sourceName;
+            LocalFileSystem.recursivelyDownloadDirectory(source.getFilePath(), FileUtils.TEMP_DIRECTORY, null, ftpConnection, true);
+
+            LocalFile localFile = new LocalFile(localPath);
+            if (!localFile.exists())
+                throw new FileSystemException("Failed to local temp copy file");
+            localFile.deleteOnExit();
+
+            recursivelyUploadDirectory(localPath, destinationDir, null, ftpConnection, true);
+        } else {
+            LocalFile downloaded = ftpConnection.downloadFile(source.getFilePath(), FileUtils.TEMP_DIRECTORY);
+
+            if (downloaded == null || !downloaded.exists())
+                throw new FileSystemException("Failed to local temp copy file");
+
+            if (ftpConnection.uploadFile(downloaded, destinationDir) == null)
+                throw new FileSystemException("Failed to upload the local temp copy to the destination");
+        }
+
+        return new RemoteFile(destPath).exists();
+    }
+
+    /**
+     * Performs the remote to remote copy/move of files
+     * @param source the source file to copy/move
+     * @param destination the destination folder to place the source into
+     * @return true if successful, false if not
+     * @throws FileSystemException if an exception occurs
+     */
+    private boolean remoteToRemoteOperation(RemoteFile source, RemoteFile destination, boolean copy) throws FileSystemException {
+        String sourceName = source.getName();
+        String destinationDir = destination.getFilePath();
+        String destinationPath = destinationDir + "/" + sourceName;
+
+        String sourcePath = source.getFilePath();
+
+        if (!source.exists())
+            throw new FileSystemException("The source file " + sourcePath + " does not exist");
+
+        if (!destination.isADirectory())
+            throw new FileSystemException("The destination directory " + destinationDir + " is either not a directory or it does not exist");
+
+        if (fileExists(destinationPath))
+            return false;
+
+        try {
+            if (copy) {
+                return copyRemoteToRemote(source, destination); // for a copy on a FTP server, you need to do a local temp copy and then re-upload to the destination
+            } else {
+                return ftpConnection.renameFile(sourcePath, destinationPath); // for a move, rename is enough
+            }
+        } catch (FTPException ex) {
+            throw new FileSystemException("Failed to " + (copy ? "copy" : "move") + " files: " + ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * Recursively uploads an entire directory to the destination directory path.
+     * @param sourceDirectory the source directory to upload
+     * @param destDirectory the destination directory to upload to
+     * @param currentDirectory the current directory traversed, leave null for initial state
+     * @param ftpConnection the connection to use
+     * @param copy if false, the files will be deleted locally as they are copied
+     * @throws FTPException if an error occurs related to the FTP connection
+     */
+    private void recursivelyUploadDirectory(String sourceDirectory, String destDirectory, String currentDirectory, FTPConnection ftpConnection, boolean copy) throws FTPException, FileSystemException {
+        String listPath = sourceDirectory;
+        if (currentDirectory != null)
+            listPath += FileUtils.PATH_SEPARATOR + currentDirectory;
+
+        LocalFile listFile = new LocalFile(listPath);
+
+        String destPath = destDirectory + "/" + listFile.getName();
+
+        RemoteFile destFile = new RemoteFile(destPath);
+        if (!destFile.exists())
+            if (!ftpConnection.makeDirectory(destPath))
+                throw new FileSystemException("Failed to create a directory in the download directory structure, path: " + destPath);
+
+        String[] fileNames = listFile.list();
+
+        if (fileNames != null && fileNames.length > 0) {
+            for (String name : fileNames) {
+                String filePath;
+                if (currentDirectory == null) {
+                    filePath = sourceDirectory + FileUtils.PATH_SEPARATOR + name;
+                } else {
+                    filePath = sourceDirectory + FileUtils.PATH_SEPARATOR + currentDirectory + FileUtils.PATH_SEPARATOR + name;
+                }
+
+                LocalFile file = new LocalFile(filePath);
+
+                if (file.isADirectory()) {
+                    recursivelyUploadDirectory(listPath, destPath, name, ftpConnection, copy);
+                } else {
+                    if (ftpConnection.uploadFile(file, destPath) == null)
+                        throw new FileSystemException("Failed to upload file: " + filePath + " with FTP Reply: " + ftpConnection.getReplyString());
+
+                    if (!copy && !file.delete())
+                        throw new FileSystemException("Failed to remove file: " + filePath);
+                }
+            }
+
+            if (!copy && !new LocalFile(listPath).delete())
+                throw new FileSystemException("Failed to remove file: " + listPath);
+        }
+    }
+
+    /**
+     * Performs local to remote copy/move of the source file
+     * @param source the file representing the source file/directory
+     * @param destination the file representing the destination directory
+     * @param copy true if this operation is a copy, false if a move
+     * @return true if successful, false if not
+     * @throws FileSystemException if any failure occurs
+     */
+    private boolean localToRemoteOperation(LocalFile source, RemoteFile destination, boolean copy) throws FileSystemException {
+        String sourceName = source.getName();
+        String destinationDir = destination.getFilePath();
+        String destinationPath = destinationDir + "/" + sourceName;
+
+        String sourcePath = source.getFilePath();
+
+        if (!source.exists())
+            throw new FileSystemException("The source file path " + sourcePath + " does not exist");
+
+        if (!destination.isADirectory())
+            throw new FileSystemException("The destination file " + destinationDir + " is either not a directory or it does not exist");
+
+        if (fileExists(destinationPath))
+            return false;
+
+        boolean sourceDir = source.isADirectory();
+
+        try {
+            if (sourceDir) {
+                recursivelyUploadDirectory(sourcePath, destinationDir, null, ftpConnection, copy);
+                return fileExists(destinationPath);
+            } else {
+                if (ftpConnection.uploadFile(source, destinationDir) != null) {
+                    return copy || source.delete();
+                } else {
+                    return false;
+                }
+            }
+        } catch (FTPException ex) {
+            throw new FileSystemException("Failed to " + (copy ? "copy":"move") + " files: " + ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * This is the method which will implement the copy operation. It permits copying between different filesystems and also within the same filesystem.
+     * The behaviour of the method depends on the implementation types of the source and destination parameters. If the types are both the same,
+     * the copying will take place on the same file system those files are defined for.
+     * If the types are different, it is for copying between different file systems, i.e. copying from the file defined for that file system to the file system defined for the
+     * destination file.
+     * If the types provided are in the wrong order, or both the same types but not the matching type for that file system, an IllegalArgumentException should be thrown.
+     * <p>
+     * A copy to another directory on the same remote file system requires a local copy. I.e. it requires a download of the file to a temp folder and then upload it to the destination
+     * folder
+     * <p>
+     * An IllegalArgumentException can be thrown in the following conditions:
+     * <ol>
+     *     <li>If the implementing types of source and destination are the same but not LocalFile</li>
+     *     <li>If the implementing types are different and source is not RemoteFile and destination is not LocalFile</li>
+     * </ol>
+     *
+     * @param source      the file representing the file to copy. Can be a directory or a file
+     * @param destination the file representing the <b>directory</b> the source will be copied to. If this file is not a directory, an IllegalArgumentException should be thrown
+     * @return true if a success, false if not
+     */
+    @Override
+    public boolean copyFiles(CommonFile source, CommonFile destination) throws FileSystemException {
+        CopyMoveOperation copyMoveOperation = determineCopyMoveOperation(source, destination);
+        if (copyMoveOperation == CopyMoveOperation.REMOTE_TO_REMOTE) {
+            return remoteToRemoteOperation((RemoteFile)source, (RemoteFile)destination, true);
+        } else if (copyMoveOperation == CopyMoveOperation.LOCAL_TO_REMOTE) {
+            return localToRemoteOperation((LocalFile)source, (RemoteFile)destination, true);
+        } else {
+            throw new UnsupportedOperationException("Unsupported copy operation for RemoteFileSystem encountered: " + copyMoveOperation);
+        }
+    }
+
+    /**
+     * This is the method which will implement the move operation. It permits moving between different filesystems and also within the same filesystem.
+     * The behaviour of the method depends on the implementation types of the source and destination parameters. If the types are both the same,
+     * the moving will take place on the same file system those files are defined for.
+     * If the types are different, it is for moving between different file systems, i.e. moving from the file defined for that file system to the file system defined for the
+     * destination file.
+     * If the types provided are in the wrong order, or both the same types but not the matching type for that file system, an IllegalArgumentException should be thrown.
+     * <p>
+     * A move from local to remote requires a upload and then deletion on the local file system of the source file. Remote to local requires a download and then deletion on
+     * the remote file system of the source file.
+     * <p>
+     * An IllegalArgumentException can be thrown in the following conditions:
+     * <ol>
+     *     <li>If the implementing types of source and destination are the same but not LocalFile</li>
+     *     <li>If the implementing types are different and source is not RemoteFile and destination is not LocalFile</li>
+     * </ol>
+     *
+     * @param source      the file representing the file to move. Can be a directory or a file
+     * @param destination the file representing the <b>directory</b> the source will be copied to. If this file is not a directory, an IllegalArgumentException should be thrown
+     * @return true if a success, false if not
+     */
+    @Override
+    public boolean moveFiles(CommonFile source, CommonFile destination) throws FileSystemException {
+        CopyMoveOperation copyMoveOperation = determineCopyMoveOperation(source, destination);
+        if (copyMoveOperation == CopyMoveOperation.REMOTE_TO_REMOTE) {
+            return remoteToRemoteOperation((RemoteFile)source, (RemoteFile)destination, false);
+        } else if (copyMoveOperation == CopyMoveOperation.LOCAL_TO_REMOTE) {
+            return localToRemoteOperation((LocalFile)source, (RemoteFile)destination, false);
+        } else {
+            throw new UnsupportedOperationException("Unsupported move operation for RemoteFileSystem encountered: " + copyMoveOperation);
+        }
     }
 }

@@ -163,10 +163,10 @@ final class LocalFilePanel extends FilePanel {
      */
     private String resolveTargetPath(String targetPath) throws LocalPathNotFoundException, FileSystemException, IOException {
         LocalFile file = new LocalFile(targetPath);
-        targetPath = !file.isAbsolute() ? FileUtils.addPwdToPath(directoryPane.getCurrentWorkingDirectory(), targetPath, UI.PATH_SEPARATOR):targetPath;
+        targetPath = !file.isAbsolute() ? FileUtils.addPwdToPath(directoryPane.getCurrentWorkingDirectory(), targetPath, FileUtils.PATH_SEPARATOR):targetPath;
         String windowsParent;
         String root = ((windowsParent = System.getenv("SystemDrive")) != null) ? windowsParent:null;
-        targetPath = UI.resolveSymbolicPath(targetPath, UI.PATH_SEPARATOR, root);
+        targetPath = UI.resolveSymbolicPath(targetPath, FileUtils.PATH_SEPARATOR, root);
         file = new LocalFile(targetPath);
 
         if (!file.isSymbolicLink())
@@ -187,10 +187,10 @@ final class LocalFilePanel extends FilePanel {
      */
     private String resolveSymbolicName(String symbolicName) throws FileSystemException {
         LocalFile file = new LocalFile(symbolicName);
-        String path = !file.isAbsolute() ? FileUtils.addPwdToPath(directoryPane.getCurrentWorkingDirectory(), symbolicName, UI.PATH_SEPARATOR):symbolicName;
+        String path = !file.isAbsolute() ? FileUtils.addPwdToPath(directoryPane.getCurrentWorkingDirectory(), symbolicName, FileUtils.PATH_SEPARATOR):symbolicName;
         String windowsParent;
         String root = ((windowsParent = System.getenv("SystemDrive")) != null) ? windowsParent:null;
-        path = UI.resolveSymbolicPath(path, UI.PATH_SEPARATOR, root);
+        path = UI.resolveSymbolicPath(path, FileUtils.PATH_SEPARATOR, root);
 
         return !directoryPane.getFileSystem().fileExists(path) ? path:null;
     }
@@ -260,11 +260,11 @@ final class LocalFilePanel extends FilePanel {
             String currWorkingDir = directoryPane.getCurrentWorkingDirectory();
             LocalFile file = new LocalFile(path);
             boolean absolute = file.isAbsolute();
-            path = !absolute ? FileUtils.addPwdToPath(currWorkingDir, path, UI.PATH_SEPARATOR) : path;
+            path = !absolute ? FileUtils.addPwdToPath(currWorkingDir, path, FileUtils.PATH_SEPARATOR) : path;
 
             String windowsRoot;
             String root = ((windowsRoot = System.getenv("SystemDrive")) != null) ? windowsRoot : null;
-            String symbolicPath = UI.resolveSymbolicPath(path, UI.PATH_SEPARATOR, root);
+            String symbolicPath = UI.resolveSymbolicPath(path, FileUtils.PATH_SEPARATOR, root);
             if (symbolicPath == null)
                 return; // this is a rare case. UI.resolveSymbolicPath would have shown an error dialog
 

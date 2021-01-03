@@ -39,6 +39,7 @@ public final class FileUtils {
      * The mappings of r, w, x or - to octal number
      */
     private static final HashMap<Character, Integer> octalMappings = new HashMap<>();
+
     /**
      * Maps a octal digit to the triplet of rwx
      *
@@ -71,6 +72,17 @@ public final class FileUtils {
         octalToPermissionTriplet.put(1, "--x");
         octalToPermissionTriplet.put(0, "---");
     }
+
+    /**
+     * The temp directory
+     */
+    public static final String TEMP_DIRECTORY = System.getProperty("java.io.tmpdir");
+
+    /**
+     *
+     * The separator for local file paths
+     */
+    public static final String PATH_SEPARATOR = System.getProperty("file.separator");
 
     /**
      * Parses the calendar object to the FILE_DATETIME_FORMAT

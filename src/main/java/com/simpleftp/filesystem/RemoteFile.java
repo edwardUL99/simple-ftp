@@ -183,8 +183,12 @@ public class RemoteFile implements CommonFile {
         }
     }
 
-    @Override
-    public String getName() {
+    /**
+     * Pulls the name of the absolute remote path given and returns it
+     * @param absolutePath the absolute path to retrieve name from
+     * @return the name of the file the absolute path refers to
+     */
+    public static String getName(String absolutePath) {
         String name = absolutePath;
         int index = name.indexOf("/");
 
@@ -198,6 +202,11 @@ public class RemoteFile implements CommonFile {
         }
 
         return name;
+    }
+
+    @Override
+    public String getName() {
+        return getName(absolutePath);
     }
 
     @Override

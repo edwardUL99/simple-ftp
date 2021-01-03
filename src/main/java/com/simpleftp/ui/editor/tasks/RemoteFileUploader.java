@@ -17,6 +17,7 @@
 
 package com.simpleftp.ui.editor.tasks;
 
+import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFileSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
@@ -24,7 +25,6 @@ import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
-import com.simpleftp.ui.UI;
 import com.simpleftp.ui.editor.FileEditorWindow;
 import lombok.extern.log4j.Log4j2;
 
@@ -144,7 +144,7 @@ final class RemoteFileUploader extends FileUploader {
      */
     @Override
     String getSaveFilePath(String filePath) {
-        return UI.TEMP_DIRECTORY + UI.PATH_SEPARATOR + new File(filePath).getName();
+        return FileUtils.TEMP_DIRECTORY + FileUtils.PATH_SEPARATOR + new File(filePath).getName();
     }
 
     /**

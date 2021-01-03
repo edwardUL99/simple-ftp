@@ -197,17 +197,6 @@ public final class UI {
     }
 
     /**
-     * The temp directory
-     */
-    public static final String TEMP_DIRECTORY = System.getProperty("java.io.tmpdir");
-
-    /**
-     *
-     * The separator for file paths
-     */
-    public static final String PATH_SEPARATOR = System.getProperty("file.separator");
-
-    /**
      * List of background UI tasks running
      */
     private static final ArrayList<BackgroundTask> backgroundTasks = new ArrayList<>();

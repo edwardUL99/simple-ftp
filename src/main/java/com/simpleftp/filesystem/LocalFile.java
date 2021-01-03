@@ -56,7 +56,7 @@ public class LocalFile extends File implements CommonFile {
 
     @Override
     public boolean isADirectory() {
-        return super.isDirectory();
+        return isSymbolicLink() ? super.isDirectory():Files.isDirectory(toPath());
     }
 
     @Override
