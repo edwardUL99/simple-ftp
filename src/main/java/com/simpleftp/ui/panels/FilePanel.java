@@ -416,7 +416,7 @@ public abstract class FilePanel extends VBox {
                         comboBox.setValue("");
                         entryMappings.remove(fileName);
                     } else {
-                        UI.doError("File not deleted", "File " + fileName + " wasn't deleted. FTP Reply: " + directoryPane.getFileSystem().getFTPConnection().getReplyString());
+                        UI.doError("File not deleted", "File " + fileName + " wasn't deleted successfully");
                     }
                 }
             } else {

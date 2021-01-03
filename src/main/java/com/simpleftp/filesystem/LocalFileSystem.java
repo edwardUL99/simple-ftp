@@ -78,6 +78,24 @@ public class LocalFileSystem implements FileSystem {
     }
 
     /**
+     * Recursively deletes the directory from the local file system
+     * @param directory the directory to remove recursively
+     * @throws FileSystemException if an error occurs causing the deletion to fail
+     */
+    private void deleteDirectoryRecursively(String directory) throws FileSystemException {
+        LocalFile file = new LocalFile(directory);
+        File[] listings = file.listFiles();
+        if (listings != null) {
+            for (File file1 : listings) {
+                deleteDirectoryRecursively(file1.getAbsolutePath());
+            }
+        }
+
+        if (!file.delete())
+            throw new FileSystemException("A file in the directory tree failed to be deleted with path: " + directory);
+    }
+
+    /**
      * Removes the specified file from the local file system
      * @param file the representation of the file to remove
      * @return true if successful
@@ -88,7 +106,12 @@ public class LocalFileSystem implements FileSystem {
         if (!(file instanceof LocalFile))
             throw new FileSystemException("Cannot remove a remote file from the LocalFileSystem");
 
-        return ((LocalFile) file).delete();
+        if (file.isADirectory()) {
+            deleteDirectoryRecursively(file.getFilePath());
+            return !file.exists();
+        } else {
+            return ((LocalFile) file).delete();
+        }
     }
 
     /* Removes the specified file from the local file system
@@ -96,8 +119,8 @@ public class LocalFileSystem implements FileSystem {
      * @return true if successful
      */
     @Override
-    public boolean removeFile(String fileName) {
-        return new LocalFile(fileName).delete();
+    public boolean removeFile(String fileName) throws FileSystemException {
+        return removeFile(new LocalFile(fileName));
     }
 
     /**

@@ -36,7 +36,7 @@ import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * This class represents a DirectoryPane storing a DirectoryPane for remote files
+ * This class represents a DirectoryPane storing a DirectoryPane for local files
  */
 final class LocalFilePanel extends FilePanel {
     /**

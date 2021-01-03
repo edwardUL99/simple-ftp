@@ -80,6 +80,48 @@ public class RemoteFileSystem implements FileSystem {
     }
 
     /**
+     * Recursively deletes the directory from the remote server
+     * @param directory the directory to remove recursively
+     * @param currentDirectory the current directory in the recursive step, null for initial step
+     * @param connection the connection to use for removal
+     * @throws FTPException if a FTP Exception occurs
+     * @throws FileSystemException if an error occurs causing the deletion to fail
+     */
+    private void deleteDirectoryRecursively(String directory, String currentDirectory, FTPConnection connection) throws FTPException, FileSystemException {
+        String listPath = directory;
+        if (currentDirectory != null)
+            listPath += "/" + currentDirectory;
+
+        FTPFile[] files = connection.listFiles(listPath);
+
+        if (files != null && files.length > 0) {
+            for (FTPFile file : files) {
+                String name = file.getName();
+
+                if (name.equals(".") || name.equals(".."))
+                    continue;
+
+                String filePath;
+                if (currentDirectory == null) {
+                    filePath = directory + "/" + name;
+                } else {
+                    filePath = directory + "/" + currentDirectory + "/" + name;
+                }
+
+                if (file.isDirectory()) {
+                    deleteDirectoryRecursively(listPath, name, connection);
+                } else {
+                    if (!ftpConnection.removeFile(filePath))
+                        throw new FileSystemException("Failed to remove a file in the directory tree with path: " + filePath);
+                }
+            }
+
+            if (!ftpConnection.removeDirectory(listPath))
+                throw new FileSystemException("Failed to remove a directory in the directory tree with path: " + listPath);
+        }
+    }
+
+    /**
      * Removes the specified file from the file system
      *
      * @param file the representation of the file to remove
@@ -91,7 +133,18 @@ public class RemoteFileSystem implements FileSystem {
         if (!(file instanceof RemoteFile))
             throw new FileSystemException("Cannot remove a Local File from a remote file system");
 
-        return removeFile(file.getFilePath());
+        String filePath = file.getFilePath();
+
+        try {
+            if (file.isNormalFile()) {
+                return ftpConnection.removeFile(filePath);
+            } else {
+                deleteDirectoryRecursively(filePath, null, ftpConnection);
+                return !ftpConnection.remotePathExists(filePath, true);
+            }
+        } catch (FTPException ex) {
+            throw new FileSystemException("A FTP Exception occurred when removing the specified file", ex);
+        }
     }
 
     /**
@@ -103,20 +156,7 @@ public class RemoteFileSystem implements FileSystem {
      */
     @Override
     public boolean removeFile(String fileName) throws FileSystemException {
-        try {
-            RemoteFile file = (RemoteFile)getFile(fileName);
-            if (file != null) {
-                if (file.isNormalFile()) {
-                    return ftpConnection.removeFile(fileName);
-                } else {
-                    return ftpConnection.removeDirectory(fileName);
-                }
-            }
-
-            return false;
-        } catch (FTPException ex) {
-            throw new FileSystemException("A FTP Exception occurred when removing the specified file", ex);
-        }
+        return removeFile(getFile(fileName));
     }
 
     /**
