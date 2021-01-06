@@ -64,9 +64,13 @@ public class LocalFile extends File implements CommonFile {
         return super.isFile();
     }
 
+    /**
+     * Returns the hashcode of this file by returning the hashcode of the file path
+     * @return hash code for use in hash maps
+     */
     @Override
     public int hashCode() {
-        return super.hashCode();
+        return getFilePath().hashCode();
     }
 
     /**
@@ -80,8 +84,6 @@ public class LocalFile extends File implements CommonFile {
             return false;
 
         if (this == obj) {
-            return true;
-        } else if (this.hashCode() == obj.hashCode()) {
             return true;
         } else {
             LocalFile localFile = (LocalFile)obj;

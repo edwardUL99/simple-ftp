@@ -106,7 +106,7 @@ public class LocalFileSystem implements FileSystem {
         if (!(file instanceof LocalFile))
             throw new FileSystemException("Cannot remove a remote file from the LocalFileSystem");
 
-        if (file.isADirectory()) {
+        if (!file.isSymbolicLink() && file.isADirectory()) { // if file is a symbolic link just delete the link, not the target directory
             deleteDirectoryRecursively(file.getFilePath());
             return !file.exists();
         } else {
@@ -298,11 +298,14 @@ public class LocalFileSystem implements FileSystem {
                     filePath = sourceDirectory + "/" + currentDirectory + "/" + currName;
                 }
 
-                boolean directory = file1.isSymbolicLink() ? new RemoteFile(filePath, ftpConnection, file1).isADirectory():file1.isDirectory();
+                RemoteFile file2 = new RemoteFile(filePath, ftpConnection, file1);
+                boolean symLink = file1.isSymbolicLink();
+                boolean directory = symLink ? file2.isADirectory():file1.isDirectory();
+                boolean isFile = symLink ? file2.isNormalFile():file1.isFile();
 
                 if (directory) {
                     recursivelyDownloadDirectory(listPath, destPath, currName, ftpConnection, copy);
-                } else {
+                } else if (isFile) {
                     LocalFile downloaded = ftpConnection.downloadFile(filePath, destPath);
                     if (downloaded == null || !downloaded.exists())
                         throw new FileSystemException("Failed to download file: " + filePath + " with FTP Reply: " + ftpConnection.getReplyString());

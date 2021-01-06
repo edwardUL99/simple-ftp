@@ -29,6 +29,7 @@ import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.properties.Properties;
 import com.simpleftp.ui.background.BackgroundTask;
+import com.simpleftp.ui.background.FileService;
 import com.simpleftp.ui.dialogs.*;
 import com.simpleftp.ui.exceptions.UIException;
 import com.simpleftp.ui.files.LineEntry;
@@ -55,7 +56,8 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * This class provides static util methods and constants for UI
+ * This class provides static util methods and constants for UI as well as background task management and tracking
+ * if a file is opened or not
  */
 public final class UI {
     /**
@@ -499,6 +501,50 @@ public final class UI {
         }
 
         return false;
+    }
+
+    /**
+     * Returns an unmodifiable view of the background tasks this UI class is holding
+     * @return unmodifiable view of the background tasks
+     */
+    public static List<BackgroundTask> getBackgroundTasks() {
+        return Collections.unmodifiableList(backgroundTasks);
+    }
+
+    /**
+     * Checks if file matches file1 by the isLocal method and file's filePath starts with file1's filePath
+     * @param file the first file to compare
+     * @param file1 the file that the first file is matched against
+     * @return true if they match, false if not
+     */
+    private static boolean taskFileEquals(CommonFile file, CommonFile file1) {
+        return file.getFilePath().startsWith(file1.getFilePath()) && file.isLocal() == file1.isLocal(); // if the file's filePath starts with the file1's path, we have a sub-file of file and file is a directory
+    }
+
+    /**
+     * Determines whether the specified file is "locked" by a FileService task.
+     * It is determined locked, if there exists a FileService background task with a source file matching the file. The source file could be a parent of the file
+     * @param file the file to check if it is locked
+     * @param checkDestination true to check this file against a task's destination file if non-null, if false, only check against a task's source file
+     * @return true if locked, false if not
+     */
+    public static boolean isFileLockedByFileService(CommonFile file, boolean checkDestination) {
+        List<BackgroundTask> tasks = getBackgroundTasks();
+        if (tasks.size() == 0)
+            return false;
+        else
+            return tasks.stream()
+                    .filter(task -> task instanceof FileService)
+                    .map(task -> (FileService) task)
+                    .anyMatch(task -> {
+                        CommonFile source = task.getSource();
+                        CommonFile destination = task.getDestination();
+                        if (checkDestination && destination != null) {
+                            return taskFileEquals(file, source) || taskFileEquals(file, destination);
+                        } else {
+                            return taskFileEquals(file, source);
+                        }
+                    });
     }
 
     /**

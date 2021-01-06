@@ -408,7 +408,9 @@ public abstract class FilePanel extends VBox {
             CommonFile file = lineEntry.getFile();
             String fileName = file.getName();
 
-            if (!UI.isFileOpened(file.getFilePath(), directoryPane.isLocal())) {
+            boolean opened = UI.isFileOpened(file.getFilePath(), directoryPane.isLocal());
+            boolean locked = UI.isFileLockedByFileService(file, true); // check if this file is the destination of a copy/move as removing it would cause issues
+            if (!opened && !locked) {
                 if (UI.doConfirmation("Confirm file deletion", "Confirm deletion of " + fileName)) {
                     if (directoryPane.deleteEntry(lineEntry)) {
                         UI.doInfo("File deleted successfully", "File " + fileName + " deleted");
@@ -419,8 +421,10 @@ public abstract class FilePanel extends VBox {
                         UI.doError("File not deleted", "File " + fileName + " wasn't deleted successfully");
                     }
                 }
-            } else {
+            } else if (opened) {
                 UI.doError("File Open", "File " + fileName + " is currently opened, file can't be deleted");
+            } else {
+                UI.doError("File Locked", "File " + fileName + " is currently locked by a background task, file can't be deleted");
             }
         }
     }

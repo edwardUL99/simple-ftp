@@ -322,24 +322,39 @@ public class RemoteFile implements CommonFile {
         }
     }
 
-
-    @Override
-    public int hashCode() {
-        return ftpFile.hashCode();
+    /**
+     * Returns the path without separators (if a path is equal to another path without separators, that means that it would be equal with the separator.
+     * This is used for hashcode also
+     * @return path without separators
+     */
+    private String getPathWithoutSeparators() {
+        return absolutePath.replaceAll("/", "");
     }
 
+    /**
+     * Returns the hashcode of this file's path
+     * @return hash code for use in hash data structures
+     */
+    @Override
+    public int hashCode() {
+        return getPathWithoutSeparators().hashCode();
+    }
+
+    /**
+     * Determines if this file is equal to the object provided based on file path
+     * @param obj the object to compare to
+     * @return true if equal, false if not
+     */
     @Override
     public boolean equals(Object obj) {
         if (!(obj instanceof RemoteFile)) {
             return false;
         } else if (this == obj) {
             return true;
-        } else if (this.hashCode() == obj.hashCode()) {
-            return true;
         } else {
             RemoteFile remoteFile = (RemoteFile)obj;
 
-            return this.getFilePath().equals(remoteFile.getFilePath());
+            return this.getPathWithoutSeparators().equals(remoteFile.getPathWithoutSeparators());
         }
     }
 

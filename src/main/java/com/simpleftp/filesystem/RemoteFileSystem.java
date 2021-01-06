@@ -136,7 +136,7 @@ public class RemoteFileSystem implements FileSystem {
         String filePath = file.getFilePath();
 
         try {
-            if (file.isNormalFile()) {
+            if (file.isNormalFile() || file.isSymbolicLink()) { // if file is a symbolic link just delete the link, not the target directory
                 return ftpConnection.removeFile(filePath);
             } else {
                 deleteDirectoryRecursively(filePath, null, ftpConnection);
@@ -364,7 +364,7 @@ public class RemoteFileSystem implements FileSystem {
         RemoteFile destFile = new RemoteFile(destPath);
         if (!destFile.exists())
             if (!ftpConnection.makeDirectory(destPath))
-                throw new FileSystemException("Failed to create a directory in the download directory structure, path: " + destPath);
+                throw new FileSystemException("Failed to create a directory in the upload directory structure, path: " + destPath);
 
         String[] fileNames = listFile.list();
 
@@ -381,9 +381,9 @@ public class RemoteFileSystem implements FileSystem {
 
                 if (file.isADirectory()) {
                     recursivelyUploadDirectory(listPath, destPath, name, ftpConnection, copy);
-                } else {
+                } else if (file.isFile()) {
                     if (ftpConnection.uploadFile(file, destPath) == null)
-                        throw new FileSystemException("Failed to upload file: " + filePath + " with FTP Reply: " + ftpConnection.getReplyString());
+                        throw new FileSystemException("Failed to upload file: " + filePath);
 
                     if (!copy && !file.delete())
                         throw new FileSystemException("Failed to remove file: " + filePath);
@@ -413,7 +413,7 @@ public class RemoteFileSystem implements FileSystem {
         if (!source.exists())
             throw new FileSystemException("The source file path " + sourcePath + " does not exist");
 
-        if (!destination.isADirectory())
+        if (!destination.exists() || !destination.isADirectory())
             throw new FileSystemException("The destination file " + destinationDir + " is either not a directory or it does not exist");
 
         if (fileExists(destinationPath))

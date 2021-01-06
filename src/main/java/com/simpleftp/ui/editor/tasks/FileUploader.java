@@ -25,6 +25,7 @@ import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.background.BackgroundTask;
+import com.simpleftp.ui.background.scheduling.TaskScheduler;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.editor.FileEditorWindow;
 import javafx.application.Platform;
@@ -36,7 +37,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.HashMap;
 
 /**
  * The service for uploading the text of a changed file
@@ -69,13 +69,17 @@ public abstract class FileUploader implements BackgroundTask {
      */
     protected FTPConnection uploadingConnection;
     /**
-     * This returns true if there is an upload in progress for the specified FileEditorWindow
+     * A boolean to keep track of if this task is finished or not
      */
-    private static final HashMap<FileEditorWindow, Boolean> uploadInProgress = new HashMap<>();
+    private boolean finished;
     /**
      * Regex used to identify a backup file
      */
     protected static final String BACKUP_REGEX = "^.+([.]*~(([\\\\.])([0-9]+))*$)";
+    /**
+     * A scheduler for scheduling this uploader
+     */
+    private static final TaskScheduler<FileEditorWindow, FileUploader> scheduler = new TaskScheduler<>();
 
     /**
      * Constructs a file uploader
@@ -102,23 +106,16 @@ public abstract class FileUploader implements BackgroundTask {
         };
 
         uploadService.setOnSucceeded(e -> doSucceed());
-    }
-
-    /**
-     * A method to set the value of upload in progress for the specified editor window
-     * @param editorWindow the editor to window to set
-     * @param uploadInProgress the value for upload in progress
-     */
-    private static synchronized void setUploadInProgress(FileEditorWindow editorWindow, boolean uploadInProgress) {
-        FileUploader.uploadInProgress.put(editorWindow, uploadInProgress);
+        uploadService.setOnFailed(e -> finished = true);
+        uploadService.setOnCancelled(e -> finished = false);
     }
 
     /**
      * Defines what should happen when the upload succeeds
      */
     private void doSucceed() {
+        finished = true;
         UI.removeBackgroundTask(this);
-        setUploadInProgress(editorWindow, false);
 
         if (!errorOccurred) {
             DirectoryPane directoryPane = editorWindow.getCreatingPane();
@@ -145,20 +142,10 @@ public abstract class FileUploader implements BackgroundTask {
      */
     @Override
     public void start() {
+        editorWindow.displaySavingLabel(true);
         uploadService.start();
-        setUploadInProgress(editorWindow, true);
+        finished = false;
         UI.addBackgroundTask(this);
-    }
-
-    /**
-     * Returns true if an upload is in progress for the specified editor window.
-     * No uploads should be started for that editor window when this method returns true
-     * @param editorWindow the editor window to check
-     * @return true if an upload is in progress for that window, false if now
-     */
-    public static synchronized boolean isUploadInProgress(FileEditorWindow editorWindow) {
-        Boolean upload = uploadInProgress.get(editorWindow);
-        return upload != null ? upload:false;
     }
 
     /**
@@ -262,6 +249,17 @@ public abstract class FileUploader implements BackgroundTask {
     }
 
     /**
+     * Returns a boolean determining if the task is finished.
+     * This should be tracked by a variable in the implementing class and not by checking any underlying JavaFX Service state since that has to be done from the JavaFX thread
+     *
+     * @return true if finished, false if not
+     */
+    @Override
+    public boolean isFinished() {
+        return finished;
+    }
+
+    /**
      * Creates a FileUploader for the file provided
      * @param editorWindow the editor window
      * @param filePath the path to the file
@@ -295,10 +293,29 @@ public abstract class FileUploader implements BackgroundTask {
     }
 
     /**
+     * Use this call to determine if a task is ready
+     *
+     * @return true if ready, false if not
+     */
+    @Override
+    public boolean isReady() {
+        return uploadService.getState() == Worker.State.READY;
+    }
+
+    /**
      * Returns the state of the upload service
      * @return the state of the upload service thread
      */
     public Worker.State getState() {
         return uploadService.getState();
+    }
+
+    /**
+     * Schedule this uploader to be run by using its editor window as the key, i.e. if another file uploader is used with the same editor window,
+     * run them one after another
+     */
+    @Override
+    public void schedule() {
+        scheduler.schedule(editorWindow, this);
     }
 }

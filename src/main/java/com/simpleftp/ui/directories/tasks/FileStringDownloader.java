@@ -49,12 +49,22 @@ public class FileStringDownloader implements BackgroundTask {
      * Need a separate connection for downloading files so it doesn't hog the main connection
      */
     private FTPConnection readingConnection;
+    /**
+     * The pane that created this task
+     */
     private DirectoryPane creatingPanel;
+    /**
+     * A flag indicating that an error has occurred
+     */
     private boolean errorOccurred;
     /**
      * The download service for downloading the contents
      */
     private Service<String> downloadService;
+    /**
+     * A flag keeping track of if this task is finished or not
+     */
+    private boolean finished;
 
     /**
      * Creates a FileStringDownloader object
@@ -80,7 +90,16 @@ public class FileStringDownloader implements BackgroundTask {
     @Override
     public void start() {
         UI.addBackgroundTask(this);
+        finished = false;
         downloadService.start();
+    }
+
+    /**
+     * FileStringDownloaded does not schedule, instead it just calls start
+     */
+    @Override
+    public void schedule() {
+        start();
     }
 
     /**
@@ -102,6 +121,27 @@ public class FileStringDownloader implements BackgroundTask {
     }
 
     /**
+     * Use this call to determine if a task is ready
+     *
+     * @return true if ready, false if not
+     */
+    @Override
+    public boolean isReady() {
+        return downloadService.isRunning();
+    }
+
+    /**
+     * Returns a boolean determining if the task is finished.
+     * This should be tracked by a variable in the implementing class and not by checking any underlying JavaFX Service state since that has to be done from the JavaFX thread
+     *
+     * @return true if finished, false if not
+     */
+    @Override
+    public boolean isFinished() {
+        return finished;
+    }
+
+    /**
      * Initialises the download service
      */
     private void initDownloadService() {
@@ -113,6 +153,7 @@ public class FileStringDownloader implements BackgroundTask {
         };
 
         downloadService.setOnSucceeded(e -> {
+            finished = true;
             if (!errorOccurred) {
                 String contents = (String) e.getSource().getValue();
                 UI.showFileEditor(creatingPanel, file, contents);
@@ -121,8 +162,14 @@ public class FileStringDownloader implements BackgroundTask {
             UI.removeBackgroundTask(this);
         });
 
-        downloadService.setOnCancelled(e -> disconnectConnection());
-        downloadService.setOnFailed(e -> disconnectConnection());
+        downloadService.setOnCancelled(e -> {
+            finished = true;
+            disconnectConnection();
+        });
+        downloadService.setOnFailed(e -> {
+            finished = true;
+            disconnectConnection();
+        });
     }
 
     /**
