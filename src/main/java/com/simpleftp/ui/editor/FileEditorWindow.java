@@ -410,4 +410,30 @@ public abstract class FileEditorWindow extends VBox implements Window {
      * @return true if remote, false if local
      */
     public abstract boolean isRemote();
+
+    /**
+     * Returns the hash code of the file in this editor window
+     * @return the hash code of the file in this editor window
+     */
+    @Override
+    public int hashCode() {
+        return file.hashCode();
+    }
+
+    /**
+     * Determines if this editor window is equal to another based on its file
+     * @param obj the object to check equality with
+     * @return true if this editor's window equals another irregardless of contents
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof FileEditorWindow)) {
+            return false;
+        } else if (this == obj) {
+            return true;
+        } else {
+            FileEditorWindow editorWindow = (FileEditorWindow)obj;
+            return file.equals(editorWindow.file);
+        }
+    }
 }

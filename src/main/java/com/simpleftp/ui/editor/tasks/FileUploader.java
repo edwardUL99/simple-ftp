@@ -107,7 +107,7 @@ public abstract class FileUploader implements BackgroundTask {
 
         uploadService.setOnSucceeded(e -> doSucceed());
         uploadService.setOnFailed(e -> finished = true);
-        uploadService.setOnCancelled(e -> finished = false);
+        uploadService.setOnCancelled(e -> finished = true);
     }
 
     /**
@@ -131,9 +131,9 @@ public abstract class FileUploader implements BackgroundTask {
             if (finalParent.equals(directoryPane.getCurrentWorkingDirectory())) {
                 directoryPane.refresh();
             }
-
-            editorWindow.displaySavingLabel(false);
         }
+
+        editorWindow.displaySavingLabel(false);
     }
 
     /**

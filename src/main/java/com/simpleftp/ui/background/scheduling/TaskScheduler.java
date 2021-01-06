@@ -50,6 +50,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  *
  * @param <T> the "key" to synchronize by, i.e. if you want to register a task to a key (could be if the task is for the same file for e.g. use a CommonFile as a key and then if 2 tasks with the same file object are registered, run one after another),
  *           basically this key is what determines if a task is a duplicate of another and they should be run one after another based on this key.
+ *           It is recommended that T overrides both equals() and hashCode() - following their contract if possible
  * @param <R> the type of the task
  */
 public class TaskScheduler<T, R extends BackgroundTask> {
@@ -109,10 +110,12 @@ public class TaskScheduler<T, R extends BackgroundTask> {
      */
     private boolean isTaskInProgress(T key) {
         R task = runningTask.get(key);
-        if (task != null && task.isFinished()) {
-            runningTask.remove(key);
-
-            return true;
+        if (task != null) {
+            if (task.isFinished()) {
+                runningTask.remove(key);
+            } else {
+                return true;
+            }
         }
 
         return false;
