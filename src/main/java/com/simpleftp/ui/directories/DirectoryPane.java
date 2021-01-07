@@ -167,8 +167,10 @@ public abstract class DirectoryPane extends VBox {
      * @throws FileSystemException if an exception occurs returning to the root
      */
     public void goToRoot() throws FileSystemException {
-        setDirectory(getRootDirectory());
-        refresh();
+        if (!isAtRootDirectory()) {
+            setDirectory(getRootDirectory());
+            refresh();
+        }
     }
 
     /**

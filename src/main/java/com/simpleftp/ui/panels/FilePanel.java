@@ -321,9 +321,7 @@ public abstract class FilePanel extends VBox {
 
     private void goToRootDirectory() {
         try {
-            if (!directoryPane.isAtRootDirectory()) {
-                directoryPane.goToRoot();
-            }
+            directoryPane.goToRoot();
         } catch (FileSystemException ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
