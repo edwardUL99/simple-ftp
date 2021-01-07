@@ -126,8 +126,7 @@ public final class FileUtils {
     public static String getParentPath(String path, boolean local) {
         if (local) {
             String parentPath = new LocalFile(path).getParent();
-            String windowsParent;
-            parentPath = parentPath == null ? ((windowsParent = System.getenv("SystemDrive")) != null ? windowsParent:"/"):parentPath; // if windows, find the root
+            parentPath = parentPath == null ? getRootPath(true):parentPath; // if windows, find the root
 
             return parentPath;
         } else {
@@ -144,6 +143,20 @@ public final class FileUtils {
             } else {
                 return fileSeparator;
             }
+        }
+    }
+
+    /**
+     * Gets the path representing root. On Windows, this is the SystemDrive and on Unix, it is "/"
+     * @param local true if you want local root, false if remote
+     * @return the path representing root
+     */
+    public static String getRootPath(boolean local) {
+        String systemDrive = System.getenv("SystemDrive");
+        if (!local || systemDrive == null) { // if local is true and system drive is null, we are on a Unix system. If local is false, we use the remote separator
+            return "/";
+        } else {
+            return systemDrive + PATH_SEPARATOR;
         }
     }
 

@@ -17,6 +17,8 @@
 
 package com.simpleftp.ui.panels;
 
+import com.simpleftp.filesystem.FileUtils;
+import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ui.UI;
@@ -50,7 +52,7 @@ import java.util.HashMap;
 @Log4j2
 public abstract class FilePanel extends VBox {
     /**
-     * The DirectoryPane this DirectoryPane is connected tp
+     * The DirectoryPane this FilePanel is connected to
      */
     @Getter
     protected DirectoryPane directoryPane;
@@ -62,7 +64,7 @@ public abstract class FilePanel extends VBox {
     /**
      * The HBox with combo box and buttons
      */
-    private FlowPane toolBar;
+    private final FlowPane toolBar;
     /**
      * The button for deleting chosen files
      */
@@ -87,6 +89,10 @@ public abstract class FilePanel extends VBox {
      * The button used to bring up the mask button
      */
     private Button maskButton;
+    /**
+     * The button to go to the root directory
+     */
+    private Button rootButton;
     /**
      * The button for opening a properties window
      */
@@ -121,7 +127,7 @@ public abstract class FilePanel extends VBox {
         setDirectoryPane(directoryPane);
         initButtons();
 
-        toolBar.getChildren().addAll(new Label("Files: "), comboBox, delete, open, gotoButton, hideHiddenFiles, createButton, maskButton, propertiesButton, symLinkDestButton);
+        toolBar.getChildren().addAll(new Label("Files: "), comboBox, open, delete, gotoButton, hideHiddenFiles, createButton, maskButton, rootButton, propertiesButton, symLinkDestButton);
         setKeyBindings();
     }
 
@@ -154,17 +160,17 @@ public abstract class FilePanel extends VBox {
      * Initialises all the buttons for the toolbar
      */
     private void initButtons() {
-        delete = new Button();
-        delete.setMnemonicParsing(true);
-        delete.setText("_Delete");
-        delete.setOnAction(e -> delete());
-        delete.setTooltip(new Tooltip("Deletes the selected file"));
-
         open = new Button();
         open.setMnemonicParsing(true);
         open.setText("_Open");
         open.setOnAction(e -> open());
         open.setTooltip(new Tooltip("Opens the selected file (changes directory or opens text file)"));
+
+        delete = new Button();
+        delete.setMnemonicParsing(true);
+        delete.setText("_Delete");
+        delete.setOnAction(e -> delete());
+        delete.setTooltip(new Tooltip("Deletes the selected file"));
 
         gotoButton = new Button();
         gotoButton.setMnemonicParsing(true);
@@ -187,6 +193,10 @@ public abstract class FilePanel extends VBox {
         maskButton.setText("File _Mask");
         initMaskButton();
         maskButton.setTooltip(new Tooltip("Specify a mask to filter the files displayed"));
+
+        rootButton = new Button(FileUtils.getRootPath(directoryPane.isLocal()));
+        rootButton.setTooltip(new Tooltip("Go to the root directory"));
+        rootButton.setOnAction(e -> goToRootDirectory());
 
         propertiesButton = new Button();
         propertiesButton.setMnemonicParsing(true);
@@ -309,6 +319,16 @@ public abstract class FilePanel extends VBox {
         });
     }
 
+    private void goToRootDirectory() {
+        try {
+            if (!directoryPane.isAtRootDirectory()) {
+                directoryPane.goToRoot();
+            }
+        } catch (FileSystemException ex) {
+            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+        }
+    }
+
     /**
      * Opens the property window for the selected file in the ComboBox
      */
@@ -343,6 +363,8 @@ public abstract class FilePanel extends VBox {
             CommonFile file = lineEntry.getFile();
             symLinkDestButton.setVisible(file.isSymbolicLink());
             propertiesButton.setVisible(true);
+            open.setVisible(true);
+            delete.setVisible(true);
         } else {
             symLinkDestButton.setVisible(false);
             propertiesButton.setVisible(false);

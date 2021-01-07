@@ -132,6 +132,10 @@ public abstract class DirectoryPane extends VBox {
      * The regex fileMask is converted to
      */
     private String fileMaskRegex;
+    /**
+     * The directory representing root
+     */
+    protected CommonFile rootDirectory;
 
     /**
      * Constructs a DirectoryPane object with the specified symbolicLink
@@ -149,6 +153,22 @@ public abstract class DirectoryPane extends VBox {
         initDirectory(directory);
         initEmptyFolderPane();
         setOnMouseClicked(this::unselectFile);
+    }
+
+    /**
+     * Lazy Initialises the root directory for this directory pane and returns it
+     * @return the root directory
+     * @throws FileSystemException if an error occurs in creating the file
+     */
+    abstract CommonFile getRootDirectory() throws FileSystemException;
+
+    /**
+     * Instructs this DirectoryPane to go to the root directory
+     * @throws FileSystemException if an exception occurs returning to the root
+     */
+    public void goToRoot() throws FileSystemException {
+        setDirectory(getRootDirectory());
+        refresh();
     }
 
     /**
@@ -292,11 +312,11 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
-     * Checks if you are at the root symbolicLink
-     * @return true if at the root symbolicLink
+     * Checks if you are at the root
+     * @return true if at the root
      */
     public boolean isAtRootDirectory() {
-        return new LocalFile(directory.getFilePath()).getParent() == null;
+        return directory.getFilePath().equals(FileUtils.getRootPath(isLocal()));
     }
 
     /**

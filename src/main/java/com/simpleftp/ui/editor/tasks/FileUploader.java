@@ -17,6 +17,7 @@
 
 package com.simpleftp.ui.editor.tasks;
 
+import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.FileSystem;
@@ -120,8 +121,7 @@ public abstract class FileUploader implements BackgroundTask {
         if (!errorOccurred) {
             DirectoryPane directoryPane = editorWindow.getCreatingPane();
             String parentPath = new File(filePath).getParent();
-            String windowsParent;
-            parentPath = parentPath == null ? ((windowsParent = System.getenv("SystemDrive")) != null ? windowsParent:"/"):parentPath; // if windows, find the root
+            parentPath = parentPath == null ? FileUtils.getRootPath(directoryPane.isLocal()) :parentPath; // if windows, find the root
             final String finalParent = parentPath;
 
             editorWindow.setResetFileContents(savedFileContents); // we have now successfully saved the file contents. Our reset string should now match what is actually saved

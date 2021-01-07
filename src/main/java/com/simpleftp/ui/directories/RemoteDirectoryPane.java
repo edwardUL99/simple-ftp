@@ -87,7 +87,7 @@ final class RemoteDirectoryPane extends DirectoryPane {
         if (newPath != null) {
             try {
                 newPath = FileUtils.addPwdToPath(getCurrentWorkingDirectory(), newPath, "/");
-                newPath = UI.resolveSymbolicPath(newPath, "/", null); // we will use symbolic path resolving as we may want to rename a file to a symbolic path
+                newPath = UI.resolveSymbolicPath(newPath, "/", "/"); // we will use symbolic path resolving as we may want to rename a file to a symbolic path
                 if (overwriteExistingFile(new RemoteFile(newPath))) {
                     FTPConnection connection = fileSystem.getFTPConnection();
                     if (connection.renameFile(filePath, newPath)) {
@@ -196,6 +196,21 @@ final class RemoteDirectoryPane extends DirectoryPane {
         } else {
             return fileSystem.removeFile(remoteFile);
         }
+    }
+
+    /**
+     * Lazy Initialises the root directory for this directory pane and returns it
+     *
+     * @return the root directory
+     * @throws FileSystemException if an error occurs in creating the file
+     */
+    @Override
+    CommonFile getRootDirectory() throws FileSystemException {
+        if (rootDirectory == null) {
+            rootDirectory = new RemoteFile(FileUtils.getRootPath(false));
+        }
+
+        return rootDirectory;
     }
 
     /**

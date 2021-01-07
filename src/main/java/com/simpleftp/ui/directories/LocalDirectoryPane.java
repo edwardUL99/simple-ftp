@@ -95,6 +95,20 @@ final class LocalDirectoryPane extends DirectoryPane {
     }
 
     /**
+     * Lazy Initialises the root directory for this directory pane and returns it
+     *
+     * @return the root directory
+     */
+    @Override
+    CommonFile getRootDirectory() {
+        if (rootDirectory == null) {
+            rootDirectory = new LocalFile(FileUtils.getRootPath(true));
+        }
+
+        return rootDirectory;
+    }
+
+    /**
      * Does the remove action for the file. Removal of a file may differ between local and remote file panels, hence why abstract
      *
      * @param commonFile the file to remove
@@ -116,7 +130,7 @@ final class LocalDirectoryPane extends DirectoryPane {
         if (newPath != null) {
             try {
                 newPath = FileUtils.addPwdToPath(getCurrentWorkingDirectory(), newPath, "/");
-                newPath = UI.resolveSymbolicPath(newPath, "/", System.getenv("SystemDrive")); // we will use symbolic path resolving as we may want to rename a file to a symbolic path
+                newPath = UI.resolveSymbolicPath(newPath, "/", FileUtils.getRootPath(true)); // we will use symbolic path resolving as we may want to rename a file to a symbolic path
                 if (overwriteExistingFile(new LocalFile(newPath))) {
                     if (localFile.renameTo(new File(newPath))) {
                         UI.doInfo("File Renamed", "File has been renamed successfully");

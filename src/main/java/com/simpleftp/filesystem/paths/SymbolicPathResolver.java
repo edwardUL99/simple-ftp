@@ -39,14 +39,14 @@ public class SymbolicPathResolver implements PathResolver {
 
     /**
      * The root to use at the start of the path.
-     * This can be null
+     * This shouldn't be null
      */
     private final String root;
 
     /**
      * Constructs a symbolic path resolver
      * @param pathSeparator the path separator to use
-     * @param root the root at the start of the path. If the root of the path, e.g. on linux "/" isn't pathSeparator, specify here. E.g. it may be C:\ Otherwise leave null
+     * @param root the root at the start of the path
      */
     protected SymbolicPathResolver(String pathSeparator, String root) {
         this.pathSeparator = pathSeparator;
@@ -59,7 +59,7 @@ public class SymbolicPathResolver implements PathResolver {
      * @return the array containing the split components
      */
     private String[] splitPath(String path) {
-        if (root != null && path.startsWith(root))
+        if (root != null && !root.equals("/") && path.startsWith(root))
             path = path.substring(root.length() - 1);
         else if (path.startsWith(pathSeparator))
             path = path.substring(1);
