@@ -319,6 +319,9 @@ public abstract class FilePanel extends VBox {
         });
     }
 
+    /**
+     * The method handler for the root button
+     */
     private void goToRootDirectory() {
         try {
             directoryPane.goToRoot();
