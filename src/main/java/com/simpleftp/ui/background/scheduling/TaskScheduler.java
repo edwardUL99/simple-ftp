@@ -101,6 +101,15 @@ public class TaskScheduler<T, R extends BackgroundTask> {
                 };
             }
         };
+
+        scheduler.setOnCancelled(e -> {
+            started = false;
+            cancelled = true;
+        });
+
+        scheduler.setOnFailed(e -> {
+            started = cancelled = false;
+        });
     }
 
     /**
