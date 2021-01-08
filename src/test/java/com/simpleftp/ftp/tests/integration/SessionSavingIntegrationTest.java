@@ -20,6 +20,8 @@ package com.simpleftp.ftp.tests.integration;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.Server;
 import com.simpleftp.ftp.tests.testable.SessionFileTestable;
+import com.simpleftp.ftp.tests.testable.SessionLoaderTestable;
+import com.simpleftp.ftp.tests.testable.SessionSaverTestable;
 import com.simpleftp.ftp.tests.testable.SessionTestable;
 import com.simpleftp.sessions.*;
 import com.simpleftp.sessions.exceptions.SessionLoadException;
@@ -68,8 +70,8 @@ public class SessionSavingIntegrationTest {
 
     @BeforeEach
     void init() {
-        sessionSaver = new SessionSaver();
-        sessionLoader = new SessionLoader();
+        sessionSaver = new SessionSaverTestable();
+        sessionLoader = new SessionLoaderTestable();
         autoCloseable = MockitoAnnotations.openMocks(this);
         FTPSystem.setSystemTesting(true);
     }

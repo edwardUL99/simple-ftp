@@ -21,7 +21,7 @@ package com.simpleftp.sessions;
  * This class provides names of the tags that are used in sessions.xsd.
  * This allows easy maintainability in case names change, you only have to change one value
  */
-public final class XMLConstants {
+final class XMLConstants {
     /**
      * The root node of the XML document
      */

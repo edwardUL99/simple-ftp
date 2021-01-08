@@ -22,6 +22,7 @@ import com.ctc.wstx.stax.WstxInputFactory;
 import com.simpleftp.ftp.connection.Server;
 import com.simpleftp.security.PasswordEncryption;
 import com.simpleftp.sessions.exceptions.SessionLoadException;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import org.codehaus.stax2.XMLStreamReader2;
@@ -36,10 +37,16 @@ import java.time.LocalDateTime;
 /**
  * This class loads in saved sessions from a specified xml file
  */
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class SessionLoader {
+    /**
+     * The reader used to parse our XML file
+     */
     private XMLStreamReader2 reader;
+    /**
+     * The name of the XML file to load in
+     */
     private String currentFile;
 
     /**

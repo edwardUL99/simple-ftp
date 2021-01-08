@@ -47,7 +47,8 @@ import java.util.stream.Collectors;
  *
  * Changes aren't persisted until you call the save method on the current session.
  *
- * This class provides the main interface between the sessions file both in memory and on disk.
+ * This class provides the main interface between the sessions file both in memory and on disk. You cannot construct any sessions classes outside this class. To create
+ * a Session use getSession with the server that session is registered to. This will either return a new Session or an existing one.
  *
  * This class is not thread-safe. The results of multiple threads accessing and saving the current session at the same time are undefined.
  */
@@ -336,7 +337,7 @@ public final class Sessions {
     /**
      * This is the operation to get a Session object for the given user on the provided server.
      * It attempts to match an existing session with this one based on server host, user, port and matching connection details. If a match is found,
-     * it returns that session. If a match could not be found, the match is returned (with password updated to the one in server details if provided).
+     * it returns that session (with password updated to the one in server details if provided). If a match could not be found, a new Session for the provided server is returned.
      *
      * This method can be used to store entered details to be saved as a new session. If a session is chosen from an existing list, the setCurrentSession method should be used
      * instead.

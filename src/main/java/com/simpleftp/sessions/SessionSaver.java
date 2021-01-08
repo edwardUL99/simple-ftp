@@ -21,6 +21,7 @@ import com.ctc.wstx.stax.WstxOutputFactory;
 import com.simpleftp.ftp.connection.Server;
 import com.simpleftp.security.PasswordEncryption;
 import com.simpleftp.sessions.exceptions.SessionSaveException;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import org.codehaus.stax2.XMLStreamWriter2;
@@ -40,11 +41,16 @@ import static com.simpleftp.sessions.XMLConstants.*;
 /**
  * This class is responsible for saving/writing a SessionFile to an xml file
  */
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class SessionSaver {
+    /**
+     * The writer we are using to write to our XML file
+     */
     private XMLStreamWriter2 writer;
-
+    /**
+     * The session file object in memory that this session saver class is to save to disk
+     */
     private SessionFile currentFile;
 
     /**

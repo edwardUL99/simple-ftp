@@ -33,11 +33,11 @@ public class SessionFile {
     /**
      * The sessions stored in this file
      */
-    private Set<Session> sessions;
+    private final Set<Session> sessions;
     /**
      * Comparator to sort the set based on ID
      */
-    private static final Comparator<Session> SET_COMPARATOR = new Comparator<Session>() {
+    private static final Comparator<Session> SET_COMPARATOR = new Comparator<>() {
         @Override
         public int compare(Session o1, Session o2) {
             return o1.getSessionId() - o2.getSessionId();
@@ -46,13 +46,13 @@ public class SessionFile {
     /**
      * A set to keep track of session ids so we can validate uniqueness quickly
      */
-    private Set<Integer> addedIDs;
+    private final Set<Integer> addedIDs;
 
     /**
      * Constructs a empty SessionFile with the specified name
      * @param fileName the name of this file. Equals to the name if written on disk
      */
-    public SessionFile(String fileName) {
+    protected SessionFile(String fileName) {
         this.fileName = fileName;
         this.sessions = new TreeSet<>(SET_COMPARATOR);
         this.addedIDs = new TreeSet<>();
