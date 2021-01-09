@@ -268,7 +268,6 @@ public abstract class FileService implements BackgroundTask {
             }
         }
 
-
         return sourceFile;
     }
 
