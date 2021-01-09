@@ -17,6 +17,9 @@
 
 package com.simpleftp.filesystem;
 
+import com.simpleftp.properties.Properties;
+import com.simpleftp.properties.Property;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
@@ -79,10 +82,19 @@ public final class FileUtils {
     public static final String TEMP_DIRECTORY = System.getProperty("java.io.tmpdir");
 
     /**
-     *
      * The separator for local file paths
      */
     public static final String PATH_SEPARATOR = System.getProperty("file.separator");
+
+    /**
+     * The boolean value for file sizes and following links
+     */
+    static final boolean FILE_SIZE_FOLLOW_LINK = Boolean.parseBoolean(Properties.getProperty(Property.FILE_SIZE_FOLLOW_LINK));
+
+    /**
+     * The boolean value for file permissions and following links
+     */
+    static final boolean FILE_PERMS_FOLLOW_LINK = Boolean.parseBoolean(Properties.getProperty(Property.FILE_PERMS_FOLLOW_LINK));
 
     /**
      * Parses the calendar object to the FILE_DATETIME_FORMAT

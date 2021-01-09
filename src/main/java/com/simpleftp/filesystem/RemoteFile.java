@@ -305,7 +305,7 @@ public class RemoteFile implements CommonFile {
     public long getSize() throws FileSystemException {
         if (!exists) {
             return -1;
-        } else if (ftpFile.isValid() && !ftpFile.isSymbolicLink()) {
+        } else if (ftpFile.isValid() && (!ftpFile.isSymbolicLink() || !FileUtils.FILE_SIZE_FOLLOW_LINK)) {
             return ftpFile.getSize();
         } else {
             try {
@@ -363,72 +363,83 @@ public class RemoteFile implements CommonFile {
      * @return the permissions
      */
     private String calculateRemotePermissions() {
-        String permissions = "";
-        FTPFile file = getFtpFile();
-
-        if (file.isSymbolicLink()) {
-            permissions += "l";
-        } else if (file.isDirectory()) {
-            permissions += "d";
+        if (isSymbolicLink() && FileUtils.FILE_PERMS_FOLLOW_LINK) {
+            try {
+                return new RemoteFile(getSymbolicLinkTarget()).calculateRemotePermissions();
+            } catch (FileSystemException ex) {
+                if (FTPSystem.isDebugEnabled())
+                    ex.printStackTrace();
+                // just display the permissions of the link's file
+                return calculateRemotePermissions();
+            }
         } else {
-            permissions += "-";
-        }
+            String permissions = "";
+            FTPFile file = getFtpFile();
 
-        if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.READ_PERMISSION)) {
-            permissions += "r";
-        } else {
-            permissions += "-";
-        }
+            if (file.isSymbolicLink()) {
+                permissions += "l";
+            } else if (file.isDirectory()) {
+                permissions += "d";
+            } else {
+                permissions += "-";
+            }
 
-        if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.WRITE_PERMISSION)) {
-            permissions += "w";
-        } else {
-            permissions += "-";
-        }
+            if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.READ_PERMISSION)) {
+                permissions += "r";
+            } else {
+                permissions += "-";
+            }
 
-        if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
-            permissions += "x";
-        } else {
-            permissions += "-";
-        }
+            if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.WRITE_PERMISSION)) {
+                permissions += "w";
+            } else {
+                permissions += "-";
+            }
 
-        if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.READ_PERMISSION)) {
-            permissions += "r";
-        } else {
-            permissions += "-";
-        }
+            if (file.hasPermission(FTPFile.USER_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
+                permissions += "x";
+            } else {
+                permissions += "-";
+            }
 
-        if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.WRITE_PERMISSION)) {
-            permissions += "w";
-        } else {
-            permissions += "-";
-        }
+            if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.READ_PERMISSION)) {
+                permissions += "r";
+            } else {
+                permissions += "-";
+            }
 
-        if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
-            permissions += "x";
-        } else {
-            permissions += "-";
-        }
+            if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.WRITE_PERMISSION)) {
+                permissions += "w";
+            } else {
+                permissions += "-";
+            }
 
-        if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.READ_PERMISSION)) {
-            permissions += "r";
-        } else {
-            permissions += "-";
-        }
+            if (file.hasPermission(FTPFile.GROUP_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
+                permissions += "x";
+            } else {
+                permissions += "-";
+            }
 
-        if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.WRITE_PERMISSION)) {
-            permissions += "w";
-        } else {
-            permissions += "-";
-        }
+            if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.READ_PERMISSION)) {
+                permissions += "r";
+            } else {
+                permissions += "-";
+            }
 
-        if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
-            permissions += "x";
-        } else {
-            permissions += "-";
-        }
+            if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.WRITE_PERMISSION)) {
+                permissions += "w";
+            } else {
+                permissions += "-";
+            }
 
-        return permissions;
+            if (file.hasPermission(FTPFile.WORLD_ACCESS, FTPFile.EXECUTE_PERMISSION)) {
+                permissions += "x";
+            } else {
+                permissions += "-";
+            }
+
+            return permissions;
+        }
     }
 
     /**
@@ -438,6 +449,15 @@ public class RemoteFile implements CommonFile {
      */
     @Override
     public String getPermissions() {
+        if (isSymbolicLink() && FileUtils.FILE_PERMS_FOLLOW_LINK) {
+            try {
+                return new RemoteFile(getSymbolicLinkTarget()).getPermissions();
+            } catch (FileSystemException ex) {
+                if (FTPSystem.isDebugEnabled())
+                    ex.printStackTrace();
+                // just return the permissions of this file even if it is a link
+            }
+        }
         return calculateRemotePermissions();
     }
 

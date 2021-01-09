@@ -17,6 +17,7 @@
 
 package com.simpleftp.properties;
 
+import com.simpleftp.properties.exceptions.PropertyException;
 import lombok.Getter;
 
 import java.io.File;
@@ -40,18 +41,13 @@ public final class Properties {
      */
     @Getter
     private static boolean initialised = false;
+    /**
+     * The location of the properties file
+     */
+    private static String propertiesLocation;
 
     static {
         initialiseProperties();
-    }
-
-    /**
-     * This enum represents each possible property
-     */
-    public enum Property {
-        CONNECTION_MONITOR_INTERVAL, // the interval that the system should check the connection state
-        FILE_EDITOR_HEIGHT, // the height for the file editor window
-        FILE_EDITOR_WIDTH // the width for the file editor window
     }
 
     /**
@@ -59,7 +55,7 @@ public final class Properties {
      */
     private static void initialiseProperties() {
         try {
-            String propertiesLocation = System.getProperty("simpleftp.properties");
+            propertiesLocation = System.getProperty("simpleftp.properties");
             propertiesLocation = propertiesLocation == null ? "simpleftp.properties" : propertiesLocation;
 
             File file = new File(propertiesLocation);
@@ -77,11 +73,50 @@ public final class Properties {
     }
 
     /**
-     * Retrieves the property identified by the provided property name
+     * Validates the the property's value matches the value in the properties file
+     * @param propertyName the name of the property
+     * @param propertyValue the value of the property
+     * @param propertyType the type of the property
+     */
+    private static void validatePropertyValue(String propertyName, String propertyValue, Property.Type propertyType) {
+        switch (propertyType) {
+            case INTEGER: try {
+                Integer.parseInt(propertyValue);
+            } catch (NumberFormatException ex) {
+                throw new PropertyException("The property with name " + propertyName + " with value " + propertyValue + " is not a valid value of type " + propertyType.toString());
+            }
+            break;
+            case BOOLEAN: propertyValue = propertyValue.toLowerCase();
+            if (!propertyValue.equals("true") && !propertyValue.equals("false")) {
+                throw new PropertyException("The property with name " + propertyName + " with value " + propertyValue + " is not a valid value of type " + propertyType.toString());
+            }
+
+        }
+    }
+
+    /**
+     * Validates that the property is in the properties value and type matches that value
+     * @param property the property to validate
+     */
+    private static void validateProperty(Property property) {
+        String propertyName = property.getPropertyName();
+        Property.Type propertyType = property.getType();
+        String value = properties.getProperty(property.getPropertyName());
+        if (value == null)
+            throw new PropertyException("Property with name " + propertyName + " with type " + propertyType.toString() + " not found in properties file " + propertiesLocation);
+        else if (value.equals(""))
+            throw new PropertyException("Property with name " + propertyName + " with type " + propertyType.toString() + " cannot have an empty value");
+
+        validatePropertyValue(propertyName, value, propertyType);
+    }
+
+    /**
+     * Retrieves the property identified by the provided property name. If the value in the file is not found or invalid type, PropertyException is thrown
      * @param property the property to get the value of
      * @return the property value if found
      */
     public static String getProperty(Property property) {
-        return properties.getProperty(property.toString());
+        validateProperty(property);
+        return properties.getProperty(property.getPropertyName());
     }
 }

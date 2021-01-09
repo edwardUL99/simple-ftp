@@ -21,6 +21,7 @@ import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.exceptions.PathResolverException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.filesystem.paths.PathResolverFactory;
+import com.simpleftp.ftp.FTPSystem;
 
 import java.io.File;
 import java.io.IOException;
@@ -99,7 +100,7 @@ public class LocalFile extends File implements CommonFile {
      */
     @Override
     public long getSize() throws FileSystemException {
-        if (!isSymbolicLink()) {
+        if (!isSymbolicLink() || !FileUtils.FILE_SIZE_FOLLOW_LINK) {
             return length();
         } else {
             return new LocalFile(getSymbolicLinkTarget()).getSize();
@@ -115,7 +116,7 @@ public class LocalFile extends File implements CommonFile {
 
         if (path.getFileSystem().supportedFileAttributeViews().contains("posix")) {
             try {
-                Set<PosixFilePermission> permissionsSet = Files.getPosixFilePermissions(path, LinkOption.NOFOLLOW_LINKS);
+                Set<PosixFilePermission> permissionsSet = FileUtils.FILE_PERMS_FOLLOW_LINK ? Files.getPosixFilePermissions(path):Files.getPosixFilePermissions(path, LinkOption.NOFOLLOW_LINKS);
                 String[] permissionsStringArr = new String[9]; // first 3 indices, owner rwx, next 3, group, last 3 others
                 for (int i = 0; i < 9; i++)
                     permissionsStringArr[i] = "-";
@@ -153,27 +154,38 @@ public class LocalFile extends File implements CommonFile {
      * @return the permissions string
      */
     private String resolveNonPosixPermissions() {
-        String permissions = "";
-
-        if (canRead()) {
-            permissions += "r";
+        if (FileUtils.FILE_PERMS_FOLLOW_LINK) {
+            try {
+                return new LocalFile(getSymbolicLinkTarget()).resolveNonPosixPermissions();
+            } catch (FileSystemException ex) {
+                if (FTPSystem.isDebugEnabled())
+                    ex.printStackTrace();
+                // if an exception occurs finding target, just display the link's permissions
+                return resolveNonPosixPermissions();
+            }
         } else {
-            permissions += "-";
-        }
+            String permissions = "";
 
-        if (canWrite()) {
-            permissions += "-w";
-        } else {
-            permissions += "--";
-        }
+            if (canRead()) {
+                permissions += "r";
+            } else {
+                permissions += "-";
+            }
 
-        if (canExecute()) {
-            permissions += "-x";
-        } else {
-            permissions += "--";
-        }
+            if (canWrite()) {
+                permissions += "-w";
+            } else {
+                permissions += "--";
+            }
 
-        return permissions;
+            if (canExecute()) {
+                permissions += "-x";
+            } else {
+                permissions += "--";
+            }
+
+            return permissions;
+        }
     }
 
     /**
@@ -203,6 +215,15 @@ public class LocalFile extends File implements CommonFile {
      */
     @Override
     public String getPermissions() {
+        if (isSymbolicLink() && FileUtils.FILE_PERMS_FOLLOW_LINK) {
+            try {
+                return new LocalFile(getSymbolicLinkTarget()).getPermissions();
+            } catch (FileSystemException ex) {
+                if (FTPSystem.isDebugEnabled())
+                    ex.printStackTrace();
+                // if an exception occurs finding target, just display the link's permissions
+            }
+        }
         return calculateLocalPermissions();
     }
 

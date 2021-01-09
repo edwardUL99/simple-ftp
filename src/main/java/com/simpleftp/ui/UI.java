@@ -28,6 +28,7 @@ import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.properties.Properties;
+import com.simpleftp.properties.Property;
 import com.simpleftp.ui.background.BackgroundTask;
 import com.simpleftp.ui.background.FileService;
 import com.simpleftp.ui.dialogs.*;
@@ -123,12 +124,12 @@ public final class UI {
     /**
      * The height for file editors
      */
-    public static final int FILE_EDITOR_HEIGHT = Integer.parseInt(Properties.getProperty(Properties.Property.FILE_EDITOR_HEIGHT));
+    public static final int FILE_EDITOR_HEIGHT = Integer.parseInt(Properties.getProperty(Property.FILE_EDITOR_HEIGHT));
 
     /**
      * The width for file editors
      */
-    public static final int FILE_EDITOR_WIDTH = Integer.parseInt(Properties.getProperty(Properties.Property.FILE_EDITOR_WIDTH));
+    public static final int FILE_EDITOR_WIDTH = Integer.parseInt(Properties.getProperty(Property.FILE_EDITOR_WIDTH));
 
     /**
      * The width for the DirectoryPane ComboBox
@@ -188,7 +189,7 @@ public final class UI {
     /**
      * The interval to monitor the connection at for the PanelView
      */
-    public static final int CONNECTION_MONITOR_INTERVAL = Integer.parseInt(Properties.getProperty(Properties.Property.CONNECTION_MONITOR_INTERVAL));
+    public static final int CONNECTION_MONITOR_INTERVAL = Integer.parseInt(Properties.getProperty(Property.CONNECTION_MONITOR_INTERVAL));
 
     /**
      * An enum to determine which type of dialog to show for a given exception
