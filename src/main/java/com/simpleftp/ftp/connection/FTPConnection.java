@@ -1206,23 +1206,6 @@ public class FTPConnection {
     }
 
     /**
-     * Checks if the FTPSystem.getConnection matches the server details provided
-     *
-     * @param ftpServer the server details
-     * @return true if matches, false if not
-     */
-    private static boolean connectionMatches(Server ftpServer) {
-        FTPConnection systemConnection = FTPSystem.getConnection();
-        if (systemConnection == null) {
-            return false;
-        } else {
-            Server server = systemConnection.getServer();
-
-            return server.equals(ftpServer);
-        }
-    }
-
-    /**
      * This method sets the connection, but doesn't connect or log in
      *
      * @param server            the details to create the connection with
@@ -1236,20 +1219,53 @@ public class FTPConnection {
     }
 
     /**
-     * Creates a shared FTPConnection. It does this by setting the FTPSystem.setConnection.
-     * This should be used for when you want a connection to be shared among filesystem classes as the default constructors for the files and file systems uses the FTPSystem connection
-     * It checks if the system's connection already matches the server details and returns that, if not, it creates a new one.
-     * It does not connect or log it in.
+     * Attempts to match the state of the connection after setting the server to that of the connection before re-connecting it
+     * @param server the state t
+     * @throws FTPException if an error occurs matching the state
+     */
+    private static void matchState(Server server) throws FTPException {
+        FTPConnection systemConnection = FTPSystem.getConnection();
+        boolean connected = systemConnection.isConnected(), loggedIn = systemConnection.isLoggedIn();
+        if (connected)
+            systemConnection.disconnect();
+        systemConnection.setServer(server);
+
+        if (connected) {
+            systemConnection.connect();
+
+            if (!systemConnection.isConnected()) {
+                throw new FTPConnectionFailedException("The connection of the new FTPConnection to the server has failed", systemConnection.getReplyString(), systemConnection.server);
+            }
+
+            if (loggedIn) {
+                systemConnection.login();
+                if (!systemConnection.isLoggedIn()) {
+                    throw new FTPError("The login of the new FTPConnection has failed", systemConnection.getReplyString());
+                }
+            }
+        }
+    }
+
+    /**
+     * Creates a shared FTPConnection which is the connection used by the entire system, e.g in filesystems .
+     * If FTPSystem.getConnection() returns null, a new connection is created and assigned to it. Else, the setServer method is called
+     * on the system's connection, attempting to match the state to what it was before this call
      *
      * @param serverDetails     the server details to check/create a connection with
      * @return the created connection. This connection should equal FTPSystem.getConnection
+     * @throws FTPException if an error occurs resetting the connection to the new server details
      */
-    public static FTPConnection createSharedConnection(Server serverDetails) {
-        serverDetails = serverDetails == null ? new Server() : serverDetails;
-        if (!connectionMatches(serverDetails)) {
-            return createConnection(serverDetails);
+    public static FTPConnection createSharedConnection(Server serverDetails) throws FTPException {
+        FTPConnection systemConnection = FTPSystem.getConnection();
+        if (systemConnection == null) {
+            FTPConnection connection = new FTPConnection(serverDetails);
+            ConnectionFTPSystem.setConnection(connection);
+
+            return connection;
         } else {
-            return FTPSystem.getConnection();
+            matchState(serverDetails);
+
+            return systemConnection;
         }
     }
 
@@ -1270,7 +1286,7 @@ public class FTPConnection {
      * This allows creating a temporary FTPConnection not shared with other classes from the provided details.
      * This could be useful for creating an uploading/downloading connection as another temporary user.
      *
-     * This method leaves it up to the programmer to clone the Server and FTPConnectionDetails classses before passing them into this
+     * This method leaves it up to the programmer to clone the Server and FTPConnectionDetails classes before passing them into this
      * method.
      *
      * @param server               the Server object containing the login details

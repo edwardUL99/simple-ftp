@@ -17,12 +17,13 @@
 
 package com.simpleftp.ftp.tests.integration;
 
+import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.LocalFile;
-import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPPathStats;
 import com.simpleftp.ftp.connection.Server;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.ftp.tests.testable.FTPConnectionTestable;
+import com.simpleftp.ftp.tests.testable.FTPSystemTestable;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
 import org.junit.jupiter.api.AfterEach;
@@ -78,7 +79,7 @@ public class FTPConnectionIntegrationTest {
         ftpServer.start();
 
         Server serverDetails = new Server("localhost", TEST_SERVER_USER, TEST_SERVER_PASSWORD, TEST_SERVER_PORT, 200);
-        FTPSystem.setSystemTesting(true);
+        FTPSystemTestable.setSystemTesting(true);
         ftpConnection = new FTPConnectionTestable();
         ftpConnection.setServer(serverDetails);
     }
@@ -164,7 +165,8 @@ public class FTPConnectionIntegrationTest {
         assertTrue(ftpConnection.connect());
         assertTrue(ftpConnection.login());
 
-        LocalFile file = new LocalFile("test.txt");
+        String path = System.getProperty("user.dir") + FileUtils.PATH_SEPARATOR + "test.txt";
+        LocalFile file = new LocalFile(path);
         file.createNewFile();
 
         FTPFile uploaded = ftpConnection.uploadFile(file, TEST_PATH);
@@ -178,10 +180,11 @@ public class FTPConnectionIntegrationTest {
         assertTrue(ftpConnection.connect());
         assertTrue(ftpConnection.login());
 
-        File file = new File("test.txt");
+        String path = System.getProperty("user.dir") + FileUtils.PATH_SEPARATOR + "test.txt";
+        File file = new File(path);
         file.createNewFile();
 
-        FTPFile uploaded = ftpConnection.uploadFile("test.txt", TEST_PATH);
+        FTPFile uploaded = ftpConnection.uploadFile(path, TEST_PATH);
         assertNotNull(uploaded);
         assertTrue(ftpServer.getFileSystem().exists(TEST_PATH + "/test.txt"));
         file.delete();

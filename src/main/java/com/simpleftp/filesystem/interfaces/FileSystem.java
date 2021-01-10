@@ -79,12 +79,6 @@ public interface FileSystem {
     FTPConnection getFTPConnection();
 
     /**
-     * Sets the connection for the file system
-     * @param connection the connection to set
-     */
-    void setFTPConnection(FTPConnection connection);
-
-    /**
      * This is the method which will implement the copy operation. It permits copying between different filesystems and also within the same filesystem.
      * The behaviour of the method depends on the implementation types of the source and destination parameters. If the types are both the same,
      * the copying will take place on the same file system those files are defined for.

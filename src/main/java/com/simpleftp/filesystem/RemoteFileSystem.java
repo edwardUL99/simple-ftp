@@ -33,16 +33,28 @@ import java.util.Arrays;
  * For a RemoteFileSystem, it must be connected and logged in before use
  */
 public class RemoteFileSystem implements FileSystem {
+    /**
+     * The connection backing this file system. Should only be not null if it is not to use the system connection
+     */
     private FTPConnection ftpConnection;
 
+    /**
+     * Creates a file system for use with shared files, i.e using system's connection
+     * @throws FileSystemException if an error occurs
+     */
     public RemoteFileSystem() throws FileSystemException {
-        ftpConnection = FTPSystem.getConnection();
+        FTPConnection ftpConnection = FTPSystem.getConnection();
         if (ftpConnection == null) {
             throw new FileSystemException("A FileSystem needs a FTPConnection object to function");
         }
         validateConnection(ftpConnection);
     }
 
+    /**
+     * Creates a file system for use with a specified connection (useful for background tasks)
+     * @param connection the connection to use
+     * @throws FileSystemException if an error occurs
+     */
     public RemoteFileSystem(FTPConnection connection) throws FileSystemException {
         ftpConnection = connection;
         validateConnection(ftpConnection);
@@ -73,7 +85,7 @@ public class RemoteFileSystem implements FileSystem {
             throw new FileSystemException("Cannot add a file to the Remote File System that is already a RemoteFile. The mapping is Local File to Remote File System");
 
         try {
-            return ftpConnection.uploadFile((LocalFile)file, path) != null;
+            return getFTPConnection().uploadFile((LocalFile)file, path) != null;
         } catch (FTPException ex) {
             throw new FileSystemException("A FTP Exception occurred when adding file to the remote file system", ex);
         }
@@ -111,12 +123,12 @@ public class RemoteFileSystem implements FileSystem {
                 if (file.isDirectory()) {
                     deleteDirectoryRecursively(listPath, name, connection);
                 } else {
-                    if (!ftpConnection.removeFile(filePath))
+                    if (!connection.removeFile(filePath))
                         throw new FileSystemException("Failed to remove a file in the directory tree with path: " + filePath);
                 }
             }
 
-            if (!ftpConnection.removeDirectory(listPath))
+            if (!connection.removeDirectory(listPath))
                 throw new FileSystemException("Failed to remove a directory in the directory tree with path: " + listPath);
         }
     }
@@ -136,11 +148,13 @@ public class RemoteFileSystem implements FileSystem {
         String filePath = file.getFilePath();
 
         try {
+            FTPConnection connection = getFTPConnection();
+
             if (file.isNormalFile() || file.isSymbolicLink()) { // if file is a symbolic link just delete the link, not the target directory
-                return ftpConnection.removeFile(filePath);
+                return connection.removeFile(filePath);
             } else {
-                deleteDirectoryRecursively(filePath, null, ftpConnection);
-                return !ftpConnection.remotePathExists(filePath, true);
+                deleteDirectoryRecursively(filePath, null, connection);
+                return !connection.remotePathExists(filePath, true);
             }
         } catch (FTPException ex) {
             throw new FileSystemException("A FTP Exception occurred when removing the specified file", ex);
@@ -169,9 +183,10 @@ public class RemoteFileSystem implements FileSystem {
     @Override
     public CommonFile getFile(String fileName) throws FileSystemException {
         try {
-            FTPFile ftpFile = ftpConnection.getFTPFile(fileName);
+            FTPConnection connection = getFTPConnection();
+            FTPFile ftpFile = connection.getFTPFile(fileName);
             if (ftpFile != null) {
-                return new RemoteFile(fileName, ftpConnection, ftpFile);
+                return new RemoteFile(fileName, connection, ftpFile);
             }
 
             return null;
@@ -190,7 +205,7 @@ public class RemoteFileSystem implements FileSystem {
     @Override
     public boolean fileExists(String fileName) throws FileSystemException {
         try {
-            return ftpConnection.remotePathExists(fileName);
+            return getFTPConnection().remotePathExists(fileName);
         } catch (FTPException ex) {
             throw new FileSystemException("A FTP Exception occurred when checking if the remote file exists", ex);
         }
@@ -206,7 +221,9 @@ public class RemoteFileSystem implements FileSystem {
     @Override
     public CommonFile[] listFiles(String dir) throws FileSystemException {
         try {
-            FTPFile[] files = ftpConnection.listFiles(dir);
+            FTPConnection connection = getFTPConnection();
+
+            FTPFile[] files = connection.listFiles(dir);
             if (files != null) {
                 RemoteFile[] remoteFiles = new RemoteFile[files.length];
 
@@ -214,7 +231,7 @@ public class RemoteFileSystem implements FileSystem {
                 for (FTPFile f : files) {
                     if (!f.getName().equals(".") && !f.getName().equals("..")) {
                         String path = dir.equals("/") || dir.endsWith("/") ? dir + f.getName() : dir + "/" + f.getName();
-                        remoteFiles[i++] = new RemoteFile(path, ftpConnection, f);
+                        remoteFiles[i++] = new RemoteFile(path, connection, f);
                     }
                 }
 
@@ -238,17 +255,7 @@ public class RemoteFileSystem implements FileSystem {
      */
     @Override
     public FTPConnection getFTPConnection() {
-        return ftpConnection;
-    }
-
-    /**
-     * Sets the connection for the file system
-     *
-     * @param connection the connection to set
-     */
-    @Override
-    public void setFTPConnection(FTPConnection connection) {
-        this.ftpConnection = connection;
+        return ftpConnection == null ? FTPSystem.getConnection():ftpConnection;
     }
 
     /**
@@ -285,24 +292,25 @@ public class RemoteFileSystem implements FileSystem {
     private boolean copyRemoteToRemote(RemoteFile source, RemoteFile destination) throws FTPException, FileSystemException {
         String sourceName = source.getName();
         String destinationDir = destination.getFilePath();
-        String destPath = destinationDir + "/" + sourceName;
+        String destPath = (destinationDir.endsWith("/") ? "":"/") + sourceName;
+        FTPConnection connection = getFTPConnection();
 
         if (source.isADirectory()) {
             String localPath = FileUtils.TEMP_DIRECTORY + FileUtils.PATH_SEPARATOR + sourceName;
-            LocalFileSystem.recursivelyDownloadDirectory(source.getFilePath(), FileUtils.TEMP_DIRECTORY, null, ftpConnection, true);
+            LocalFileSystem.recursivelyDownloadDirectory(source.getFilePath(), FileUtils.TEMP_DIRECTORY, null, connection, true);
 
             LocalFile localFile = new LocalFile(localPath);
             if (!localFile.exists())
                 throw new FileSystemException("Failed to local temp copy file");
 
-            recursivelyUploadDirectory(localPath, destinationDir, null, ftpConnection, true);
+            recursivelyUploadDirectory(localPath, destinationDir, null, connection, true);
         } else {
-            LocalFile downloaded = ftpConnection.downloadFile(source.getFilePath(), FileUtils.TEMP_DIRECTORY);
+            LocalFile downloaded = connection.downloadFile(source.getFilePath(), FileUtils.TEMP_DIRECTORY);
 
             if (downloaded == null || !downloaded.exists())
                 throw new FileSystemException("Failed to local temp copy file");
 
-            if (ftpConnection.uploadFile(downloaded, destinationDir) == null)
+            if (connection.uploadFile(downloaded, destinationDir) == null)
                 throw new FileSystemException("Failed to upload the local temp copy to the destination");
         }
 
@@ -319,7 +327,7 @@ public class RemoteFileSystem implements FileSystem {
     private boolean remoteToRemoteOperation(RemoteFile source, RemoteFile destination, boolean copy) throws FileSystemException {
         String sourceName = source.getName();
         String destinationDir = destination.getFilePath();
-        String destinationPath = destinationDir + "/" + sourceName;
+        String destinationPath = destinationDir + (destinationDir.endsWith("/") ? "":"/") + sourceName;
 
         String sourcePath = source.getFilePath();
 
@@ -336,7 +344,7 @@ public class RemoteFileSystem implements FileSystem {
             if (copy) {
                 return copyRemoteToRemote(source, destination); // for a copy on a FTP server, you need to do a local temp copy and then re-upload to the destination
             } else {
-                return ftpConnection.renameFile(sourcePath, destinationPath); // for a move, rename is enough
+                return getFTPConnection().renameFile(sourcePath, destinationPath); // for a move, rename is enough
             }
         } catch (FTPException ex) {
             throw new FileSystemException("Failed to " + (copy ? "copy" : "move") + " files: " + ex.getMessage(), ex);
@@ -359,12 +367,11 @@ public class RemoteFileSystem implements FileSystem {
 
         LocalFile listFile = new LocalFile(listPath);
 
-        String destPath = destDirectory + "/" + listFile.getName();
+        String destPath = destDirectory + (destDirectory.endsWith("/") ? "":"/") + listFile.getName();
 
-        RemoteFile destFile = new RemoteFile(destPath);
-        if (!destFile.exists())
+        if (!fileExists(destPath))
             if (!ftpConnection.makeDirectory(destPath))
-                throw new FileSystemException("Failed to create a directory in the upload directory structure, path: " + destPath);
+                throw new FileSystemException("Failed to create a directory in the upload directory structure, path: " + destPath + " " + ftpConnection.getReplyString());
 
         String[] fileNames = listFile.list();
 
@@ -406,7 +413,7 @@ public class RemoteFileSystem implements FileSystem {
     private boolean localToRemoteOperation(LocalFile source, RemoteFile destination, boolean copy) throws FileSystemException {
         String sourceName = source.getName();
         String destinationDir = destination.getFilePath();
-        String destinationPath = destinationDir + "/" + sourceName;
+        String destinationPath = destinationDir + (destinationDir.endsWith("/") ? "":"/") + sourceName;
 
         String sourcePath = source.getFilePath();
 
@@ -422,11 +429,13 @@ public class RemoteFileSystem implements FileSystem {
         boolean sourceDir = source.isADirectory();
 
         try {
+            FTPConnection connection = getFTPConnection();
+
             if (sourceDir) {
-                recursivelyUploadDirectory(sourcePath, destinationDir, null, ftpConnection, copy);
+                recursivelyUploadDirectory(sourcePath, destinationDir, null, connection, copy);
                 return fileExists(destinationPath);
             } else {
-                if (ftpConnection.uploadFile(source, destinationDir) != null) {
+                if (connection.uploadFile(source, destinationDir) != null) {
                     return copy || source.delete();
                 } else {
                     return false;

@@ -19,10 +19,17 @@ package com.simpleftp.ftp.tests.unit;
 
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.ftp.FTPSystem;
-import com.simpleftp.ftp.connection.*;
+import com.simpleftp.ftp.connection.FTPConnection;
+import com.simpleftp.ftp.connection.FTPLookup;
+import com.simpleftp.ftp.connection.FTPPathStats;
+import com.simpleftp.ftp.connection.Server;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.ftp.tests.testable.FTPConnectionTestable;
-import org.apache.commons.net.ftp.*;
+import com.simpleftp.ftp.tests.testable.FTPSystemTestable;
+import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPConnectionClosedException;
+import org.apache.commons.net.ftp.FTPFile;
+import org.apache.commons.net.ftp.FTPReply;
 import org.apache.commons.net.io.CopyStreamException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,7 +87,7 @@ class FTPConnectionUnitTest {
     void init() {
         closeable = MockitoAnnotations.openMocks(this);
         server.setTimeout(300);
-        FTPSystem.setSystemTesting(true);
+        FTPSystemTestable.setSystemTesting(true);
     }
 
     @AfterEach
@@ -1793,7 +1800,7 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldCreateSharedConnectionSuccessfully() {
+    void shouldCreateSharedConnectionSuccessfully() throws FTPException{
         FTPSystem.reset();
         assertNull(FTPSystem.getConnection());
 
@@ -1803,51 +1810,20 @@ class FTPConnectionUnitTest {
     }
 
     @Test
-    void shouldReturnSharedConnectionIfCreatedWithSameDetails() {
+    void shouldChangeSharedConnectionServerSuccessfully() throws FTPException {
         FTPSystem.reset();
         assertNull(FTPSystem.getConnection());
 
-        Server testServer = getTestFTPServer();
-        FTPConnection connection = FTPConnection.createSharedConnection(testServer);
-        FTPConnection connection1 = FTPConnection.createSharedConnection(testServer);
+        Server server1 = getTestFTPServer();
+        Server server2 = server1.withServer("server2");
+        FTPConnection connection = FTPConnection.createSharedConnection(server1);
+        FTPConnection connection1 = FTPConnection.createSharedConnection(server2);
 
-        assertEquals(connection, FTPSystem.getConnection());
-        assertEquals(connection1, FTPSystem.getConnection()); // should be the same
-        assertSame(connection, connection1); // should be exact same address
+        assertSame(connection, connection1); // should be same server object
     }
 
     @Test
-    void shouldReturnNewConnectionIfDetailsChange() {
-        FTPSystem.reset();
-        assertNull(FTPSystem.getConnection());
-
-        Server testServer = getTestFTPServer();
-
-        FTPConnection connection = FTPConnection.createSharedConnection(testServer);
-
-        assertEquals(connection, FTPSystem.getConnection());
-
-        Server newServer = new Server("newServer", "user", "pass", 22, 200);
-        FTPConnection connection1 = FTPConnection.createSharedConnection(newServer);
-
-        assertEquals(connection1, FTPSystem.getConnection());
-        assertNotEquals(connection, FTPSystem.getConnection());
-        assertNotSame(connection, connection1);
-    }
-
-    @Test
-    void shouldCreateSharedConnectionWithNullFTPServer() {
-        FTPSystem.reset();
-        assertNull(FTPSystem.getConnection());
-
-        FTPConnection connection = FTPConnection.createSharedConnection(null);
-
-        assertEquals(connection, FTPSystem.getConnection());
-        assertNotNull(connection.getServer());
-    }
-
-    @Test
-    void shouldCreateTempConnectionFromExisting() {
+    void shouldCreateTempConnectionFromExisting() throws FTPException {
         FTPSystem.reset();
 
         Server server = getTestFTPServer();

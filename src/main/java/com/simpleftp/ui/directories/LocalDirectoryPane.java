@@ -45,7 +45,7 @@ final class LocalDirectoryPane extends DirectoryPane {
      * Initialises the file system for use with this DirectoryPane
      */
     @Override
-    void initFileSystem() {
+    void initFileSystem() throws FileSystemException {
         fileSystem = new LocalFileSystem();
     }
 

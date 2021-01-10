@@ -40,10 +40,20 @@ public class LocalFile extends File implements CommonFile {
 
     /**
      * Constructs a LocalFile with the specified pathname
-     * @param pathname the pathname of the file
+     * @param pathname the pathname of the file (has to be absolute)
      */
     public LocalFile(String pathname) {
         super(pathname);
+        validateFilePath(pathname);
+    }
+
+    /**
+     * Validates that the file path is absolute and throws an IllegalArgumentException if not
+     * @param filePath the file path to validate
+     */
+    private void validateFilePath(String filePath) {
+        if (!filePath.startsWith(FileUtils.getRootPath(true)))
+            throw new IllegalArgumentException("The path passed into a LocalFile must be absolute");
     }
 
     /**

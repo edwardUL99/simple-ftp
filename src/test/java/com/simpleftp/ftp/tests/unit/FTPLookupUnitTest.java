@@ -17,10 +17,10 @@
 
 package com.simpleftp.ftp.tests.unit;
 
-import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPLookup;
 import com.simpleftp.ftp.connection.FTPPathStats;
 import com.simpleftp.ftp.exceptions.FTPError;
+import com.simpleftp.ftp.tests.testable.FTPSystemTestable;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPConnectionClosedException;
 import org.apache.commons.net.ftp.FTPFile;
@@ -56,7 +56,7 @@ public class FTPLookupUnitTest {
     @BeforeEach
     void init() {
         closeable = MockitoAnnotations.openMocks(this);
-        FTPSystem.setSystemTesting(true);
+        FTPSystemTestable.setSystemTesting(true);
     }
 
     @AfterEach

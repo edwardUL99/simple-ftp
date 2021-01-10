@@ -62,12 +62,12 @@ public class LocalPathResolver implements PathResolver {
      */
     @Override
     public String resolvePath(String path) throws PathResolverException {
-        LocalFile file = new LocalFile(path);
-        boolean absolute = file.isAbsolute();
+        boolean absolute = path.startsWith(FileUtils.getRootPath(true));
         if (!absolute) {
             path = FileUtils.addPwdToPath(currWorkingDir, path, FileUtils.PATH_SEPARATOR);
-            file = new LocalFile(path);
         }
+
+        LocalFile file = new LocalFile(path);
 
         try {
             if (!isPathCanonical(path) || file.isSymbolicLink()) {

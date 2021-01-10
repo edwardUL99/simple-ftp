@@ -20,7 +20,6 @@ package com.simpleftp.ui.views;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
-import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
@@ -211,10 +210,6 @@ public class PanelView extends VBox {
             panelsBox.getChildren().remove(1);
             remotePanelBox.getChildren().add(remotePanel);
             panelsBox.getChildren().add(remotePanelBox);
-            FileSystem localFileSystem = localPanel.getDirectoryPane().getFileSystem();
-
-            if (localFileSystem.getFTPConnection() == null) // a connection was established, set the local file system with the same connection
-                localFileSystem.setFTPConnection(remotePanel.getDirectoryPane().getFileSystem().getFTPConnection());
 
             connectionMonitor.start();
         } catch (FileSystemException ex) {

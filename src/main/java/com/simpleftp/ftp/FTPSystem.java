@@ -18,6 +18,7 @@
 package com.simpleftp.ftp;
 
 import com.simpleftp.ftp.connection.FTPConnection;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -37,7 +38,7 @@ public class FTPSystem {
      * Indicates system testing is taking place
      */
     @Getter
-    @Setter
+    @Setter(value = AccessLevel.PROTECTED)
     private static boolean systemTesting;
 
     /**
@@ -54,10 +55,14 @@ public class FTPSystem {
     }
 
     /**
-     * Resets the connection, i.e. sets it to null
+     * Resets the connection, i.e. sets it to null.
+     * This should only be called when testing
      */
     public static void reset() {
-        connection = null;
+        if (systemTesting)
+            connection = null;
+        else
+            throw new UnsupportedOperationException("Reset can only be called from a testing context");
     }
 
     /**

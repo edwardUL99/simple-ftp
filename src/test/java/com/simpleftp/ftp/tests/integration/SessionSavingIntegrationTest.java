@@ -17,13 +17,12 @@
 
 package com.simpleftp.ftp.tests.integration;
 
-import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.Server;
-import com.simpleftp.ftp.tests.testable.SessionFileTestable;
-import com.simpleftp.ftp.tests.testable.SessionLoaderTestable;
-import com.simpleftp.ftp.tests.testable.SessionSaverTestable;
-import com.simpleftp.ftp.tests.testable.SessionTestable;
-import com.simpleftp.sessions.*;
+import com.simpleftp.ftp.tests.testable.*;
+import com.simpleftp.sessions.Session;
+import com.simpleftp.sessions.SessionFile;
+import com.simpleftp.sessions.SessionLoader;
+import com.simpleftp.sessions.SessionSaver;
 import com.simpleftp.sessions.exceptions.SessionLoadException;
 import com.simpleftp.sessions.exceptions.SessionSaveException;
 import org.codehaus.stax2.XMLStreamReader2;
@@ -73,7 +72,7 @@ public class SessionSavingIntegrationTest {
         sessionSaver = new SessionSaverTestable();
         sessionLoader = new SessionLoaderTestable();
         autoCloseable = MockitoAnnotations.openMocks(this);
-        FTPSystem.setSystemTesting(true);
+        FTPSystemTestable.setSystemTesting(true);
     }
 
     @AfterEach
