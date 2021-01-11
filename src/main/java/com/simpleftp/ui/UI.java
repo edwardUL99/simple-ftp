@@ -89,12 +89,12 @@ public final class UI {
     /**
      * Name for the hide hidden files button
      */
-    public static final String HIDE_FILES = "_Hide hidden files";
+    public static final String HIDE_FILES = "Hide hidden files";
 
     /**
      * Name for the show hidden files button
      */
-    public static final String SHOW_FILES = "_Show hidden files";
+    public static final String SHOW_FILES = "Show hidden files";
 
     /**
      * Height of the File panel

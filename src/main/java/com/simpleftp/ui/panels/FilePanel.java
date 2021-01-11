@@ -160,37 +160,27 @@ public abstract class FilePanel extends VBox {
      * Initialises all the buttons for the toolbar
      */
     private void initButtons() {
-        open = new Button();
-        open.setMnemonicParsing(true);
-        open.setText("_Open");
+        open = new Button("Open");
         open.setOnAction(e -> open());
         open.setTooltip(new Tooltip("Opens the selected file (changes directory or opens text file)"));
 
-        delete = new Button();
-        delete.setMnemonicParsing(true);
-        delete.setText("_Delete");
+        delete = new Button("Delete");
         delete.setOnAction(e -> delete());
         delete.setTooltip(new Tooltip("Deletes the selected file"));
 
-        gotoButton = new Button();
-        gotoButton.setMnemonicParsing(true);
-        gotoButton.setText("_Go To");
+        gotoButton = new Button("Go To");
         gotoButton.setOnAction(e -> gotoPath());
         gotoButton.setTooltip(new Tooltip("Specify a path to open"));
 
         hideHiddenFiles = new Button();
-        hideHiddenFiles.setMnemonicParsing(true);
         initHideButton();
         hideHiddenFiles.setTooltip(new Tooltip("Toggle the flag to display/hide hidden files"));
 
-        createButton = new MenuButton();
-        createButton.setMnemonicParsing(true);
+        createButton = new MenuButton("New");
         initCreateButton();
         createButton.setTooltip(new Tooltip("Choose a file type to create"));
 
-        maskButton = new Button();
-        maskButton.setMnemonicParsing(true);
-        maskButton.setText("File _Mask");
+        maskButton = new Button("File Mask");
         initMaskButton();
         maskButton.setTooltip(new Tooltip("Specify a mask to filter the files displayed"));
 
@@ -198,9 +188,7 @@ public abstract class FilePanel extends VBox {
         rootButton.setTooltip(new Tooltip("Go to the root directory"));
         rootButton.setOnAction(e -> goToRootDirectory());
 
-        propertiesButton = new Button();
-        propertiesButton.setMnemonicParsing(true);
-        propertiesButton.setText("_Properties");
+        propertiesButton = new Button("Properties");
         propertiesButton.setOnAction(e -> openPropertiesWindow());
         propertiesButton.managedProperty().bind(propertiesButton.visibleProperty()); // if hidden, re-arrange toolbar. But for best effects, keep the button as the second last button so ToolBar doesn't keep chopping and changing
         propertiesButton.setVisible(false);
@@ -214,9 +202,7 @@ public abstract class FilePanel extends VBox {
      * Initialises the symbolic link button
      */
     private void initSymLinkButton() {
-        symLinkDestButton = new Button();
-        symLinkDestButton.setMnemonicParsing(true);
-        symLinkDestButton.setText("Go to _Target");
+        symLinkDestButton = new Button("Go to Target");
         symLinkDestButton.setTooltip(new Tooltip("The selected file is a symbolic link. Click to go directly to the target directory"));
         symLinkDestButton.setOnAction(e -> goToSymLinkTarget());
         symLinkDestButton.managedProperty().bind(symLinkDestButton.visibleProperty()); // if hidden, re-arrange toolbar. But for best effects, keep the button as the last button so ToolBar doesn't keep chopping and changing
@@ -253,28 +239,21 @@ public abstract class FilePanel extends VBox {
      * Initialises the button to create new objects
      */
     private void initCreateButton() {
-        createButton.setText("_New");
-        MenuItem menuItem = new MenuItem();
-        menuItem.setMnemonicParsing(true);
-        menuItem.setText("Di_rectory");
+        MenuItem menuItem = new MenuItem("Directory");
         ImageView imageView = new ImageView(new Image("dir_icon.png"));
         imageView.setFitHeight(20);
         imageView.setFitWidth(20);
         menuItem.setGraphic(imageView);
         menuItem.setOnAction(e -> createNewDirectory());
 
-        MenuItem menuItem1 = new MenuItem();
-        menuItem1.setMnemonicParsing(true);
-        menuItem1.setText("_File");
+        MenuItem menuItem1 = new MenuItem("File");
         ImageView imageView1 = new ImageView(new Image("file_icon.png"));
         imageView1.setFitWidth(20);
         imageView1.setFitHeight(20);
         menuItem1.setGraphic(imageView1);
         menuItem1.setOnAction(e -> createNewFile());
 
-        MenuItem menuItem2 = new MenuItem();
-        menuItem2.setMnemonicParsing(true);
-        menuItem2.setText("_Symbolic Link");
+        MenuItem menuItem2 = new MenuItem("Symbolic Link");
         ImageView imageView2 = new ImageView(new Image("sym_link.png"));
         imageView2.setFitWidth(20);
         imageView2.setFitHeight(20);
@@ -303,7 +282,7 @@ public abstract class FilePanel extends VBox {
     private void setKeyBindings() {
         setOnKeyPressed(e -> {
             if (!e.isAltDown()) {
-                // if alt is down, a mnenomic is needed
+                // if alt is down, a mnemonic is needed
                 KeyCode keyCode = e.getCode();
 
                if (keyCode == KeyCode.Q) {

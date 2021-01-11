@@ -220,15 +220,11 @@ public abstract class DirectoryPane extends VBox {
      * Initialises the buttons and sets their respective actions
      */
     private void initButtons() {
-        refresh = new Button();
-        refresh.setMnemonicParsing(true);
-        refresh.setText("_Refresh");
+        refresh = new Button("Refresh");
         refresh.setTooltip(new Tooltip("Refresh the files listing on this panel"));
         refresh.setOnAction(e -> refresh());
 
-        up = new Button();
-        up.setMnemonicParsing(true);
-        up.setText("_Up");
+        up = new Button("Up");
         up.setTooltip(new Tooltip("Move up to the parent directory"));
         up.setOnAction(e -> up());
     }
@@ -789,7 +785,7 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
-     * Sets the mask used for displaying files. Refresh should be called afterwards
+     * Sets the mask used for displaying files. refresh should be called after for the mask to be visibly applied
      * @param fileMask the file mask to show
      */
     public void setFileMask(String fileMask) {
