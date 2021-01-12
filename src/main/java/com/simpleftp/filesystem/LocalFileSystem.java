@@ -17,10 +17,8 @@
 
 package com.simpleftp.filesystem;
 
-import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
-import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import org.apache.commons.net.ftp.FTPFile;
@@ -35,28 +33,22 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Represents a local file system "linked" to a remote FTP Connection
  */
-public class LocalFileSystem implements FileSystem {
+public class LocalFileSystem extends AbstractFileSystem {
     /**
-     * The connection backing this file system if not using system connection
+     * Creates a "system-wide" file system for use with the system's connection.
+     * This is the main constructor that you will want to call to create a file system for the main system panes etc.
      */
-    private FTPConnection ftpConnection;
-
-    /**
-     * Creates a file system for use with shared files, i.e using system's connection
-     */
-    public LocalFileSystem() throws FileSystemException {
-        FTPConnection ftpConnection = FTPSystem.getConnection();
-        if (ftpConnection == null) {
-            throw new FileSystemException("A FileSystem needs a FTPConnection object to function");
-        }
+    public LocalFileSystem() {
+        super();
     }
 
     /**
-     * Creates a file system for use with a specified connection (useful for background tasks)
+     * Creates a "temporary" file system for use with a specified connection (useful for background tasks).
+     * This file system should not be used for the main system, should only be used on a background task for one task
      * @param connection the connection to use
      */
     public LocalFileSystem(FTPConnection connection)  {
-        ftpConnection = connection;
+        super(connection);
     }
 
     /**
@@ -168,17 +160,6 @@ public class LocalFileSystem implements FileSystem {
     }
 
     /**
-     * Returns the FTPConnection the file system is linked to.
-     * A FTP connection is required for both local and remote file systems as local file system needs to be able to download from the ftp server
-     *
-     * @return the connection being used
-     */
-    @Override
-    public FTPConnection getFTPConnection() {
-        return ftpConnection == null ? FTPSystem.getConnection():ftpConnection;
-    }
-
-    /**
      * This method determines the type of operation the source and destination parameters represent.
      * Checks that the parameters match the criteria for a local file system,
      * throws an IllegalArgumentException if not met.
@@ -211,7 +192,7 @@ public class LocalFileSystem implements FileSystem {
     private boolean localToLocalOperation(LocalFile source, LocalFile destination, boolean copy) throws FileSystemException {
         String sourceName = source.getName();
         String destinationDir = destination.getAbsolutePath();
-        String destinationPath = destinationDir + (destinationDir.endsWith(FileUtils.PATH_SEPARATOR) ? "":FileUtils.PATH_SEPARATOR) + sourceName;
+        String destinationPath = FileUtils.appendPath(destinationDir, sourceName, true);
 
         if (fileExists(destinationPath))
             return false;
@@ -265,9 +246,9 @@ public class LocalFileSystem implements FileSystem {
     static void recursivelyDownloadDirectory(String sourceDirectory, String destDirectory, String currentDirectory, FTPConnection ftpConnection, boolean copy) throws FTPException, FileSystemException {
         String listPath = sourceDirectory;
         if (currentDirectory != null)
-            listPath += (listPath.endsWith("/") ? "":"/") + currentDirectory;
+            listPath = FileUtils.appendPath(listPath, currentDirectory, false); // here this is appending a remote path
 
-        String destPath = destDirectory + FileUtils.PATH_SEPARATOR + RemoteFile.getName(listPath);
+        String destPath = FileUtils.appendPath(destDirectory, RemoteFile.getName(listPath), true);
 
         LocalFile file = new LocalFile(destPath);
         if (!file.exists())
@@ -285,9 +266,9 @@ public class LocalFileSystem implements FileSystem {
 
                 String filePath;
                 if (currentDirectory == null) {
-                    filePath = sourceDirectory + "/" + currName;
+                    filePath = FileUtils.appendPath(sourceDirectory, currName, false);
                 } else {
-                    filePath = sourceDirectory + "/" + currentDirectory + "/" + currName;
+                    filePath = FileUtils.appendPath(FileUtils.appendPath(sourceDirectory, currentDirectory, false), currName, false);
                 }
 
                 RemoteFile file2 = new RemoteFile(filePath, ftpConnection, file1);

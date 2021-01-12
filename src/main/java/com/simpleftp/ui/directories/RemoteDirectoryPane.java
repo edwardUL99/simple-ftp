@@ -39,17 +39,9 @@ final class RemoteDirectoryPane extends DirectoryPane {
      * @param directory the initial directory to display
      */
     RemoteDirectoryPane(RemoteFile directory) throws FileSystemException {
-        super(directory);
-    }
-
-    /**
-     * Initialises the file system for use with this DirectoryPane
-     *
-     * @throws FileSystemException if an error occurs initialising it
-     */
-    @Override
-    void initFileSystem() throws FileSystemException {
+        super();
         fileSystem = new RemoteFileSystem();
+        initDirectory(directory);
     }
 
     /**

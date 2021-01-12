@@ -107,9 +107,7 @@ public class TaskScheduler<T, R extends BackgroundTask> {
             cancelled = true;
         });
 
-        scheduler.setOnFailed(e -> {
-            started = cancelled = false;
-        });
+        scheduler.setOnFailed(e -> started = cancelled = false);
     }
 
     /**
@@ -131,26 +129,43 @@ public class TaskScheduler<T, R extends BackgroundTask> {
     }
 
     /**
+     * Checks all running tasks for if they are still running
+     */
+    private void checkAllRunningTasks() {
+        ArrayList<T> tasksToRemove = new ArrayList<>();
+        for (Map.Entry<T, R> entry : runningTask.entrySet()) {
+            if (entry.getValue().isFinished())
+                tasksToRemove.add(entry.getKey());
+        }
+
+        tasksToRemove.forEach(runningTask::remove);
+    }
+
+    /**
      * Starts the next tasks available to run in the file's queues if not empty. If the source file's queue is empty, it is removed from the map
      */
     private void startNextTask() {
         if (taskQueues.isEmpty()) {
-            Platform.runLater(() -> {
-                scheduler.cancel();
-                started = false;
-                cancelled = true;
-            });
+            checkAllRunningTasks();
+            if (runningTask.isEmpty()) {
+                Platform.runLater(() -> {
+                    scheduler.cancel();
+                    started = false;
+                    cancelled = true;
+                });
+            }
         } else {
             ArrayList<T> entriesToRemove = new ArrayList<>();
 
             for (Map.Entry<T, Queue<R>> entry : taskQueues.entrySet()) {
                 Queue<R> tasks = entry.getValue();
+                T key = entry.getKey();
+                boolean taskInProgress = isTaskInProgress(key);
 
                 if (tasks.isEmpty()) {
-                    entriesToRemove.add(entry.getKey());
+                    entriesToRemove.add(key);
                 } else {
-                    T key = entry.getKey();
-                    if (!isTaskInProgress(key)) { // if a task is currently in progress for the provided key, don't start a next task for that key
+                    if (!taskInProgress) { // if a task is currently in progress for the provided key, don't start a next task for that key
                         R task = tasks.poll();
                         if (task != null && task.isReady()) {
                             runningTask.put(key, task);
@@ -187,8 +202,6 @@ public class TaskScheduler<T, R extends BackgroundTask> {
      * @param task the task to register to the key
      */
     public void schedule(T key, R task) {
-        checkServiceStatus();
-
         Queue<R> taskQueue = taskQueues.get(key);
         if (taskQueue == null) {
             taskQueue = new ConcurrentLinkedQueue<>();
@@ -196,5 +209,7 @@ public class TaskScheduler<T, R extends BackgroundTask> {
         }
 
         taskQueue.add(task);
+
+        checkServiceStatus(); // check the service status after adding the task queue or else the task queue may still be empty when startNextTask is called and the service may just get cancelled
     }
 }

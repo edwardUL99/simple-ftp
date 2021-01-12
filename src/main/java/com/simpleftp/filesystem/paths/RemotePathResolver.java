@@ -18,7 +18,6 @@
 package com.simpleftp.filesystem.paths;
 
 import com.simpleftp.filesystem.FileUtils;
-import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.exceptions.PathResolverException;
@@ -28,11 +27,12 @@ import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 
 import java.io.File;
+import java.util.List;
 
 /**
  * This class represents a PathResolver for resolving remote paths
  */
-public class RemotePathResolver implements PathResolver {
+class RemotePathResolver implements PathResolver {
     /**
      * The connection to use for resolving paths
      */
@@ -53,7 +53,7 @@ public class RemotePathResolver implements PathResolver {
      * @param pathExists true if the path should already exist, false if it is to be created
      * @throws IllegalArgumentException if the connection is not ready (i.e. not connected and logged in)
      */
-    protected RemotePathResolver(FTPConnection connection, String currWorkingDir, boolean pathExists) throws IllegalArgumentException {
+    RemotePathResolver(FTPConnection connection, String currWorkingDir, boolean pathExists) throws IllegalArgumentException {
         this.connection = connection;
         this.currWorkingDir = currWorkingDir;
         this.pathExists = pathExists;
@@ -69,11 +69,8 @@ public class RemotePathResolver implements PathResolver {
      * @return true if canonical
      */
     private boolean isPathCanonical(String path) {
-        String fileName = new LocalFile(path).getName();
-        return !path.contains("/..") && !path.contains("../")
-                && !path.contains("/.") && !path.contains("./")
-                && !path.equals("..") && !path.equals(".")
-                && !fileName.equals(".") && !fileName.equals("..");
+        List<String> splitPath = FileUtils.splitPath(path, false);
+        return !splitPath.contains(".") && !splitPath.contains("..");
     }
 
     /**

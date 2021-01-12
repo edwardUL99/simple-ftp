@@ -118,7 +118,6 @@ public abstract class FileEditorWindow extends VBox implements Window {
         editorScrollPane = new VirtualizedScrollPane<>(editor);
         buttonBar = new HBox();
         VBox.setVgrow(editorScrollPane, Priority.ALWAYS);
-        getChildren().addAll(buttonBar, editorScrollPane);
         saved = true;
         save = new Button();
         save.setMnemonicParsing(true);
@@ -138,11 +137,16 @@ public abstract class FileEditorWindow extends VBox implements Window {
             }
         });
 
-        initButtonBar();
-
         savingLabel = new Label("Saving...");
         savingLabel.setVisible(false);
-        buttonBar.getChildren().add(savingLabel);
+    }
+
+    /**
+     * Adds all necessary objects to children
+     */
+    private void initChildren() {
+        getChildren().addAll(buttonBar, editorScrollPane);
+        initButtonBar();
     }
 
     /**
@@ -150,7 +154,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
      */
     private void initButtonBar() {
         buttonBar.setSpacing(10);
-        buttonBar.getChildren().addAll(save, reset);
+        buttonBar.getChildren().addAll(save, reset, savingLabel);
         buttonBar.setBorder(new Border(new BorderStroke(Paint.valueOf("BLACK"), BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));
         buttonBar.setStyle(UI.GREY_BACKGROUND);
         buttonBar.setAlignment(Pos.CENTER_LEFT);
@@ -398,11 +402,16 @@ public abstract class FileEditorWindow extends VBox implements Window {
      * @param file the file the contents belongs to
      */
     public static FileEditorWindow newInstance(DirectoryPane creatingPane, String fileContents, CommonFile file) {
+        FileEditorWindow editorWindow;
         if (file instanceof LocalFile) {
-            return new LocalFileEditorWindow(creatingPane, fileContents, file);
+            editorWindow = new LocalFileEditorWindow(creatingPane, fileContents, file);
         } else {
-            return new RemoteFileEditorWindow(creatingPane, fileContents, file);
+            editorWindow = new RemoteFileEditorWindow(creatingPane, fileContents, file);
         }
+
+        editorWindow.initChildren();
+
+        return editorWindow;
     }
 
     /**

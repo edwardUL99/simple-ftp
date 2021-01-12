@@ -69,6 +69,21 @@ public class FilePropertyWindow extends VBox implements Window {
     private Stage stage;
 
     /**
+     * A separator for separating properties from header
+     */
+    private final Separator headerSeparator;
+
+    /**
+     * A separator for separation permissions from properties
+     */
+    private Separator permissionsSeparator;
+
+    /**
+     * True if this has been fully initialised
+     */
+    private boolean initialised;
+
+    /**
      * Max length for path before abbreviating
      */
     private static final int MAX_PATH_LENGTH = 25;
@@ -93,26 +108,36 @@ public class FilePropertyWindow extends VBox implements Window {
         setSpacing(10);
         setStyle(UI.WHITE_BACKGROUND);
         initNamePanel();
-        Separator separator = new Separator();
-        separator.setOrientation(Orientation.HORIZONTAL);
+        headerSeparator = new Separator();
+        headerSeparator.setOrientation(Orientation.HORIZONTAL);
         propertiesPanel = new PropertiesPanel();
-
-        getChildren().addAll(namePanel, separator, propertiesPanel);
 
         String osName = UI.OS_NAME.toLowerCase();
         displayPermissionsBox = !lineEntry.isLocal() || osName.contains("nix") || osName.contains("nux") || osName.contains("aix");
 
         if (displayPermissionsBox) {
             // we have a linux (or remote window) os, show properties editing
-            separator = new Separator();
-            separator.setOrientation(Orientation.HORIZONTAL);
-            getChildren().addAll(separator, new PermissionsBox());
+            permissionsSeparator = new Separator();
+            permissionsSeparator.setOrientation(Orientation.HORIZONTAL);
         }
 
         setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.ESCAPE)
                 close();
         });
+    }
+
+    /**
+     * Does all necessary initialisations and adds all elements to children
+     */
+    private void initChildren() {
+        getChildren().addAll(namePanel, headerSeparator, propertiesPanel);
+
+        if (displayPermissionsBox) {
+            getChildren().addAll(permissionsSeparator, new PermissionsBox());
+        }
+
+        initialised = true;
     }
 
     /**
@@ -154,6 +179,10 @@ public class FilePropertyWindow extends VBox implements Window {
      * Shows this FilePropertyWindow
      */
     public void show() {
+        if (!initialised) {
+            initChildren();
+        }
+
         boolean symLink = lineEntry.file.isSymbolicLink();
         int height = displayPermissionsBox ? UI.PROPERTIES_WINDOW_HEIGHT_PERMISSIONS:UI.PROPERTIES_WINDOW_HEIGHT;
         height = symLink ? height + 30:height;

@@ -25,16 +25,18 @@ import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.background.scheduling.TaskScheduler;
+import com.simpleftp.ui.interfaces.ActionHandler;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.concurrent.Worker;
 import lombok.Getter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * This class provides a service for doing copy/move operations on files in the background.
- * It is designed to have a local or remote file service for the type of copy/move required.
+ * It is designed to have a local or remote file service for the type of operation required.
  * It uses a copy FTPSystem's connection to do all its operations.
  */
 public abstract class FileService implements BackgroundTask {
@@ -53,9 +55,9 @@ public abstract class FileService implements BackgroundTask {
      */
     private Service<Void> service;
     /**
-     * A boolean flag to determine if this FileService is for copying or moving files
+     * The operation that this FileService will carry out
      */
-    private final boolean copy;
+    protected final Operation operation;
     /**
      * A boolean flag for the service to set if the operation succeeded
      */
@@ -63,6 +65,7 @@ public abstract class FileService implements BackgroundTask {
     /**
      * A FileSystemException if occurred from any operation
      */
+    @Getter
     private FileSystemException operationException;
     /**
      * The FileSystem backing the operations this FileService is doing
@@ -73,26 +76,73 @@ public abstract class FileService implements BackgroundTask {
      */
     private boolean finished;
     /**
+     * The action handler to use for when operation succeeds
+     */
+    private ActionHandler onOperationSucceeded;
+    /**
+     * The action handler to use for when operation fails
+     */
+    private ActionHandler onOperationFailed;
+    /**
      * The scheduler that will schedule this service
      */
     private static final TaskScheduler<CommonFile, FileService> scheduler = new TaskScheduler<>();
     /**
      * Keep track of all scheduled FileServices
      */
-    private static final ArrayList<FileService> scheduledTasks = new ArrayList<>();
+    private static final ArrayList<FileService> scheduledServices = new ArrayList<>();
+    /**
+     * A hash map mapping an operation to a boolean to check if a destination file is required and if not, null can be provided
+     */
+    private static final HashMap<Operation, Boolean> destinationRequired = new HashMap<>();
+
+    static {
+        destinationRequired.put(Operation.COPY, true);
+        destinationRequired.put(Operation.MOVE, true);
+        destinationRequired.put(Operation.DELETE, false);
+    }
+
+    /**
+     * This enum represents the operation that this FileService is to carry out
+     */
+    public enum Operation {
+        /**
+         * This enum option represents a copy operation
+         */
+        COPY,
+        /**
+         * This enum option represents a move operation
+         */
+        MOVE,
+        /**
+         * This enum represents a delete operation
+         */
+        DELETE
+    }
 
     /**
      * Constructs a FileService object with the provided parameters.
      * See the documentation for the file system's copyFiles and moveFiles methods for the rules on the provided parameters
      * @param source the source file that is being copied/moved
      * @param destination the destination directory of this copy/move
-     * @param copy true if the source file is to be copied, false if it is to be moved
+     * @param operation the operation for this FileService to complete
      */
-    protected FileService(CommonFile source, CommonFile destination, boolean copy) {
+    protected FileService(CommonFile source, CommonFile destination, Operation operation) {
         this.source = source;
+        this.operation = operation;
+        checkDestinationNullity(destination);
         this.destination = destination;
-        this.copy = copy;
         initService();
+    }
+
+    /**
+     * Checks if the destination file is allowed to be null for the given operation type. If destination is null and
+     * destinationRequired returns true, a NullPointerException is thrown
+     * @param destination the destination file to check
+     */
+    private void checkDestinationNullity(CommonFile destination) {
+        if (destinationRequired.get(operation) && destination == null)
+            throw new NullPointerException("The provided destination file is null but for the operation " + operation.toString() + ", a destination file is required");
     }
 
     /**
@@ -117,6 +167,28 @@ public abstract class FileService implements BackgroundTask {
     }
 
     /**
+     * Sets the handler for when the operation succeeds. If you want to display any success dialogs etc. this handler should
+     * do this, otherwise, this service will give no feedback
+     * @param onOperationSucceeded the handler to call when the operation succeeds
+     * @return this so chaining can be used
+     */
+    public FileService setOnOperationSucceeded(ActionHandler onOperationSucceeded) {
+        this.onOperationSucceeded = onOperationSucceeded;
+        return this;
+    }
+
+    /**
+     * Sets the handler for when the operation fails. If you want to display any error dialogs etc. this handler should
+     * do this, otherwise, this service will give no feedback
+     * @param onOperationFailed the handler to call when the operation fails
+     * @return this so chaining can be used
+     */
+    public FileService setOnOperationFailed(ActionHandler onOperationFailed) {
+        this.onOperationFailed = onOperationFailed;
+        return this;
+    }
+
+    /**
      * Retrieves the FileSystem to use for this FileService. Lazily initiliases this FileService's FileSystem instance
      * @return the file system to use for this FileService
      * @throws FileSystemException if an exception occurs creating the file system
@@ -129,10 +201,13 @@ public abstract class FileService implements BackgroundTask {
     private void doOperation() {
         try {
             FileSystem fileSystem = getFileSystem();
-            if (copy) {
-                operationSucceeded = fileSystem.copyFiles(source, destination);
-            } else {
-                operationSucceeded = fileSystem.moveFiles(source, destination);
+            switch (operation) {
+                case COPY: operationSucceeded = fileSystem.copyFiles(source, destination);
+                            break;
+                case MOVE: operationSucceeded = fileSystem.moveFiles(source, destination);
+                            break;
+                case DELETE: operationSucceeded = fileSystem.removeFile(source);
+                             break;
             }
         } catch (FileSystemException ex) {
             operationSucceeded = false;
@@ -147,16 +222,25 @@ public abstract class FileService implements BackgroundTask {
      */
     private void doSuccess() {
         UI.removeBackgroundTask(this);
-        scheduledTasks.remove(this);
+        scheduledServices.remove(this);
         finished = true;
-        String copyString = copy ? "copy":"move";
 
         if (operationSucceeded) {
-            UI.doInfo("File Operation Successful", "The " + copyString + " of " + source.getFilePath() + " to " + destination.getFilePath() + " has completed successfully");
+            if (onOperationSucceeded != null)
+                onOperationSucceeded.doAction();
         } else {
-            String error = operationException != null ? operationException.getMessage():null;
-            UI.doError("File Operation Unsuccessful", "The " + copyString + " of " + source.getFilePath() + " to " + destination.getFilePath() + " has failed"
-                + (error != null ? " because of the error: " + error:""));
+            if (onOperationFailed != null)
+                onOperationFailed.doAction();
+        }
+
+        try {
+            FTPConnection connection = fileSystem.getFTPConnection();
+            if (connection != null && connection.isConnected())
+                connection.disconnect();
+        } catch (FTPException ex) {
+            if (FTPSystem.isDebugEnabled())
+                ex.printStackTrace();
+            UI.doError("Service Completion Error", "An error occurred disconnecting the service's connection because: " + ex.getMessage());
         }
     }
 
@@ -180,15 +264,22 @@ public abstract class FileService implements BackgroundTask {
     private void doCancel(boolean wantedCancel) {
         try {
             finished = true;
-            if (!wantedCancel)
-                UI.doError("Task Failure", "A file service task has failed due to an unknown error");
+            if (!wantedCancel) {
+                if (onOperationFailed != null) {
+                    onOperationFailed.doAction();
+                } else {
+                    UI.doError("Task Failure", "A file service task has failed due to an unknown error");
+                }
+            }
             FTPConnection connection = fileSystem.getFTPConnection();
             if (connection.isConnected())
                 connection.disconnect();
+
+            scheduledServices.remove(this);
         } catch (FTPException ex) {
             if (FTPSystem.isDebugEnabled())
                 ex.printStackTrace();
-            UI.doError("Cancellation Failed", "Failed to cancel this task because of the error: " + ex.getMessage());
+            UI.doError("Service Cancellation Error", "An error occurred disconnecting the service's connection because: " + ex.getMessage());
         }
     }
 
@@ -253,7 +344,7 @@ public abstract class FileService implements BackgroundTask {
      */
     private CommonFile getSchedulerKey() {
         CommonFile sourceFile = source;
-        for (FileService service : scheduledTasks) {
+        for (FileService service : scheduledServices) {
             if (source.equals(service.source)) {
                 break;
             } else if (destination != null && destination.equals(service.source)) {
@@ -294,22 +385,22 @@ public abstract class FileService implements BackgroundTask {
     @Override
     public void schedule() {
         scheduler.schedule(getSchedulerKey(), this);
-        scheduledTasks.add(this);
+        scheduledServices.add(this);
     }
 
     /**
      * Constructs a new instance of FileService based on the provided parameters.
      * @param source the source file being copied/moved by this FileService
-     * @param destination the destination directory being copied/moved to
-     * @param copy true to copy, false to move
+     * @param destination the destination directory being copied/moved to. If the operation is one that involves only one file, leave destination null
+     * @param operation the operation for this FileService
      * @param local true if the destination FileSystem is local, false if remote
      * @return the instance of FileService
      */
-    public static FileService newInstance(CommonFile source, CommonFile destination, boolean copy, boolean local) {
+    public static FileService newInstance(CommonFile source, CommonFile destination, Operation operation, boolean local) {
         if (local) {
-            return new LocalFileService(source, destination, copy);
+            return new LocalFileService(source, destination, operation);
         } else {
-            return new RemoteFileService(source, destination, copy);
+            return new RemoteFileService(source, destination, operation);
         }
     }
 }

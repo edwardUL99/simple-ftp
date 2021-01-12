@@ -22,10 +22,13 @@ import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ui.UI;
+import com.simpleftp.ui.background.FileService;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.files.LineEntry;
 import com.simpleftp.ui.views.PanelView;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -120,7 +123,7 @@ public abstract class FilePanel extends VBox {
         setPadding(new Insets(UI.UNIVERSAL_PADDING));
         setSpacing(UI.UNIVERSAL_PADDING);
 
-        initComboBox(); // combo box needs to be initalised before file panel is set
+        initComboBox(); // combo box needs to be initialised before file panel is set
         toolBar = new FlowPane();
         initToolbar();
         getChildren().add(toolBar);
@@ -129,6 +132,15 @@ public abstract class FilePanel extends VBox {
 
         toolBar.getChildren().addAll(new Label("Files: "), comboBox, open, delete, gotoButton, hideHiddenFiles, createButton, maskButton, rootButton, propertiesButton, symLinkDestButton);
         setKeyBindings();
+    }
+
+    /**
+     * Returns the children of this editor window. Makes this method final so that we are not calling overridable method
+     * @return the list of children
+     */
+    @Override
+    public final ObservableList<Node> getChildren() {
+        return super.getChildren();
     }
 
     /**
@@ -401,6 +413,16 @@ public abstract class FilePanel extends VBox {
     }
 
     /**
+     * Cleans this file name from the panel, i.e. from combo box and mappings etc
+     * @param fileName the file name to remove
+     */
+    private void removeLineEntryFromPanel(String fileName) {
+        comboBox.getItems().remove(fileName);
+        comboBox.setValue("");
+        entryMappings.remove(fileName);
+    }
+
+    /**
      * Deletes the chosen line entry from the combobox
      */
     public void delete() {
@@ -411,16 +433,22 @@ public abstract class FilePanel extends VBox {
             String fileName = file.getName();
 
             boolean opened = UI.isFileOpened(file.getFilePath(), directoryPane.isLocal());
-            boolean locked = UI.isFileLockedByFileService(file, true); // check if this file is the destination of a copy/move as removing it would cause issues
+            boolean locked = UI.isFileLockedByFileService(file);
             if (!opened && !locked) {
                 if (UI.doConfirmation("Confirm file deletion", "Confirm deletion of " + fileName)) {
-                    if (directoryPane.deleteEntry(lineEntry)) {
-                        UI.doInfo("File deleted successfully", "File " + fileName + " deleted");
-                        comboBox.getItems().remove(fileName);
-                        comboBox.setValue("");
-                        entryMappings.remove(fileName);
-                    } else {
-                        UI.doError("File not deleted", "File " + fileName + " wasn't deleted successfully");
+                    try {
+                        if (file.isNormalFile() || file.isSymbolicLink()) {
+                            if (directoryPane.deleteEntry(lineEntry)) {
+                                UI.doInfo("File deleted successfully", "File " + fileName + " deleted");
+                                removeLineEntryFromPanel(fileName);
+                            } else {
+                                UI.doError("File not deleted", "File " + fileName + " wasn't deleted successfully");
+                            }
+                        } else {
+                            doRecursiveDeletion(lineEntry); // recursive may take a while so we want a FileService to do it in the background
+                        }
+                    } catch (FileSystemException ex) {
+                        UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
                     }
                 }
             } else if (opened) {
@@ -429,6 +457,23 @@ public abstract class FilePanel extends VBox {
                 UI.doError("File Locked", "File " + fileName + " is currently locked by a background task, file can't be deleted");
             }
         }
+    }
+
+    /**
+     * This method carries out recursive file deletion
+     * @param lineEntry the line entry to delete recursively
+     */
+    private void doRecursiveDeletion(final LineEntry lineEntry) {
+        CommonFile file = lineEntry.getFile();
+        FileService.newInstance(file, null, FileService.Operation.DELETE, directoryPane.isLocal())
+            .setOnOperationSucceeded(() -> {
+                String fileName = file.getName();
+                UI.doInfo("File deleted successfully", "File " + fileName + " deleted successfully");
+                directoryPane.deleteEntry(lineEntry, false);
+                removeLineEntryFromPanel(fileName);
+            })
+            .setOnOperationFailed(() -> UI.doError("File not deleted", "File " + file.getName() + " wasn't deleted successfully"))
+            .schedule(); // schedule it to run
     }
 
     /**
@@ -447,7 +492,7 @@ public abstract class FilePanel extends VBox {
      * Automatically links the file panel by calling DirectoryPane.setFilePanel
      * @param directoryPane the file panel to set
      */
-    public void setDirectoryPane(DirectoryPane directoryPane) {
+    public final void setDirectoryPane(DirectoryPane directoryPane) {
         if (this.directoryPane != null)
             getChildren().remove(this.directoryPane);
 

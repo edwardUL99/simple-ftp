@@ -100,7 +100,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     /**
      * Initialises the line entry
      */
-    protected void init() throws FileSystemException {
+    private void init() throws FileSystemException {
         if (getChildren().size() > 1) {
             getChildren().clear();
         }

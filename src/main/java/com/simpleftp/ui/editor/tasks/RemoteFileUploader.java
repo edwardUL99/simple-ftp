@@ -144,7 +144,7 @@ final class RemoteFileUploader extends FileUploader {
      */
     @Override
     String getSaveFilePath(String filePath) {
-        return FileUtils.TEMP_DIRECTORY + FileUtils.PATH_SEPARATOR + new File(filePath).getName();
+        return FileUtils.appendPath(FileUtils.TEMP_DIRECTORY, new File(filePath).getName(), true);
     }
 
     /**

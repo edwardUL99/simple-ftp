@@ -17,6 +17,7 @@
 
 package com.simpleftp.ftp.connection;
 
+import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.exceptions.*;
@@ -464,12 +465,7 @@ public class FTPConnection {
      */
     private synchronized FTPFile writeLocalFileToRemote(File file, String path) throws IOException {
         String name = file.getName();
-        String remoteFileName;
-        if (path.equals("/")) {
-            remoteFileName = path + name;
-        } else {
-            remoteFileName = path + "/" + name;
-        }
+        String remoteFileName = FileUtils.appendPath(path, name, false);
 
         boolean stored;
 
@@ -1052,7 +1048,7 @@ public class FTPConnection {
      * This client uses keep alive with this timeout
      * Uses the seconds from FTPConnectionDetails. This can be called if it was changed and to refresh it after disconnecting
      */
-    public synchronized void setTimeoutTime() {
+    public synchronized final void setTimeoutTime() {
         if (!connected) {
             loggedIn = false;
 

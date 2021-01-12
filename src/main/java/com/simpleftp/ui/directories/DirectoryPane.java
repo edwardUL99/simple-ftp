@@ -106,7 +106,7 @@ public abstract class DirectoryPane extends VBox {
      */
     private VBox entriesBox;
     /**
-     * The file system this DirectoryPane is connected to
+     * The file system this DirectoryPane is connected to. Expected to be initialised by sub-classes
      */
     @Getter
     protected FileSystem fileSystem;
@@ -138,19 +138,16 @@ public abstract class DirectoryPane extends VBox {
     protected CommonFile rootDirectory;
 
     /**
-     * Constructs a DirectoryPane object with the specified symbolicLink
-     * @param directory the symbolicLink object. Can be Local or Remote file
-     * @throws FileSystemException if the symbolicLink is not in fact a symbolicLink
+     * Constructs a DirectoryPane object.
+     * Sub-classes are expected to instantiate the filesystem object as the instance varies depending on if this is local or remote and to call the initDirectory(directory) method.
      */
-    DirectoryPane(CommonFile directory) throws FileSystemException {
+    DirectoryPane() {
         setStyle(UI.WHITE_BACKGROUND);
         lineEntries = new ArrayList<>();
 
         initButtons();
         initStatusPanel();
         initEntriesBox();
-        initFileSystem();
-        initDirectory(directory);
         initEmptyFolderPane();
         setOnMouseClicked(this::unselectFile);
     }
@@ -257,16 +254,10 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
-     * Initialises the file system for use with this DirectoryPane
-     * @throws FileSystemException if an error occurs initialising it
+     * Initialises the directory for this PanelView. This should be called by sub-classes to initialise the directory
+     * @param directory the directory to set as initial directory
      */
-    abstract void initFileSystem() throws FileSystemException;
-
-    /**
-     * Initialises the symbolicLink that this DirectoryPane is set up to view
-     * @param directory the symbolicLink to set as initial symbolicLink
-     */
-    private void initDirectory(CommonFile directory) throws FileSystemException {
+    protected void initDirectory(CommonFile directory) throws FileSystemException {
         setDirectory(directory);
         refresh();
 
@@ -733,13 +724,14 @@ public abstract class DirectoryPane extends VBox {
     /**
      * Attempts to delete the specified line entry and the file associated with it
      * @param lineEntry the line entry to remove
+     * @param removeFile remove the file from the filesystem also, leave false if you just want to delete the entry from the directory pane
      * @return true if successful, false if not
      */
-    public boolean deleteEntry(final LineEntry lineEntry) {
+    public boolean deleteEntry(final LineEntry lineEntry, boolean removeFile) {
         CommonFile file = lineEntry.getFile();
 
         try {
-            if (doRemove(file)) {
+            if (!removeFile || doRemove(file)) {
                 entriesBox.getChildren().remove(lineEntry);
                 lineEntries.remove(lineEntry);
 
@@ -750,6 +742,16 @@ public abstract class DirectoryPane extends VBox {
         }
 
         return false;
+    }
+
+    /**
+     * Attempts to delete the specified line entry and the file associated with it.
+     * This removes the associated file by calling deleteEntry(lineEntry, true)
+     * @param lineEntry the line entry to remove
+     * @return true if successful, false if not
+     */
+    public boolean deleteEntry(final LineEntry lineEntry) {
+        return deleteEntry(lineEntry, true);
     }
 
     /**

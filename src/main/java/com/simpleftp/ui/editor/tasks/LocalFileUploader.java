@@ -28,7 +28,7 @@ import java.io.File;
 import java.io.IOException;
 
 /**
- * This is for "uploading" local files, i.e. saving them to the file syste,
+ * This is for "uploading" local files, i.e. saving them to the file system,
  */
 final class LocalFileUploader extends FileUploader {
     /**
@@ -42,18 +42,11 @@ final class LocalFileUploader extends FileUploader {
     }
 
     /**
-     * Gets a new connection with same details to upload the saved file
-     *
-     * @return the connection to upload the file with
+     * @return always null as you don't need a connection for a local upload
      */
     @Override
     FTPConnection getUploadingConnection() {
-        if (uploadingConnection == null) {
-            FileSystem fileSystem = editorWindow.getCreatingPane().getFileSystem();
-            uploadingConnection = FTPConnection.createTemporaryConnection(fileSystem.getFTPConnection());
-        }
-
-        return uploadingConnection;
+        return null; // you don't need a connection for a local save
     }
 
     /**
@@ -65,7 +58,7 @@ final class LocalFileUploader extends FileUploader {
     @Override
     String getBackupPath(String filePath) {
         String pathSeparator = FileUtils.PATH_SEPARATOR;
-        String backupPath = "";
+        String backupPath;
         if (filePath.endsWith(pathSeparator)) {
             filePath = filePath.substring(0, filePath.length() - 1);
         }

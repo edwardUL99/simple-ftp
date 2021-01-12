@@ -31,7 +31,7 @@ import java.util.ArrayList;
  *
  * This resolver expects the path to be already absolute
  */
-public class SymbolicPathResolver implements PathResolver {
+class SymbolicPathResolver implements PathResolver {
     /**
      * The path separator to use when building strings
      */
@@ -48,7 +48,7 @@ public class SymbolicPathResolver implements PathResolver {
      * @param pathSeparator the path separator to use
      * @param root the root at the start of the path
      */
-    protected SymbolicPathResolver(String pathSeparator, String root) {
+    SymbolicPathResolver(String pathSeparator, String root) {
         this.pathSeparator = pathSeparator;
         this.root = root;
     }
@@ -60,7 +60,7 @@ public class SymbolicPathResolver implements PathResolver {
      */
     private String[] splitPath(String path) {
         if (root != null && !root.equals("/") && path.startsWith(root))
-            path = path.substring(root.length() - 1);
+            path = path.substring(root.length());
         else if (path.startsWith(pathSeparator))
             path = path.substring(1);
         String regex = pathSeparator.equals("\\") ? "\\\\":pathSeparator;

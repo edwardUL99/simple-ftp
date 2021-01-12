@@ -23,11 +23,12 @@ import com.simpleftp.filesystem.exceptions.PathResolverException;
 import com.simpleftp.filesystem.paths.interfaces.PathResolver;
 
 import java.io.IOException;
+import java.util.List;
 
 /*
  * Represents a resolver for resolving local paths
  */
-public class LocalPathResolver implements PathResolver {
+class LocalPathResolver implements PathResolver {
     /**
      * The current working directory;
      */
@@ -37,7 +38,7 @@ public class LocalPathResolver implements PathResolver {
      * Constructs the LocalPathResolver. Outside the filesystem package, it is only instantiable from the PathResolverFactory
      * @param currWorkingDir the current working directory
      */
-    protected LocalPathResolver(String currWorkingDir) {
+    LocalPathResolver(String currWorkingDir) {
         this.currWorkingDir = currWorkingDir;
     }
 
@@ -47,11 +48,8 @@ public class LocalPathResolver implements PathResolver {
      * @return true if canonical
      */
     private boolean isPathCanonical(String path) {
-        String fileName = new LocalFile(path).getName();
-        return !(path.contains("/..") || path.contains("\\..")) && !(path.contains("../") || path.contains("..\\"))
-                && !(path.contains("/.") || path.contains("\\.")) && !(path.contains("./") || path.contains(".\\"))
-                && !path.equals("..") && !path.equals(".")
-                && !fileName.equals(".") && !fileName.equals("..");
+        List<String> splitPath = FileUtils.splitPath(path, true);
+        return !splitPath.contains(".") && !splitPath.contains("..");
     }
 
     /**
@@ -62,12 +60,12 @@ public class LocalPathResolver implements PathResolver {
      */
     @Override
     public String resolvePath(String path) throws PathResolverException {
-        boolean absolute = path.startsWith(FileUtils.getRootPath(true));
+        LocalFile file = new LocalFile(path);
+        boolean absolute = file.isAbsolute();
         if (!absolute) {
             path = FileUtils.addPwdToPath(currWorkingDir, path, FileUtils.PATH_SEPARATOR);
+            file = new LocalFile(path);
         }
-
-        LocalFile file = new LocalFile(path);
 
         try {
             if (!isPathCanonical(path) || file.isSymbolicLink()) {

@@ -38,15 +38,9 @@ final class LocalDirectoryPane extends DirectoryPane {
      * @param directory the initial directory to display
      */
     LocalDirectoryPane(LocalFile directory) throws FileSystemException {
-        super(directory);
-    }
-
-    /**
-     * Initialises the file system for use with this DirectoryPane
-     */
-    @Override
-    void initFileSystem() throws FileSystemException {
+        super();
         fileSystem = new LocalFileSystem();
+        initDirectory(directory);
     }
 
     /**

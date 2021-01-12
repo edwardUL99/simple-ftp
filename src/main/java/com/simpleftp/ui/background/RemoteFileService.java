@@ -33,10 +33,10 @@ class RemoteFileService extends FileService {
      * Constructs a RemoteFileService with the provided parameters
      * @param source the source file this service is copying/moving
      * @param destination the destination file this service is copying/moving to
-     * @param copy true to copy, false to move
+     * @param operation the operation this file service is to carry out
      */
-    RemoteFileService(CommonFile source, CommonFile destination, boolean copy) {
-        super(source, destination, copy);
+    RemoteFileService(CommonFile source, CommonFile destination, Operation operation) {
+        super(source, destination, operation);
     }
 
     /**

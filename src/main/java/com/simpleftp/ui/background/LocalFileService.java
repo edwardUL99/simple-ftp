@@ -25,18 +25,32 @@ import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 
+import java.util.HashMap;
+
 /**
  * This class represents a FileService for use with local filesystems
  */
 class LocalFileService extends FileService {
     /**
+     * A HashMap to determine if an active (connected and logged in) connection is required for the operation.
+     * A remote file service clearly always needs an active one, but not local
+     */
+    private static final HashMap<Operation, Boolean> connectionRequired = new HashMap<>();
+
+    static {
+        connectionRequired.put(Operation.COPY, true);
+        connectionRequired.put(Operation.MOVE, true);
+        connectionRequired.put(Operation.DELETE, false);
+    }
+
+    /**
      * Creates a local file service with the provided parameters
      * @param source the source file this service is to target
      * @param destination the destination directory this service is to copy/move to
-     * @param copy true to copy, false to move
+     * @param operation the operation this file service is to carry out
      */
-    LocalFileService(CommonFile source, CommonFile destination, boolean copy) {
-        super(source, destination, copy);
+    LocalFileService(CommonFile source, CommonFile destination, Operation operation) {
+        super(source, destination, operation);
     }
 
     /**
@@ -48,11 +62,13 @@ class LocalFileService extends FileService {
     @Override
     FileSystem getFileSystem() throws FileSystemException {
         if (fileSystem == null) {
-            FTPConnection connection;
+            FTPConnection connection = null;
             try {
-                connection = FTPConnection.createTemporaryConnection(FTPSystem.getConnection());
-                connection.connect();
-                connection.login();
+                if (connectionRequired.get(operation)) {
+                    connection = FTPConnection.createTemporaryConnection(FTPSystem.getConnection());
+                    connection.connect();
+                    connection.login();
+                }
             } catch (FTPException ex) {
                 throw new FileSystemException("Couldn't intialise the FileSystem for this FileService", ex);
             }

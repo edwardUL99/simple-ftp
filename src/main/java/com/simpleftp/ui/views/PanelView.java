@@ -38,7 +38,7 @@ import lombok.Getter;
 /**
  * This class represents the main view of FilePanels side by side. It is the view that the user will see provided that they are connected to the remote server
  */
-public class PanelView extends VBox {
+public final class PanelView extends VBox {
     /**
      * The local FilePanel to be displayed
      */
@@ -57,6 +57,11 @@ public class PanelView extends VBox {
      * The monitor that will check the status of our connection
      */
     private final ConnectionMonitor connectionMonitor;
+
+    /**
+     * Keeps track of if this panel view is fully initialised
+     */
+    private boolean initialised;
 
     /**
      * Constructs the view, initialising the LocalPanel.

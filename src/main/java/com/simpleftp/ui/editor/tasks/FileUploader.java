@@ -155,7 +155,7 @@ public abstract class FileUploader implements BackgroundTask {
     private Task<Void> createTask() {
         return new Task<>() {
             @Override
-            protected Void call() throws Exception {
+            protected Void call() {
                 saveFile();
                 return null;
             }

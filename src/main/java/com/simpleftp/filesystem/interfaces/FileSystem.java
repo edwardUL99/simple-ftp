@@ -21,7 +21,22 @@ import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.ftp.connection.FTPConnection;
 
 /**
- * This interface outlines functionality that all file systems can share, e.g. a local and remote file system
+ * This interface outlines functionality that all file systems can share, e.g. a local and remote file system.
+ *
+ * A FileSystem provides a subset of operations which operates on files both locally and remote.
+ * It can either be permanent or temporary. A permanent filesystem is one that is to be used for a long period of
+ * time and usually for the entire application runtime. This means that it performs multiple actions.
+ * Conversely, a temporary filesystem is one that is used for a single task and has a short time where it remains in scope. These
+ * such filesystems are useful for doing a certain task in a background task.
+ * <p>
+ * An implementing FileSystem should have the following constructors:
+ * <ol>
+ *     <li>A no-arg constructor - Uses the system's connection and creates a permanent file system (setting appropriate flags)</li>
+ *     <li>A constructor taking an FTPConnection object - Ensures the connection is not the same as the system's connection and throws IllegalArgumentException if it is</li>
+ * </ol>
+ *
+ * Implementing class' constructors, after calling super, can do their own necessary validations then.
+ *
  */
 public interface FileSystem {
     /**
@@ -73,10 +88,21 @@ public interface FileSystem {
 
     /**
      * Returns the FTPConnection the file system is linked to.
-     * A FTP connection is required for both local and remote file systems as local file system needs to be able to download from the ftp server
-     * @return the connection being used
+     * A FTP connection is required for both local and remote file systems as local file system needs to be able to download from the ftp server.
+     * If this is a permanent file system, this should return the system connection. If it is temporary, it should return the file system's own connection instance
+     * that was passed in to the temporary FileSystem constructor
+     * @return the connection being used, may be null
      */
     FTPConnection getFTPConnection();
+
+    /**
+     * This method returns true if this file system is a temporary one. i.e. it is not (and should not) using the system connection.
+     * It is to be only used for single tasks like background tasks. Implementing classes should have a default constructor which sets a temporaryFileSystem
+     * instance variable to false and the constructor taking a specified connection should set it to true. That constructor should ensure the given connecction is not reference equal
+     * to the system's connection
+     * @return true if a temporary file system, false if not
+     */
+    boolean isTemporaryFileSystem();
 
     /**
      * This is the method which will implement the copy operation. It permits copying between different filesystems and also within the same filesystem.

@@ -17,6 +17,7 @@
 
 package com.simpleftp.ui;
 
+import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.paths.PathResolverFactory;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
@@ -519,17 +520,17 @@ public final class UI {
      * @return true if they match, false if not
      */
     private static boolean taskFileEquals(CommonFile file, CommonFile file1) {
-        return file.getFilePath().startsWith(file1.getFilePath()) && file.isLocal() == file1.isLocal(); // if the file's filePath starts with the file1's path, we have a sub-file of file and file is a directory
+        boolean fileLocal = file1.isLocal();
+        return fileLocal == file1.isLocal() && FileUtils.startsWith(file.getFilePath(), file1.getFilePath(), fileLocal); // if the file's filePath starts with the file1's path, we have a sub-file of file and file is a directory
     }
 
     /**
      * Determines whether the specified file is "locked" by a FileService task.
      * It is determined locked, if there exists a FileService background task with a source file matching the file. The source file could be a parent of the file
      * @param file the file to check if it is locked
-     * @param checkDestination true to check this file against a task's destination file if non-null, if false, only check against a task's source file
      * @return true if locked, false if not
      */
-    public static boolean isFileLockedByFileService(CommonFile file, boolean checkDestination) {
+    public static boolean isFileLockedByFileService(CommonFile file) {
         List<BackgroundTask> tasks = getBackgroundTasks();
         if (tasks.size() == 0)
             return false;
@@ -537,15 +538,7 @@ public final class UI {
             return tasks.stream()
                     .filter(task -> task instanceof FileService)
                     .map(task -> (FileService) task)
-                    .anyMatch(task -> {
-                        CommonFile source = task.getSource();
-                        CommonFile destination = task.getDestination();
-                        if (checkDestination && destination != null) {
-                            return taskFileEquals(file, source) || taskFileEquals(file, destination);
-                        } else {
-                            return taskFileEquals(file, source);
-                        }
-                    });
+                    .anyMatch(task -> taskFileEquals(file, task.getSource()));
     }
 
     /**

@@ -17,16 +17,19 @@
 
 package com.simpleftp.filesystem;
 
+import com.simpleftp.filesystem.exceptions.PathResolverException;
+import com.simpleftp.filesystem.paths.PathResolverFactory;
+import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.properties.Properties;
 import com.simpleftp.properties.Property;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Calendar;
-import java.util.HashMap;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
- * This class provides utility methods to the FileSystsemPackage
+ * This class provides utility methods to the filesystem package
  */
 public final class FileUtils {
     /**
@@ -159,6 +162,92 @@ public final class FileUtils {
     }
 
     /**
+     * This method splits a path based on its separator and places all the path components into the returned list if the component is not empty
+     * @param path the path to split
+     * @param local true if a local path, false if not
+     * @return the list of the path components
+     */
+    public static List<String> splitPath(String path, boolean local) {
+        String separator = local ? FileUtils.PATH_SEPARATOR:"/";
+        String root = FileUtils.getRootPath(local);
+        int rootLength = root.length();
+
+        if (path.contains(root))
+            path = path.substring(rootLength) + separator;
+
+        String[] pathSplit = path.split(separator);
+
+        return Arrays.stream(pathSplit)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    /**
+     * Attempts to resolve the given path if it is absolute. This gets rid of "." or ".." characters
+     * @param path the path to resolve
+     * @param local true if local, false if not
+     * @return the resolved path, or path if not absolute or an error occurs
+     */
+    private static String resolvePath(String path, boolean local) {
+        boolean absolute = local ? new LocalFile(path).isAbsolute():path.startsWith("/");
+
+        if (absolute) {
+            try {
+                path = PathResolverFactory.newInstance()
+                        .setSymbolic(local ? FileUtils.PATH_SEPARATOR : "/", getRootPath(local))
+                        .build()
+                        .resolvePath(path);
+            } catch (PathResolverException ex) {
+                if (FTPSystem.isDebugEnabled())
+                    ex.printStackTrace();
+            }
+        }
+
+        return path;
+    }
+
+    /**
+     * Checks if the given path starts with the parentPath, i.e. if the path starts with the parentPath, it is a child of
+     * the parent path. E.g. the path /path/to/file starts with or is a child of /path while /test/path is not a child or
+     * doesn't start with /path.
+     *
+     * If the path is absolute and contains "." or "..", it will be passed into a SymbolicPathResolver. Otherwise,
+     * since a current working directory cannot be derived from this method, any relative path can't be made absolute,
+     * and SymbolicPathResolver requires an absolute path.
+     *
+     * @param path the path to check
+     * @param parentPath the parent path
+     * @param local true if a local path, false if not
+     * @return true if the parentPath is a parent of path
+     */
+    public static boolean startsWith(String path, String parentPath, boolean local) {
+        String separator = local ? FileUtils.PATH_SEPARATOR:"/";
+
+        path = FileUtils.appendPath(resolvePath(path, local), "", local); // append file separator to the end of it if not already there
+        parentPath = FileUtils.appendPath(resolvePath(parentPath, local), "", local);
+
+        List<String> pathSplit = splitPath(path, local), parentPathSplit = splitPath(parentPath, local);
+
+        int pathLength = pathSplit.size(), parentPathLength = parentPathSplit.size();
+
+        StringBuilder stringBuilder = new StringBuilder(FileUtils.getRootPath(local));
+        if (pathLength >= parentPathLength) { // if the length of the path split is greater than or equal to the parent path split, we have a candidate for a child path
+            for (int i = 0; i < pathLength; i++) {
+                String pathComponent = pathSplit.get(i);
+                stringBuilder.append(pathComponent).append(separator);
+                if (stringBuilder.toString().equals(parentPath)) {
+                    return true; // if the path being built so far matches parent, we have a child path
+                } else if (i < parentPathLength && !pathComponent.equals(parentPathSplit.get(i))) {
+                    // if an element of the path does not match an element at the same index of the parent path, this is not a child path
+                    return false;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Gets the path representing root. On Windows, this is the SystemDrive and on Unix, it is "/"
      * @param local true if you want local root, false if remote
      * @return the path representing root
@@ -169,6 +258,23 @@ public final class FileUtils {
             return "/";
         } else {
             return systemDrive + PATH_SEPARATOR;
+        }
+    }
+
+    /**
+     * Appends append onto path using the appropriate file separator
+     * @param path the path to be appended to
+     * @param append the new path to append onto path
+     * @param local true if this is a local path to append or false if remote
+     * @return the appended path
+     */
+    public static String appendPath(String path, String append, boolean local) {
+        String separator = local ? PATH_SEPARATOR:"/";
+
+        if (path.endsWith(separator) || append.startsWith(separator)) {
+            return path + append;
+        } else {
+            return path + separator + append;
         }
     }
 

@@ -44,7 +44,7 @@ import java.io.IOException;
  */
 @Log4j2
 public class FileStringDownloader implements BackgroundTask {
-    private CommonFile file;
+    private final CommonFile file;
     /**
      * Need a separate connection for downloading files so it doesn't hog the main connection
      */
@@ -52,7 +52,7 @@ public class FileStringDownloader implements BackgroundTask {
     /**
      * The pane that created this task
      */
-    private DirectoryPane creatingPanel;
+    private final DirectoryPane creatingPanel;
     /**
      * A flag indicating that an error has occurred
      */
@@ -236,10 +236,10 @@ public class FileStringDownloader implements BackgroundTask {
                 LocalFile downloaded;
                 if (remoteFile.isSymbolicLink()) {
                     remoteFile = new RemoteFile(remoteFile.getSymbolicLinkTarget());
-                    downloaded = new LocalFile(FileUtils.TEMP_DIRECTORY + FileUtils.PATH_SEPARATOR + remoteFile.getName());
-                } else {
-                    downloaded = new LocalFile(FileUtils.TEMP_DIRECTORY + FileUtils.PATH_SEPARATOR + remoteFile.getName());
                 }
+
+                downloaded = new LocalFile(FileUtils.appendPath(FileUtils.TEMP_DIRECTORY, remoteFile.getName(), true));
+
 
                 if (new LocalFileSystem(readingConnection).addFile(remoteFile, downloaded.getParentFile().getAbsolutePath())) { // download the file
                     String ret = fileToString(downloaded);

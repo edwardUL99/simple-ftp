@@ -71,7 +71,7 @@ public class FTPClient extends Application {
 
         FTPConnection connection = FTPSystem.getConnection();
 
-        if (connection.isConnected() && connection.isLoggedIn())
+        if (connection != null && connection.isConnected() && connection.isLoggedIn())
             panelView.createRemotePanel(new RemoteFile("/"));
 
         Scene scene = new Scene(panelView, UI.PANEL_VIEW_WIDTH, UI.PANEL_VIEW_HEIGHT);
