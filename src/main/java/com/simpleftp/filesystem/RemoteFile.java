@@ -601,16 +601,20 @@ public class RemoteFile implements CommonFile {
     public RemoteFile getExistingParent() throws FileSystemException {
         String path = FileUtils.getParentPath(absolutePath, false);
 
-        FTPConnection connection = getConnection();
-        RemoteFile parentFile = new RemoteFile(path);
-        while (!parentFile.isADirectory()) {
-            path = FileUtils.getParentPath(path, false);
-            parentFile = new RemoteFile(path);
-        }
+        try {
+            FTPConnection connection = getConnection();
+            FTPFile parentFile = connection.getFTPFile(path);
+            while (parentFile == null) {
+                path = FileUtils.getParentPath(path, false);
+                parentFile = connection.getFTPFile(path);
+            }
 
-        if (temporaryFile)
-            return new RemoteFile(parentFile.getFilePath(), connection, parentFile.getFtpFile());
-        else
-            return new RemoteFile(parentFile.getFilePath(), parentFile.getFtpFile());
+            if (temporaryFile)
+                return new RemoteFile(path, connection, parentFile);//return new RemoteFile(parentFile.getFilePath(), connection, parentFile.getFtpFile());
+            else
+                return new RemoteFile(path, parentFile);//return new RemoteFile(parentFile.getFilePath(), parentFile.getFtpFile());
+        } catch (FTPException ex) {
+            throw new FileSystemException("An FTP error occurred retrieveing existing parent file", ex);
+        }
     }
 }
