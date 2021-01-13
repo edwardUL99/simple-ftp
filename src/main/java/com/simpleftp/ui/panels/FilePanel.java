@@ -465,7 +465,7 @@ public abstract class FilePanel extends VBox {
      */
     private void doRecursiveDeletion(final LineEntry lineEntry) {
         CommonFile file = lineEntry.getFile();
-        FileService.newInstance(file, null, FileService.Operation.DELETE, directoryPane.isLocal())
+        FileService.newInstance(file, null, FileService.Operation.REMOVE, directoryPane.isLocal())
             .setOnOperationSucceeded(() -> {
                 String fileName = file.getName();
                 UI.doInfo("File deleted successfully", "File " + fileName + " deleted successfully");

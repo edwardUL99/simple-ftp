@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -99,7 +99,7 @@ public abstract class FileService implements BackgroundTask {
     static {
         destinationRequired.put(Operation.COPY, true);
         destinationRequired.put(Operation.MOVE, true);
-        destinationRequired.put(Operation.DELETE, false);
+        destinationRequired.put(Operation.REMOVE, false);
     }
 
     /**
@@ -115,9 +115,9 @@ public abstract class FileService implements BackgroundTask {
          */
         MOVE,
         /**
-         * This enum represents a delete operation
+         * This enum option represents a remove operation
          */
-        DELETE
+        REMOVE
     }
 
     /**
@@ -206,7 +206,7 @@ public abstract class FileService implements BackgroundTask {
                             break;
                 case MOVE: operationSucceeded = fileSystem.moveFiles(source, destination);
                             break;
-                case DELETE: operationSucceeded = fileSystem.removeFile(source);
+                case REMOVE: operationSucceeded = fileSystem.removeFile(source);
                              break;
             }
         } catch (FileSystemException ex) {
