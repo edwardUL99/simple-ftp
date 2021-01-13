@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -228,12 +228,16 @@ public class RemoteFileSystem extends AbstractFileSystem {
             FTPFile[] files = connection.listFiles(dir);
             if (files != null) {
                 RemoteFile[] remoteFiles = new RemoteFile[files.length];
+                boolean tempFileSystem = isTemporaryFileSystem();
 
                 int i = 0;
                 for (FTPFile f : files) {
                     if (!f.getName().equals(".") && !f.getName().equals("..")) {
                         String path = FileUtils.appendPath(dir, f.getName(), false);
-                        remoteFiles[i++] = new RemoteFile(path, connection, f);
+                        if (tempFileSystem)
+                            remoteFiles[i++] = new RemoteFile(path, connection, f);
+                        else
+                            remoteFiles[i++] = new RemoteFile(path, f); // not a temp file system, don't create a temp file
                     }
                 }
 

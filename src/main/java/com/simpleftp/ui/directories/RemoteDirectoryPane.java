@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -226,30 +226,5 @@ final class RemoteDirectoryPane extends DirectoryPane {
     @Override
     public boolean isLocal() {
         return false;
-    }
-
-    /**
-     * Attempts to change to the remote parent directory. If not symbolic link this is connection.changeToParentDirectory, if symbolic, it is the parent folder containing symbolic link
-     * @throws FileSystemException if an exception occurs
-     */
-    private void changeToRemoteParent() throws FileSystemException {
-        String parentPath = FileUtils.getParentPath(directory.getFilePath(), false); // the directory's path should be the current one
-        RemoteFile parentFile = new RemoteFile(parentPath);
-        setDirectory(parentFile);
-        refresh();
-    }
-
-    /**
-     * Controls going up to parent directory
-     */
-    @Override
-    public void up() {
-        if (!isAtRootDirectory()) {
-            try {
-                changeToRemoteParent();
-            } catch (FileSystemException ex) {
-                UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-            }
-        }
     }
 }

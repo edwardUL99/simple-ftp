@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -290,5 +290,24 @@ public class LocalFile extends File implements CommonFile {
     @Override
     public boolean isLocal() {
         return true;
+    }
+
+    /**
+     * This method retrieves the <b>next</b> available parent of this file. What this means is that the parent retrieved
+     * may not be the immediate parent of this file, it is just the next parent that exists. It is guaranteed to not be null
+     * as the one parent that will always exist is the root file.
+     *
+     * @return the next available parent of this file
+     */
+    @Override
+    public LocalFile getExistingParent() {
+        String path = FileUtils.getParentPath(getAbsolutePath(), true);
+        LocalFile parentFile = new LocalFile(path);
+        while (!parentFile.isADirectory()) {
+            path = FileUtils.getParentPath(path, true);
+            parentFile = new LocalFile(path);
+        }
+
+        return parentFile;
     }
 }

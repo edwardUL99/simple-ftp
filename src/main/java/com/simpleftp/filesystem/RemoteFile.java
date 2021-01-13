@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -56,12 +56,26 @@ public class RemoteFile implements CommonFile {
      * Tracks if this file exists. Calling the exists() method updates it
      */
     private boolean exists;
+    /**
+     * Indicates this file is a "temporary" file and has been created using a connection that differs to the system connection
+     */
+    private final boolean temporaryFile;
 
     /**
      * Constructs a remote file name with the specified file name
      * @param fileName the name of the file. Must be an absolute path (i.e. starts with /)
      */
     public RemoteFile(String fileName) throws FileSystemException {
+        this(fileName, null);
+    }
+
+    /**
+     * Creates a RemoteFile with the provided path and ftp file instance
+     * @param fileName the name of the file (absolute path)
+     * @param ftpFile the FTPFile instance to back this RemoteFile
+     * @throws FileSystemException if an error occurs
+     */
+    public RemoteFile(String fileName, FTPFile ftpFile) throws FileSystemException {
         validateFilePath(fileName);
 
         FTPConnection connection = FTPSystem.getConnection();
@@ -69,23 +83,26 @@ public class RemoteFile implements CommonFile {
             throw new FileSystemException("There's no FTP Connection setup");
         }
 
+        temporaryFile = false;
+
         validateConnection(connection);
 
         absolutePath = fileName;
-        initialiseFTPFile(null);
+        initialiseFTPFile(ftpFile);
     }
 
     /**
-     * Creates a RemoteFile with the specified manager and ftp file. Uses fileName as path to search on Server to initialise the FTPFile returned by getFtpFile
+     * Creates a "temporary" RemoteFile with the specified connection and ftp file. Uses fileName as path to search on Server to initialise the FTPFile returned by getFtpFile
      * @param fileName the name of the file (absolute path required)
      * @param ftpConnection the connection to use
      * @param ftpFile the FTPFile to initialise this RemoteFile with. Leave null to force a lookup on FTP Server with fileName as path. This file may not exist. Assumed it does exist if you have the file
-     * @throws FileSystemException if the connection is not connected and logged in
+     * @throws FileSystemException if an error occurs
      */
     public RemoteFile(String fileName, FTPConnection ftpConnection, FTPFile ftpFile) throws FileSystemException {
         validateFilePath(fileName);
         absolutePath = fileName;
         this.connection = ftpConnection;
+        temporaryFile = true;
 
         validateConnection(this.connection);
         initialiseFTPFile(ftpFile);
@@ -112,11 +129,11 @@ public class RemoteFile implements CommonFile {
     }
 
     /**
-     * Returns the connection to use for the remote file. FTPSystem if this connection is null, the provided connection if not null
+     * Returns the connection to use for the remote file. FTPSystem if this file is not a temporary file, the provided connection if temporary file
      * @return connection to use for this remote file
      */
     private FTPConnection getConnection() {
-        return connection == null ? FTPSystem.getConnection():connection;
+        return temporaryFile ? connection:FTPSystem.getConnection();
     }
 
     /**
@@ -152,7 +169,7 @@ public class RemoteFile implements CommonFile {
      * @return the found file, null if not found
      */
     private FTPFile getSymbolicFile() throws Exception {
-        return Optional.ofNullable(getSymbolicFile(connection, absolutePath))
+        return Optional.ofNullable(getSymbolicFile(getConnection(), absolutePath))
                 .map(file -> file.ftpFile)
                 .orElse(null);
     }
@@ -568,5 +585,30 @@ public class RemoteFile implements CommonFile {
     @Override
     public boolean isLocal() {
         return false;
+    }
+
+    /**
+     * This method retrieves the <b>next</b> available parent of this file. What this means is that the parent retrieved
+     * may not be the immediate parent of this file, it is just the next parent that exists. It is guaranteed to not be null
+     * as the one parent that will always exist is the root file.
+     *
+     * @return the next available parent of this file
+     * @throws FileSystemException if an error occurs retrieving the parent
+     */
+    @Override
+    public RemoteFile getExistingParent() throws FileSystemException {
+        String path = FileUtils.getParentPath(absolutePath, false);
+
+        FTPConnection connection = getConnection();
+        RemoteFile parentFile = new RemoteFile(path);
+        while (!parentFile.isADirectory()) {
+            path = FileUtils.getParentPath(path, false);
+            parentFile = new RemoteFile(path);
+        }
+
+        if (temporaryFile)
+            return new RemoteFile(parentFile.getFilePath(), connection, parentFile.getFtpFile());
+        else
+            return new RemoteFile(parentFile.getFilePath(), parentFile.getFtpFile());
     }
 }

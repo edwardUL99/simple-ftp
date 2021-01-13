@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -111,4 +111,13 @@ public interface CommonFile {
      * @return true if local, false if remote
      */
     boolean isLocal();
+
+    /**
+     * This method retrieves the <b>next</b> available parent of this file. What this means is that the parent retrieved
+     * may not be the immediate parent of this file, it is just the next parent that exists. It is guaranteed to not be null
+     * as the one parent that will always exist is the root file.
+     * @return the next available parent of this file
+     * @throws FileSystemException if an error occurs retrieving the parent
+     */
+    CommonFile getExistingParent() throws FileSystemException;
 }

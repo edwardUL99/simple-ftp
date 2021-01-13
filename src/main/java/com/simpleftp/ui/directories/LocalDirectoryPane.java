@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -41,28 +41,6 @@ final class LocalDirectoryPane extends DirectoryPane {
         super();
         fileSystem = new LocalFileSystem();
         initDirectory(directory);
-    }
-
-    /**
-     * Controls going up to parent directory
-     */
-    @Override
-    public void up() {
-        if (!isAtRootDirectory()) {
-            try {
-                LocalFile localFile = (LocalFile) directory;
-                String parent = localFile.getParent();
-                if (parent != null) {
-                    LocalFile parentFile = new LocalFile(parent);
-                    if (parentFile.exists() && parentFile.canRead()) {
-                        setDirectory(parentFile);
-                        refresh();
-                    }
-                }
-            } catch (FileSystemException ex) {
-                UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-            }
-        }
     }
 
     /**

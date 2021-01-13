@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -311,7 +311,16 @@ public abstract class DirectoryPane extends VBox {
     /**
      * Controls going up to parent symbolicLink
      */
-    public abstract void up();
+    public void up() {
+        if (!isAtRootDirectory()) {
+            try {
+                setDirectory(directory.getExistingParent());
+                refresh();
+            } catch (FileSystemException ex) {
+                UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+            }
+        }
+    }
 
     /**
      * Checks the symbolicLink passed in to see if the type matches the dfile type this DirectoryPane is for.
