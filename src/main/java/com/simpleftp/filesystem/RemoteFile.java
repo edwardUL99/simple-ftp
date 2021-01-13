@@ -146,18 +146,20 @@ public class RemoteFile implements CommonFile {
      * @throws Exception if any exception from the connection is thrown
      */
     public static RemoteFile getSymbolicFile(FTPConnection connection, String filePath) throws Exception {
-        RemoteFile remoteFile = new RemoteFile(filePath);
         String parentPath = FileUtils.getParentPath(filePath, false);
 
         FTPFile[] files = connection.listFiles(parentPath);
 
         FTPFile file = Arrays.stream(files)
-                .filter(file1 -> file1.getName().equals(remoteFile.getName()))
+                .filter(file1 -> file1.getName().equals(getName(filePath)))
                 .findFirst()
                 .orElse(null);
 
         if (file != null) {
-            return new RemoteFile(filePath, connection, file);
+            if (connection != FTPSystem.getConnection())
+                return new RemoteFile(filePath, connection, file); //using a temporary connection, so return a temporary file
+            else
+                return new RemoteFile(filePath, file);
         }
 
         return null;
