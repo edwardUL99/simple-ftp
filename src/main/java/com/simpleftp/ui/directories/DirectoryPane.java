@@ -584,7 +584,7 @@ public abstract class DirectoryPane extends VBox {
     /**
      * Refreshes this directory listing.
      * This method is <b>cache destructive</b>. If configured, calling this method will clear all cached line entries if
-     * the directory pane implements caching. If you don't want to clear cache, call refreshCurrentDirectory() instead. That
+     * the directory pane implements caching. If you don't want to clear cache, call refreshCurrentDirectory() or cacheRefresh() instead. That
      * method is most useful after completing some task and you only need it to appear in the current working directory
      */
     public void refresh() {
