@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -243,7 +243,7 @@ public abstract class FilePanel extends VBox {
                 hideHiddenFiles.setText(UI.HIDE_FILES);
             }
 
-            directoryPane.refresh();
+            directoryPane.refreshCurrentDirectory();
         });
     }
 
@@ -281,9 +281,9 @@ public abstract class FilePanel extends VBox {
     private void initMaskButton() {
         maskButton.setOnAction(e -> {
             String currentMask = directoryPane.getFileMask();
-            String fileMask = UI.doInputDialog("File Mask", "Enter a mask to filter files: ", currentMask, "Enter wildcards (*) to check if filename contains, i.e *ile*.txt or no wildcards for exact match");
+            String fileMask = UI.doInputDialog("File Mask", "Enter a mask to filter files: ", currentMask, "Enter wildcards (*, ?) to check if filename contains, i.e *ile*.txt or no wildcards for exact match");
             directoryPane.setFileMask(fileMask);
-            directoryPane.refresh(); // refresh to put the mask in effect
+            directoryPane.refreshCurrentDirectory(); // refresh to put the mask in effect
         });
     }
 
@@ -297,15 +297,15 @@ public abstract class FilePanel extends VBox {
                 // if alt is down, a mnemonic is needed
                 KeyCode keyCode = e.getCode();
 
-               if (keyCode == KeyCode.Q) {
+                if (keyCode == KeyCode.Q) {
                     UI.doQuit();
-               } else if (keyCode == KeyCode.UP || keyCode == KeyCode.DOWN) {
-                   comboBox.requestFocus();
-               } else if (keyCode == KeyCode.DELETE) {
-                   delete();
-               } else if (keyCode == KeyCode.F5) {
-                   directoryPane.refresh();
-               }
+                } else if (keyCode == KeyCode.UP || keyCode == KeyCode.DOWN) {
+                    comboBox.requestFocus();
+                } else if (keyCode == KeyCode.DELETE) {
+                    delete();
+                } else if (keyCode == KeyCode.F5) {
+                    directoryPane.refresh();
+                }
             }
         });
     }
@@ -389,7 +389,7 @@ public abstract class FilePanel extends VBox {
     private void refreshComboBox() {
         entryMappings.clear();
         comboBox.getItems().clear();
-        ArrayList<LineEntry> filesDisplayed = directoryPane.filesDisplayed();
+        ArrayList<LineEntry> filesDisplayed = directoryPane.filesDisplayed().getLineEntries();
         filesDisplayed.forEach(e -> {
             String fileName = e.getFile().getName();
             comboBox.getItems().add(fileName);

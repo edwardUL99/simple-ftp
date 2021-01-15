@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -112,7 +112,7 @@ final class LocalFilePanel extends FilePanel {
 
             boolean parentPathMatchesPanelsPath = currentDirectory.equals(parentPath);
             if (parentPathMatchesPanelsPath) {
-                directoryPane.refresh(); // only need to refresh if the path the file is created in matches the cwd
+                directoryPane.refreshCurrentDirectory(); // only need to refresh if the path the file is created in matches the cwd
             }
 
             return true;
@@ -228,7 +228,7 @@ final class LocalFilePanel extends FilePanel {
                         UI.doInfo("Symbolic Link Created", "The Symbolic link " + namePath + " has been successfully created to point to " + targetPath);
 
                         if (FileUtils.getParentPath(resolvedNamePath, true).equals(directoryPane.getCurrentWorkingDirectory()))
-                            directoryPane.refresh();
+                            directoryPane.refreshCurrentDirectory();
                     } else {
                         UI.doError("Symbolic Link Not Created", "The Symbolic link was not created successfully");
                     }
@@ -279,7 +279,7 @@ final class LocalFilePanel extends FilePanel {
 
             if (file.isDirectory()) {
                 directoryPane.setDirectory(file);
-                directoryPane.refresh();
+                directoryPane.refresh(); // a local directory pane doesn't cache so just use normal refresh
             } else if (file.exists()) {
                 LineEntry lineEntry = LineEntry.newInstance(file, directoryPane);
                 if (lineEntry != null)

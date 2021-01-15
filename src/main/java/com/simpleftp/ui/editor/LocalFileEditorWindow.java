@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ package com.simpleftp.ui.editor;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
+import com.simpleftp.ui.files.LineEntry;
 
 /**
  * An editor window for local files
@@ -31,10 +32,10 @@ public class LocalFileEditorWindow extends FileEditorWindow {
      *
      * @param creatingPane the DirectoryPane opening this window
      * @param fileContents the contents of the file as this class does not download the contents
-     * @param file         the file the contents belongs to
+     * @param lineEntry the line entry to edit
      */
-    LocalFileEditorWindow(DirectoryPane creatingPane, String fileContents, CommonFile file) {
-        super(creatingPane, fileContents, file);
+    LocalFileEditorWindow(DirectoryPane creatingPane, String fileContents, LineEntry lineEntry) {
+        super(creatingPane, fileContents, lineEntry);
     }
 
     /**
@@ -44,6 +45,7 @@ public class LocalFileEditorWindow extends FileEditorWindow {
      */
     @Override
     String getSaveFilePath() throws Exception {
+        CommonFile file = lineEntry.getFile();
         // the default option if it is an unknown file type
         if (file.isSymbolicLink()) {
             String targetPath = file.getSymbolicLinkTarget();
@@ -66,7 +68,7 @@ public class LocalFileEditorWindow extends FileEditorWindow {
      */
     @Override
     String getFilePath() {
-        return file.getFilePath();
+        return lineEntry.getFilePath();
     }
 
     /**

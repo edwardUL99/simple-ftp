@@ -32,7 +32,6 @@ import org.apache.commons.net.ftp.FTPFile;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.Optional;
 
 /**
  * Represents a remote file associated with the provided FTPConnection instance
@@ -49,6 +48,10 @@ public class RemoteFile implements CommonFile {
     @Getter
     private FTPFile ftpFile;
     /**
+     * The ftp file representing the target if this is a symbolic link
+     */
+    private FTPFile targetFile;
+    /**
      * The absolute path for this remote file
      */
     private final String absolutePath;
@@ -57,12 +60,24 @@ public class RemoteFile implements CommonFile {
      */
     private boolean exists;
     /**
+     * A variable to cache the size of the file
+     */
+    private Long size;
+    /**
+     * This caches the permissions for this file
+     */
+    private String permissions;
+    /**
+     * This caches the modification time for this file
+     */
+    private String modificationTime;
+    /**
      * Indicates this file is a "temporary" file and has been created using a connection that differs to the system connection
      */
     private final boolean temporaryFile;
 
     /**
-     * Constructs a remote file name with the specified file name
+     * Constructs a remote file name with the specified file name, using the system's connection (i.e. not temporary)
      * @param fileName the name of the file. Must be an absolute path (i.e. starts with /)
      */
     public RemoteFile(String fileName) throws FileSystemException {
@@ -70,7 +85,7 @@ public class RemoteFile implements CommonFile {
     }
 
     /**
-     * Creates a RemoteFile with the provided path and ftp file instance
+     * Creates a RemoteFile with the provided path and ftp file instance which is not "temporary", i.e. uses the system's connection
      * @param fileName the name of the file (absolute path)
      * @param ftpFile the FTPFile instance to back this RemoteFile
      * @throws FileSystemException if an error occurs
@@ -89,10 +104,13 @@ public class RemoteFile implements CommonFile {
 
         absolutePath = fileName;
         initialiseFTPFile(ftpFile);
+        initSymlinkProperties();
     }
 
     /**
-     * Creates a "temporary" RemoteFile with the specified connection and ftp file. Uses fileName as path to search on Server to initialise the FTPFile returned by getFtpFile
+     * Creates a "temporary" RemoteFile with the specified connection and ftp file. If the provided connection != FTPSystem.getConnection(),
+     * use this constructor.
+     * Uses fileName as path to search on Server to initialise the FTPFile returned by getFtpFile
      * @param fileName the name of the file (absolute path required)
      * @param ftpConnection the connection to use
      * @param ftpFile the FTPFile to initialise this RemoteFile with. Leave null to force a lookup on FTP Server with fileName as path. This file may not exist. Assumed it does exist if you have the file
@@ -106,6 +124,7 @@ public class RemoteFile implements CommonFile {
 
         validateConnection(this.connection);
         initialiseFTPFile(ftpFile);
+        initSymlinkProperties();
     }
 
     /**
@@ -146,14 +165,7 @@ public class RemoteFile implements CommonFile {
      * @throws Exception if any exception from the connection is thrown
      */
     public static RemoteFile getSymbolicFile(FTPConnection connection, String filePath) throws Exception {
-        String parentPath = FileUtils.getParentPath(filePath, false);
-
-        FTPFile[] files = connection.listFiles(parentPath);
-
-        FTPFile file = Arrays.stream(files)
-                .filter(file1 -> file1.getName().equals(getName(filePath)))
-                .findFirst()
-                .orElse(null);
+        FTPFile file = getSymbolicFTPFile(connection, filePath);
 
         if (file != null) {
             if (connection != FTPSystem.getConnection())
@@ -171,9 +183,25 @@ public class RemoteFile implements CommonFile {
      * @return the found file, null if not found
      */
     private FTPFile getSymbolicFile() throws Exception {
-        return Optional.ofNullable(getSymbolicFile(getConnection(), absolutePath))
-                .map(file -> file.ftpFile)
-                .orElse(null);
+        return getSymbolicFTPFile(getConnection(), absolutePath);
+    }
+
+    /**
+     * Gets the FTPFile for the symbolic file
+     * @param connection the connection to use
+     * @param filePath the file path of the link
+     * @return the FTPFile object
+     * @throws Exception if any exception occurs
+     */
+    private static FTPFile getSymbolicFTPFile(FTPConnection connection, String filePath) throws Exception {
+        String parentPath = FileUtils.getParentPath(filePath, false);
+
+        FTPFile[] files = connection.listFiles(parentPath);
+
+        return files != null ?Arrays.stream(files)
+                .filter(file1 -> file1.getName().equals(getName(filePath)))
+                .findFirst()
+                .orElse(null):null;
     }
 
     /**
@@ -183,10 +211,11 @@ public class RemoteFile implements CommonFile {
     private void initialiseFTPFile(FTPFile ftpFile) throws FileSystemException {
        try {
            if (ftpFile == null) {
-               if (isSymbolicLink())
-                   this.ftpFile = getSymbolicFile();
+               ftpFile = getConnection().getFTPFile(absolutePath);
+               if (ftpFile == null)
+                   this.ftpFile = getSymbolicFile(); // try and get the "symbolic" file workaround  as that may be why the file is null
                else
-                   this.ftpFile = getConnection().getFTPFile(absolutePath);
+                   this.ftpFile = ftpFile;
 
                exists = this.ftpFile != null;
            } else {
@@ -262,41 +291,85 @@ public class RemoteFile implements CommonFile {
         return absolutePath;
     }
 
-    // the following three method don't check for existence from the ftpFile, as things may have changed since the ftpFile was populated
+    /**
+     * This method initialises the symbolic link properties if this file is a symlink
+     * @throws FileSystemException if an error occurs
+     */
+    private void initSymlinkProperties() throws FileSystemException {
+        try {
+            if (isSymbolicLink())
+                refreshSymbolicLinkProperties();
+        } catch (Exception ex) {
+            throw new FileSystemException("An error occurred initialising the file", ex);
+        }
+    }
+
+    /**
+     * Gets an absolute version of the link path of the ftpFile
+     * @return the absolute link path
+     */
+    private String getLinkPath() {
+        String linkPath = ftpFile.getLink();
+        if (!linkPath.startsWith("/"))
+            return FileUtils.appendPath(FileUtils.getParentPath(absolutePath, false), linkPath, false);
+        else
+            return linkPath;
+    }
+
+    /**
+     * Follows the link of this file if it is a symbolic link until it eventually gets to the destination
+     * @return the FTPFile representing the destination of the link, null if not a symbolic link
+     * @throws Exception if any exception occurs
+     */
+    private FTPFile followLink() throws Exception {
+        if (isSymbolicLink()) {
+            FTPConnection connection = getConnection();
+            String linkPath = getLinkPath();
+            FTPFile file = getSymbolicFTPFile(connection, linkPath); // we need to use this as we need our workaround for files
+
+            while (file != null && file.isSymbolicLink()) {
+                String linkPath1 = FileUtils.getParentPath(linkPath, false);
+                String nextLink = file.getLink();
+                linkPath = !nextLink.startsWith("/") ? FileUtils.appendPath(linkPath1, nextLink, false):nextLink;
+
+                file = getSymbolicFTPFile(connection, linkPath);
+            }
+
+            if (file != null)
+                file.setName(linkPath);
+
+            return file;
+        }
+
+        return null;
+    }
+
+    /**
+     * Refreshes the properties for a symbolic link
+     */
+    private void refreshSymbolicLinkProperties() throws Exception {
+        FTPFile symbolicFile = followLink();
+        exists = symbolicFile != null;
+        if (exists) {
+            targetFile = symbolicFile;
+        }
+    }
 
     /**
      * Checks if this file exists as either a directory or a normal file on the provided FTPConnection.
-     * This syncs up the isADirectory, isNormalFile and getSize methods with the existsence of the file
+     * This syncs up any cached information with the latest info of the file
      * @return true if exists, false if not
      * @throws FileSystemException if an error occurs
      */
     @Override
     public boolean exists() throws FileSystemException {
-        try { // exists should always check up to date info
-            boolean oldExists = exists;
-            if (isSymbolicLink())
-                exists = getConnection().remotePathExists(getSymbolicLinkTarget());
-            else
-                exists = getConnection().remotePathExists(absolutePath);
-
-            if (!oldExists && exists) {
-                // it didn't exist before, but does not, update the file
-                try {
-                    initialiseFTPFile(null);
-                } catch (FileSystemException ex) {
-                    ftpFile = null; // if file isn't found, leave null
-                }
-            }
-
-            return exists;
-        } catch (FTPException ex) {
-            throw new FileSystemException("A FTP Exception occurred, it could not be determined if this file exists", ex);
-        }
+        refresh();
+        return exists;
     }
 
     /**
      * Checks if this file is a directory.
-     * May return true if the file no longer exists as this RemoteFile may not be an up to date version. Calling exists updates this information
+     * May return true if the file no longer exists as this RemoteFile may not be an up to date version. Calling exists/refresh updates this information
      * @return true if a directory, false if not
      * @throws FileSystemException if an error occurs
      */
@@ -304,12 +377,14 @@ public class RemoteFile implements CommonFile {
     public boolean isADirectory() throws FileSystemException {
         if (!exists) {
             return false;
-        } else if (ftpFile.isValid() && !ftpFile.isSymbolicLink()) { // if symbolic link, query the ftp server
+        } else if (ftpFile.isValid() && !ftpFile.isSymbolicLink()) {
             return ftpFile.isDirectory();
+        } else if (isSymbolicLink() && targetFile.isValid()) {
+            return targetFile.isDirectory();
         } else {
             try { // if link was broken here, it would return false
                 if (isSymbolicLink())
-                    return exists() && getConnection().remotePathExists(getSymbolicLinkTarget(), true);
+                    return getConnection().remotePathExists(getLinkPath(), true);
                 else
                     return getConnection().remotePathExists(absolutePath, true);
             } catch (FTPException ex) {
@@ -320,7 +395,7 @@ public class RemoteFile implements CommonFile {
 
     /**
      * Checks if this file is a normal file.
-     * May return true, even if the file doesn't exist anymore, e.g. if the file is deleted after this RemoteFile is created. Calling exists() should be called if an update on the file is required or just general existence and if you don't need to know if it is a file or directory, calling exists updates this information
+     * May return true, even if the file doesn't exist anymore, e.g. if the file is deleted after this RemoteFile is created. Calling exists()/refresh() should be called if an update on the file is required or just general existence and if you don't need to know if it is a file or directory, calling exists updates this information
      * @return true if a directory, false if not
      * @throws FileSystemException if an error occurs
      */
@@ -328,12 +403,14 @@ public class RemoteFile implements CommonFile {
     public boolean isNormalFile() throws FileSystemException {
         if (!exists) {
             return false;
-        } else if (ftpFile.isValid() && !ftpFile.isSymbolicLink()) { // if symbolic link, query the ftp server
+        } else if (ftpFile.isValid() && !ftpFile.isSymbolicLink()) {
             return ftpFile.isFile();
+        } else if (isSymbolicLink() && (targetFile != null && targetFile.isValid())) {
+            return targetFile.isFile();
         } else {
             try {
                 if (isSymbolicLink()) {// ensure link isn't broken
-                    return exists() && getConnection().remotePathExists(getSymbolicLinkTarget(), false);
+                    return getConnection().remotePathExists(getLinkPath(), false);
                 } else {
                     return getConnection().remotePathExists(absolutePath, false);
                 }
@@ -350,24 +427,31 @@ public class RemoteFile implements CommonFile {
      */
     @Override
     public long getSize() throws FileSystemException {
-        if (!exists) {
-            return -1;
-        } else if (ftpFile.isValid() && (!ftpFile.isSymbolicLink() || !FileUtils.FILE_SIZE_FOLLOW_LINK)) {
-            return ftpFile.getSize();
-        } else {
-            try {
-                FTPConnection connection = getConnection();
-                String path = ftpFile.isSymbolicLink() ? getSymbolicLinkTarget():absolutePath;
-                String size = connection.getFileSize(path);
-                if (size != null) {
-                    return Long.parseLong(size);
-                } else {
-                    return connection.getFTPFile(path).getSize();
+        if (size == null) {
+            boolean getTargetSize = ftpFile.isSymbolicLink() && FileUtils.FILE_SIZE_FOLLOW_LINK;
+            if (!exists) {
+                size = -1L;
+            } else if (ftpFile.isValid() && !getTargetSize) {
+                size = ftpFile.getSize();
+            } else if (getTargetSize && targetFile.isValid()) {
+                size = targetFile.getSize();
+            } else {
+                try {
+                    FTPConnection connection = getConnection();
+                    String path = getTargetSize ? getLinkPath():absolutePath;
+                    String size = connection.getFileSize(path);
+                    if (size != null) {
+                        this.size = Long.parseLong(size);
+                    } else {
+                        this.size = getTargetSize ? targetFile.getSize():ftpFile.getSize();
+                    }
+                } catch (FTPException | NumberFormatException ex) {
+                    throw new FileSystemException("An error occurred retrieving size of file", ex);
                 }
-            } catch (FTPException | NumberFormatException ex) {
-                throw new FileSystemException("An error occurred retrieving size of file", ex);
             }
         }
+
+        return size;
     }
 
     /**
@@ -407,23 +491,13 @@ public class RemoteFile implements CommonFile {
     }
 
     /**
-     * Calculates the permissions for a remote file
-     * @return the permissions
+     * Calculates the permissions for the provided FTPFile
+     * @param file the file to calculate permissions for
+     * @return the permissions for the file
      */
-    private String calculateRemotePermissions() {
-        if (isSymbolicLink() && FileUtils.FILE_PERMS_FOLLOW_LINK) {
-            try {
-                return new RemoteFile(getSymbolicLinkTarget()).calculateRemotePermissions();
-            } catch (FileSystemException ex) {
-                if (FTPSystem.isDebugEnabled())
-                    ex.printStackTrace();
-                // just display the permissions of the link's file
-                return calculateRemotePermissions();
-            }
-        } else {
+    private String getPermissions(FTPFile file) {
+        if (file != null) {
             String permissions = "";
-            FTPFile file = getFtpFile();
-
             if (file.isSymbolicLink()) {
                 permissions += "l";
             } else if (file.isDirectory()) {
@@ -488,6 +562,8 @@ public class RemoteFile implements CommonFile {
 
             return permissions;
         }
+
+        return null;
     }
 
     /**
@@ -497,16 +573,15 @@ public class RemoteFile implements CommonFile {
      */
     @Override
     public String getPermissions() {
-        if (isSymbolicLink() && FileUtils.FILE_PERMS_FOLLOW_LINK) {
-            try {
-                return new RemoteFile(getSymbolicLinkTarget()).getPermissions();
-            } catch (FileSystemException ex) {
-                if (FTPSystem.isDebugEnabled())
-                    ex.printStackTrace();
-                // just return the permissions of this file even if it is a link
+        if (permissions == null) {
+            if (isSymbolicLink() && FileUtils.FILE_PERMS_FOLLOW_LINK) {
+                permissions = getPermissions(targetFile);
+            } else {
+                permissions = getPermissions(ftpFile);
             }
         }
-        return calculateRemotePermissions();
+
+        return permissions;
     }
 
     /**
@@ -517,22 +592,34 @@ public class RemoteFile implements CommonFile {
      */
     @Override
     public String getModificationTime() throws FileSystemException {
-        try {
-            String modificationTime;
-            FTPFile ftpFile = getFtpFile();
-            String filePath = getFilePath();
-            String fileModTime = getConnection().getModificationTime(filePath);
-            if (fileModTime != null) {
-                LocalDateTime dateTime = LocalDateTime.parse(fileModTime, DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy"));
-                modificationTime = dateTime.format(DateTimeFormatter.ofPattern(UI.FILE_DATETIME_FORMAT));
-            } else {
-                modificationTime = ftpFile.isValid() ? FileUtils.parseCalendarToFormattedDate(ftpFile.getTimestamp()):null;
+        if (this.modificationTime == null) {
+            try {
+                FTPFile ftpFile = getFtpFile();
+                String filePath = getFilePath();
+                String fileModTime = FileUtils.SERVER_REMOTE_MODIFICATION_TIME ? getConnection().getModificationTime(filePath):null;
+                if (fileModTime != null) {
+                    LocalDateTime dateTime = LocalDateTime.parse(fileModTime, DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy"));
+                    modificationTime = dateTime.format(DateTimeFormatter.ofPattern(UI.FILE_DATETIME_FORMAT));
+                } else {
+                    ftpFile = isSymbolicLink() ? targetFile:ftpFile;
+                    modificationTime = ftpFile.isValid() ? FileUtils.parseCalendarToFormattedDate(ftpFile.getTimestamp()) : null;
+                }
+            } catch (FTPException ex) {
+                throw new FileSystemException("An error occurred retrieving file modification time", ex);
             }
-
-            return modificationTime;
-        } catch (FTPException ex) {
-            throw new FileSystemException("An error occurred retrieving file modification time", ex);
         }
+
+        return modificationTime;
+    }
+
+    /**
+     * This method resets any cached variables since the last call to exists()
+     */
+    private void resetCachedVariables() {
+        targetFile = null;
+        size = null;
+        modificationTime = null;
+        permissions = null;
     }
 
     /**
@@ -540,8 +627,14 @@ public class RemoteFile implements CommonFile {
      */
     @Override
     public void refresh() throws FileSystemException {
-        if (exists()) {
-            initialiseFTPFile(null); // refresh permissions
+        resetCachedVariables();
+        initialiseFTPFile(null);
+        if (isSymbolicLink()) {
+            try {
+                refreshSymbolicLinkProperties();
+            } catch (Exception ex) {
+                throw new FileSystemException("An error occurred refreshing the file");
+            }
         }
     }
 
@@ -551,19 +644,19 @@ public class RemoteFile implements CommonFile {
      * @return true if it is a symbolic link
      */
     @Override
-    public boolean isSymbolicLink() {
+    public final boolean isSymbolicLink() {
         return ftpFile != null && ftpFile.isSymbolicLink();
     }
 
     /**
-     * Gets the target of the symbolic link
+     * Gets the target of the symbolic link, canonicalised
      *
      * @return the symbolic link target, null if not symbolic link
      */
     @Override
     public String getSymbolicLinkTarget() throws FileSystemException {
-        if (ftpFile.isSymbolicLink()) {
-            String path = ftpFile.getLink();
+        if (isSymbolicLink()) {
+            String path = targetFile.getName();//ftpFile.getLink();
             String parent = FileUtils.getParentPath(absolutePath, false);
 
             try {
@@ -610,11 +703,11 @@ public class RemoteFile implements CommonFile {
             }
 
             if (temporaryFile)
-                return new RemoteFile(path, connection, parentFile);//return new RemoteFile(parentFile.getFilePath(), connection, parentFile.getFtpFile());
+                return new RemoteFile(path, connection, parentFile);
             else
-                return new RemoteFile(path, parentFile);//return new RemoteFile(parentFile.getFilePath(), parentFile.getFtpFile());
+                return new RemoteFile(path, parentFile);
         } catch (FTPException ex) {
-            throw new FileSystemException("An FTP error occurred retrieveing existing parent file", ex);
+            throw new FileSystemException("An FTP error occurred retrieving existing parent file", ex);
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -17,14 +17,13 @@
 
 package com.simpleftp.ui.editor;
 
-import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
-import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
 import com.simpleftp.ftp.exceptions.FTPNotConnectedException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
+import com.simpleftp.ui.files.LineEntry;
 import com.simpleftp.ui.interfaces.Window;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -49,10 +48,10 @@ public abstract class FileEditorWindow extends VBox implements Window {
     @Getter
     protected final DirectoryPane creatingPane;
     /**
-     * The file to display in this editor
+     * The line entry being edited
      */
     @Getter
-    protected final CommonFile file;
+    protected final LineEntry lineEntry;
     /**
      * The contents of the file
      */
@@ -99,12 +98,12 @@ public abstract class FileEditorWindow extends VBox implements Window {
      * Constructs a FileEditorWindow with the specified panel and file
      * @param creatingPane the DirectoryPane opening this window
      * @param fileContents the contents of the file as this class does not download the contents
-     * @param file the file the contents belongs to
+     * @param lineEntry the line entry representing the file to edit
      */
-    FileEditorWindow(DirectoryPane creatingPane, String fileContents, CommonFile file) {
+    FileEditorWindow(DirectoryPane creatingPane, String fileContents, LineEntry lineEntry) {
         this.creatingPane = creatingPane;
         this.fileContents = resetFileContents = fileContents;
-        this.file = file;
+        this.lineEntry = lineEntry;
         editor = new StyleClassedTextArea() {
             @Override
             public void paste() {
@@ -119,9 +118,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
         buttonBar = new HBox();
         VBox.setVgrow(editorScrollPane, Priority.ALWAYS);
         saved = true;
-        save = new Button();
-        save.setMnemonicParsing(true);
-        save.setText("_Save");
+        save = new Button("Save");
         save.setOnAction(e -> save());
         save.setTooltip(new Tooltip("Save all unsaved changes"));
 
@@ -297,8 +294,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
      * @throws FileSystemException if an error occurs
      */
     private boolean checkFileStillExists() throws FileSystemException {
-        file.refresh(); // refresh to get up to date file info
-        return file.isNormalFile(); // this shouldn't be a directory if an editor window has been opened for it
+        return lineEntry.getFile().exists(); // call exists as this will refresh the file
     }
 
     /**
@@ -368,7 +364,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
                 if (consumeEvent)
                     e.consume();
                 else
-                    UI.closeFile(file.getFilePath(), creatingPane.isLocal());
+                    UI.closeFile(lineEntry.getFilePath(), creatingPane.isLocal());
             });
         } catch (Exception ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
@@ -390,7 +386,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
 
             if (closeStage) {
                 stage.close();
-                UI.closeFile(file.getFilePath(), creatingPane.isLocal());
+                UI.closeFile(lineEntry.getFilePath(), creatingPane.isLocal());
             }
         }
     }
@@ -399,14 +395,14 @@ public abstract class FileEditorWindow extends VBox implements Window {
      * Constructs a FileEditorWindow with the specified panel and file
      * @param creatingPane the DirectoryPane opening this window
      * @param fileContents the contents of the file as this class does not download the contents
-     * @param file the file the contents belongs to
+     * @param lineEntry the line entry to edit
      */
-    public static FileEditorWindow newInstance(DirectoryPane creatingPane, String fileContents, CommonFile file) {
+    public static FileEditorWindow newInstance(DirectoryPane creatingPane, String fileContents, LineEntry lineEntry) {
         FileEditorWindow editorWindow;
-        if (file instanceof LocalFile) {
-            editorWindow = new LocalFileEditorWindow(creatingPane, fileContents, file);
+        if (lineEntry.isLocal()) {
+            editorWindow = new LocalFileEditorWindow(creatingPane, fileContents, lineEntry);
         } else {
-            editorWindow = new RemoteFileEditorWindow(creatingPane, fileContents, file);
+            editorWindow = new RemoteFileEditorWindow(creatingPane, fileContents, lineEntry);
         }
 
         editorWindow.initChildren();
@@ -426,7 +422,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
      */
     @Override
     public int hashCode() {
-        return file.hashCode();
+        return lineEntry.getFile().hashCode();
     }
 
     /**
@@ -442,7 +438,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
             return true;
         } else {
             FileEditorWindow editorWindow = (FileEditorWindow)obj;
-            return file.equals(editorWindow.file);
+            return lineEntry.getFile().equals(editorWindow.lineEntry.getFile());
         }
     }
 }

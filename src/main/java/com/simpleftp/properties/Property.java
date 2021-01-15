@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -62,6 +62,22 @@ public class Property {
      * If true, the permissions retrieved by CommonFile.getPermissions() is that of the target, not the link
      */
     public static final Property FILE_PERMS_FOLLOW_LINK = new Property("FILE_PERMS_FOLLOW_LINK", Type.BOOLEAN);
+
+    /**
+     * If true, FTPConnection.getModificationTime(path) is attempted, else (or if this can't be determined), it is the time of the FTPFile returned
+     */
+    public static final Property SERVER_REMOTE_MODIFICATION_TIME = new Property("SERVER_REMOTE_MODIFICATION_TIME", Type.BOOLEAN);
+
+    /**
+     * If true, LineEntries on a RemoteDirectoryPane will be cached up until the first refresh() method call
+     */
+    public static final Property CACHE_REMOTE_DIRECTORY_LISTING = new Property("CACHE_REMOTE_DIRECTORY_LISTING", Type.BOOLEAN);
+
+    /**
+     * If true, all cached LineEntries are removed when DirectoryPane.refresh() is called (or refresh(false)). If false,
+     * just the cached entries for the current directory are cleared
+     */
+    public static final Property REMOVE_ALL_LISTING_CACHE_REFRESH = new Property("REMOVE_ALL_LISTING_CACHE_REFRESH", Type.BOOLEAN);
 
     /**
      * The type of this property

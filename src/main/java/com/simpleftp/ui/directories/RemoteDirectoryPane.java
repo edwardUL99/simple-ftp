@@ -26,14 +26,25 @@ import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
+import com.simpleftp.ui.files.LineEntries;
 import com.simpleftp.ui.files.LineEntry;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * This DirectoryPane displays files on the remote file server
  */
-final class RemoteDirectoryPane extends DirectoryPane {
+public final class RemoteDirectoryPane extends DirectoryPane {
+    /**
+     * A cached list of entries to reduce time spent navigating without an update in already visited directories on a remote pane
+     */
+    private final HashMap<String, LineEntries> cachedEntries;
+    /**
+     * A boolean flag to determine if caching of line entries is enabled
+     */
+    private final boolean CACHING_ENABLED = UI.CACHE_REMOTE_DIRECTORY_LISTING;
+
     /**
      * Constructs a RemoteDirectoryPane with the given directory to initialise this panel with
      * @param directory the initial directory to display
@@ -41,6 +52,7 @@ final class RemoteDirectoryPane extends DirectoryPane {
     RemoteDirectoryPane(RemoteFile directory) throws FileSystemException {
         super();
         fileSystem = new RemoteFileSystem();
+        cachedEntries = CACHING_ENABLED ? new HashMap<>():null;
         initDirectory(directory);
     }
 
@@ -67,10 +79,26 @@ final class RemoteDirectoryPane extends DirectoryPane {
     }
 
     /**
-     * Renames the specified remote file
-     * @param remoteFile the file to rename
+     * Refreshes the directory pane after a rename
+     * @param newPath the new path the file has to be renamed to
      */
-    private void renameRemoteFile(final RemoteFile remoteFile) {
+    private void refreshAfterRename(String newPath) {
+        double vPosition = entriesScrollPane.getVvalue();
+        double hPosition = entriesScrollPane.getHvalue();
+        String parent = FileUtils.getParentPath(newPath, false);
+        refreshCurrentDirectory();
+        if (!parent.equals(getCurrentWorkingDirectory()))
+            refreshCache(parent); // refresh the cache of the directory the file was renamed to if it wasn't renamed to the same directory
+        entriesScrollPane.setVvalue(vPosition);
+        entriesScrollPane.setHvalue(hPosition); // resets the position of the scrollbars to where they were before the refresh
+    }
+
+    /**
+     * Renames the specified remote file
+     * @param lineEntry the line entry to rename
+     */
+    private void renameRemoteFile(final LineEntry lineEntry) {
+        RemoteFile remoteFile = (RemoteFile)lineEntry.getFile();
         String filePath = remoteFile.getFilePath();
 
         String fileName = remoteFile.getName();
@@ -78,17 +106,15 @@ final class RemoteDirectoryPane extends DirectoryPane {
 
         if (newPath != null) {
             try {
-                newPath = FileUtils.addPwdToPath(getCurrentWorkingDirectory(), newPath, "/");
+                String pwd = getCurrentWorkingDirectory();
+                newPath = FileUtils.addPwdToPath(pwd, newPath, "/");
                 newPath = UI.resolveSymbolicPath(newPath, "/", "/"); // we will use symbolic path resolving as we may want to rename a file to a symbolic path
-                if (overwriteExistingFile(new RemoteFile(newPath))) {
+                RemoteFile newFile = new RemoteFile(newPath);
+                if (overwriteExistingFile(newFile)) {
                     FTPConnection connection = fileSystem.getFTPConnection();
                     if (connection.renameFile(filePath, newPath)) {
                         UI.doInfo("File Renamed", "File has been renamed successfully");
-                        double vPosition = entriesScrollPane.getVvalue();
-                        double hPosition = entriesScrollPane.getHvalue();
-                        refresh();
-                        entriesScrollPane.setVvalue(vPosition);
-                        entriesScrollPane.setHvalue(hPosition); // resets the position of the scrollbars to where they were before the refresh
+                        refreshAfterRename(newPath);
                     } else {
                         String replyString = connection.getReplyString();
                         UI.doError("Rename Failed", "Failed to rename file with error code: " + replyString);
@@ -108,10 +134,10 @@ final class RemoteDirectoryPane extends DirectoryPane {
     @Override
     void renameLineEntry(LineEntry lineEntry) {
         CommonFile file = lineEntry.getFile();
-        String filePath = file.getFilePath();
+        String filePath = lineEntry.getFilePath();
 
         if (!UI.isFileOpened(filePath, false)) {
-            renameRemoteFile((RemoteFile) file);
+            renameRemoteFile(lineEntry);
         } else {
             UI.doError("File Open", "The file " + file.getName() + " is open, it cannot be renamed");
         }
@@ -133,11 +159,11 @@ final class RemoteDirectoryPane extends DirectoryPane {
     /**
      * Constructs the list of line entries from the files listed by the remote file
      * @param lineEntries the list of line entries to populate
-     * @param remoteFile the file to list
+     * @param path the path to list
      */
-    private void constructListOfRemoteFiles(ArrayList<LineEntry> lineEntries, RemoteFile remoteFile) {
+    private void constructListOfRemoteFiles(LineEntries lineEntries, String path) {
         try {
-            String path = remoteFile.getFilePath();
+            ArrayList<LineEntry> entries = lineEntries.getLineEntries();
             for (CommonFile f : fileSystem.listFiles(path)) {
                 boolean showFile = showFile(f, e -> {
                     String fileName = f.getName();
@@ -148,7 +174,7 @@ final class RemoteDirectoryPane extends DirectoryPane {
                     LineEntry constructed = createLineEntry(f);
 
                     if (constructed != null)
-                        lineEntries.add(constructed);
+                        entries.add(constructed);
                 }
             }
         } catch (FileSystemException ex) {
@@ -207,15 +233,49 @@ final class RemoteDirectoryPane extends DirectoryPane {
 
     /**
      * Constructs the list of line entries to display
-     *
+     * @param useCache true to use cached line entries if any, or false to create a new list
+     * @param removeAllCache if useCache is false, then removeAllCache means that all cached line entries should be removed, if false, just current directory
      * @return the list of constructed line entries
      */
     @Override
-    ArrayList<LineEntry> constructListOfFiles() {
-        ArrayList<LineEntry> lineEntries = new ArrayList<>();
-        constructListOfRemoteFiles(lineEntries, (RemoteFile)directory);
+    LineEntries constructListOfFiles(boolean useCache, boolean removeAllCache) {
+        String currentDirectory = getCurrentWorkingDirectory();
+        LineEntries lineEntries;
+
+        if (CACHING_ENABLED) {
+            lineEntries = cachedEntries.get(currentDirectory);
+            if (lineEntries != null && lineEntries.size() > 0 && useCache) {
+                lineEntries.setSort(false);
+                return lineEntries;
+            } else {
+                lineEntries = lineEntries == null ? new LineEntries() : lineEntries;
+                if (!useCache) {
+                    if (removeAllCache) {
+                        cachedEntries.clear();
+                    }
+
+                    lineEntries.clear();
+                }
+
+                cachedEntries.put(currentDirectory, lineEntries);
+            }
+        } else {
+            lineEntries = new LineEntries();
+        }
+
+        constructListOfRemoteFiles(lineEntries, directory.getFilePath());
+        lineEntries.setSort(true);
 
         return lineEntries;
+    }
+
+    /**
+     * Refreshes the cached line entries for the provided file path if found. This should be used if the destination of an operation is not the current working directory
+     * @param filePath the file path to refresh
+     */
+    public void refreshCache(String filePath) {
+        if (CACHING_ENABLED)
+            cachedEntries.remove(filePath); // removing the cache for this file path will force a refresh on the next visit to this directory
     }
 
     /**

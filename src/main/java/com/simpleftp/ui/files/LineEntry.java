@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -91,7 +91,6 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         image.setFitHeight(UI.FILE_ICON_SIZE);
         image.setImage(new Image(imageURL));
         this.file = file;
-
         this.owningPane = owningPane;
 
         init();
@@ -144,7 +143,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     }
 
     /**
-     * Gets the size of the file behing this LineEntry
+     * Gets the size of the file behind this LineEntry
      * @return the file size in bytes
      * @throws FileSystemException if an error occurs and size cannot be retrieved
      */
@@ -263,5 +262,27 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
      */
     public boolean isLocal() {
         return owningPane.isLocal();
+    }
+
+    /**
+     * Refreshes this LineEntry. Should be called from the JavaFX thread
+     * @throws FileSystemException if fails to refresh file or line entry
+     */
+    public void refresh() throws FileSystemException {
+        fileSize = null;
+        modificationTime = null;
+        if (file.exists())
+            init();
+    }
+
+    /**
+     * Sets the file of this LineEntry. refresh() should be called afterwards to propagate the changes
+     * @param file the file to set.
+     */
+    public void setFile(CommonFile file) {
+        if (isLocal() != file.isLocal())
+            throw new IllegalArgumentException("The provided file must match the LineEntry's isLocal()");
+
+        this.file = file;
     }
 }

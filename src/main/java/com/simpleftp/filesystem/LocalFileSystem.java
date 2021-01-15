@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@ package com.simpleftp.filesystem;
 
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
+import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import org.apache.commons.net.ftp.FTPFile;
@@ -207,11 +208,13 @@ public class LocalFileSystem extends AbstractFileSystem {
 
                 Files.walk(sourcePath, FileVisitOption.FOLLOW_LINKS)
                         .forEach(source1 -> {
-                            try {
-                                Path targetPath = finalDestinationNioPath.resolve(sourcePath.relativize(source1));
-                                Files.copy(source1, targetPath);
-                            } catch (IOException ex) {
-                                thrownException.set(ex);
+                            if (Files.exists(source1)) {
+                                try {
+                                    Path targetPath = finalDestinationNioPath.resolve(sourcePath.relativize(source1));
+                                    Files.copy(source1, targetPath);
+                                } catch (IOException ex) {
+                                    thrownException.set(ex);
+                                }
                             }
                         });
 
@@ -258,6 +261,8 @@ public class LocalFileSystem extends AbstractFileSystem {
         FTPFile[] subFiles = ftpConnection.listFiles(listPath);
 
         if (subFiles != null && subFiles.length > 0) {
+            boolean tempFilesystem = ftpConnection != FTPSystem.getConnection();
+
             for (FTPFile file1 : subFiles) {
                 String currName = file1.getName();
 
@@ -271,7 +276,7 @@ public class LocalFileSystem extends AbstractFileSystem {
                     filePath = FileUtils.appendPath(FileUtils.appendPath(sourceDirectory, currentDirectory, false), currName, false);
                 }
 
-                RemoteFile file2 = new RemoteFile(filePath, ftpConnection, file1);
+                RemoteFile file2 =  tempFilesystem ? new RemoteFile(filePath, ftpConnection, file1):new RemoteFile(filePath, file1);
                 boolean symLink = file1.isSymbolicLink();
                 boolean directory = symLink ? file2.isADirectory():file1.isDirectory();
                 boolean isFile = symLink ? file2.isNormalFile():file1.isFile();

@@ -28,6 +28,7 @@ import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.tasks.FileStringDownloader;
 import com.simpleftp.ui.files.FilePropertyWindow;
+import com.simpleftp.ui.files.LineEntries;
 import com.simpleftp.ui.files.LineEntry;
 import com.simpleftp.ui.panels.FilePanel;
 import javafx.geometry.Insets;
@@ -43,9 +44,7 @@ import javafx.scene.text.FontWeight;
 import lombok.Getter;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 /*
 The conditions for determining if an exception or error dialog show up may have to be reconsidered
@@ -86,7 +85,7 @@ public abstract class DirectoryPane extends VBox {
     /**
      * The list of line entries inside in entries box
      */
-    private ArrayList<LineEntry> lineEntries;
+    private LineEntries lineEntries;
     /**
      * The symbolicLink that this DirectoryPane is currently listing
      */
@@ -143,7 +142,7 @@ public abstract class DirectoryPane extends VBox {
      */
     DirectoryPane() {
         setStyle(UI.WHITE_BACKGROUND);
-        lineEntries = new ArrayList<>();
+        lineEntries = new LineEntries();
 
         initButtons();
         initStatusPanel();
@@ -166,7 +165,7 @@ public abstract class DirectoryPane extends VBox {
     public void goToRoot() throws FileSystemException {
         if (!isAtRootDirectory()) {
             setDirectory(getRootDirectory());
-            refresh();
+            refresh(true, UI.REMOVE_ALL_LISTING_CACHE_REFRESH);
         }
     }
 
@@ -315,7 +314,7 @@ public abstract class DirectoryPane extends VBox {
         if (!isAtRootDirectory()) {
             try {
                 setDirectory(directory.getExistingParent());
-                refresh();
+                refresh(true, UI.REMOVE_ALL_LISTING_CACHE_REFRESH);
             } catch (FileSystemException ex) {
                 UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
             }
@@ -323,7 +322,7 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
-     * Checks the symbolicLink passed in to see if the type matches the dfile type this DirectoryPane is for.
+     * Checks the symbolicLink passed in to see if the type matches the file type this DirectoryPane is for.
      * setDirectory calls this
      * @param directory the symbolicLink to check
      * @throws IllegalArgumentException if the type of symbolicLink is different to the type of the current one
@@ -409,7 +408,7 @@ public abstract class DirectoryPane extends VBox {
 
         CommonFile targetFile = fileSystem.getFile(path);
         setDirectory(targetFile); // need to use the checked setDirectory as this is a public method
-        refresh();
+        refresh(true, UI.REMOVE_ALL_LISTING_CACHE_REFRESH);
     }
 
     /**
@@ -556,52 +555,59 @@ public abstract class DirectoryPane extends VBox {
 
     /**
      * Constructs the list of line entries to display
+     * @param useCache true if to use a cached list if supported/available. Some panes may take any value and not have any affect.
+     *                 Not all panes are required to cache line entries for each directory visited. However, remotely it is done if enabled
+     * @param removeAllCache if useCache is false, then removeAllCache means that all cached line entries should be removed, if false, just current directory
      * @return the list of constructed line entries
      */
-    abstract ArrayList<LineEntry> constructListOfFiles();
+    abstract LineEntries constructListOfFiles(boolean useCache, boolean removeAllCache);
 
     /**
      * Adds the list of line entries to the entriesBox
      * @param lineEntries the line entries to add
      */
-    private void addLineEntriesFromList(ArrayList<LineEntry> lineEntries) {
-        lineEntries.forEach(entriesBox.getChildren()::add);
+    private void addLineEntriesFromList(LineEntries lineEntries) {
+        ArrayList<LineEntry> entries = lineEntries.getLineEntries();
+        entries.forEach(entriesBox.getChildren()::add);
     }
 
     /**
-     * Sorts the line entries so that directories appear in order before files
-     * @param lineEntries the list of LineEntries to solve
-     * @return the list of sorted line entries
+     * Checks if the current directory still exists and if it doesn't it sets the directory to the next available parent
      */
-    private ArrayList<LineEntry> sortLineEntries(final ArrayList<LineEntry> lineEntries) {
-        ArrayList<LineEntry> directoryEntries = lineEntries.stream()
-                .filter(LineEntry::isDirectory)
-                .collect(Collectors.toCollection(ArrayList::new));
-        ArrayList<LineEntry> fileEntries = lineEntries.stream()
-                .filter(LineEntry::isFile)
-                .collect(Collectors.toCollection(ArrayList::new));
-
-        // sort the lists
-        Collections.sort(directoryEntries);
-        Collections.sort(fileEntries);
-
-        ArrayList<LineEntry> sorted = new ArrayList<>(directoryEntries.size() + fileEntries.size());
-        sorted.addAll(directoryEntries);
-        sorted.addAll(fileEntries);
-
-        return sorted;
+    private void checkCurrentDirExistence() throws FileSystemException {
+        if (!directory.exists()) {
+            UI.doError("Directory Not Found", "The current directory no longer exists on the file system, moving to the next parent directory that exists");
+            setDirectory(directory.getExistingParent());
+        }
     }
 
     /**
-     * Refreshes this file panel
+     * Refreshes this directory listing.
+     * This method is <b>cache destructive</b>. If configured, calling this method will clear all cached line entries if
+     * the directory pane implements caching. If you don't want to clear cache, call refreshCurrentDirectory() instead. That
+     * method is most useful after completing some task and you only need it to appear in the current working directory
      */
     public void refresh() {
-        ArrayList<LineEntry> lineEntries = constructListOfFiles();
-        if (lineEntries.size() > 0) {
-            lineEntries = sortLineEntries(lineEntries);
+        try {
+            checkCurrentDirExistence();
+            refresh(false, UI.REMOVE_ALL_LISTING_CACHE_REFRESH);
+        } catch (FileSystemException ex) {
+            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
+    }
 
-        this.lineEntries.clear();
+    /**
+     * Refreshes using cached list of line entries if supported/available
+     * @param useCache true to use cache, false if not
+     * @param removeAllCache if useCache is false, then removeAllCache means that all cached line entries should be removed, if false, just current directory
+     */
+    protected void refresh(boolean useCache, boolean removeAllCache) {
+        if (!UI.CACHE_REMOTE_DIRECTORY_LISTING)
+            useCache = false; // always use false if properties have set cache to false
+
+        LineEntries lineEntries = constructListOfFiles(useCache, removeAllCache);
+        lineEntries.sort();
+
         getChildren().clear();
         getChildren().add(statusPanel);
         entriesBox.getChildren().clear();
@@ -621,13 +627,30 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
+     * If cache is implemented by the implementing DirectoryPane, calling this method will refresh the current directory only
+     * without clearing any other cached directory listings.
+     * Calling just refresh is used to clear all cached entries if configured, so you'll most likely want to use this method
+     * unless you are using the refresh button ot F5
+     */
+    public void refreshCurrentDirectory() {
+        refresh(false, false);
+    }
+
+    /**
+     * Calls refresh but using cached information
+     */
+    public void cacheRefresh() {
+        refresh(true, UI.REMOVE_ALL_LISTING_CACHE_REFRESH);
+    }
+
+    /**
      * Handles double click of the specified symbolicLink entry
      * @param lineEntry the symbolicLink entry to double click
      */
     private void doubleClickDirectoryEntry(final LineEntry lineEntry) {
         CommonFile file = lineEntry.getFile();
         setDirectoryUnchecked(file);
-        refresh();
+        refresh(true, UI.REMOVE_ALL_LISTING_CACHE_REFRESH);
     }
 
     /**
@@ -653,7 +676,7 @@ public abstract class DirectoryPane extends VBox {
     private void doubleClickFileEntry(final LineEntry lineEntry) throws FTPException, FileSystemException {
         CommonFile file = lineEntry.getFile();
         if (checkFileSize(file)) {
-            FileStringDownloader fileStringDownloader = new FileStringDownloader(file, fileSystem, this);
+            FileStringDownloader fileStringDownloader = new FileStringDownloader(lineEntry, fileSystem, this);
             fileStringDownloader.start();
         }
     }
@@ -719,8 +742,7 @@ public abstract class DirectoryPane extends VBox {
         if (filePanel != null) {
             filePanel.removeLineEntry(lineEntry);
         }
-        entriesBox.getChildren().remove(lineEntry);
-        lineEntries.remove(lineEntry);
+        deleteEntry(lineEntry, false);
     }
 
     /**
@@ -767,7 +789,7 @@ public abstract class DirectoryPane extends VBox {
      * Returns the files that this DirectoryPane is displaying
      * @return list of displayed files
      */
-    public ArrayList<LineEntry> filesDisplayed() {
+    public LineEntries filesDisplayed() {
         return lineEntries;
     }
 

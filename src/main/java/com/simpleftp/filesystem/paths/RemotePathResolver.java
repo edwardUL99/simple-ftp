@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@ import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.exceptions.PathResolverException;
 import com.simpleftp.filesystem.paths.interfaces.PathResolver;
+import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
@@ -137,7 +138,8 @@ class RemotePathResolver implements PathResolver {
         boolean canonical = isPathCanonical(path);
 
         try {
-            if (!canonical || new RemoteFile(path, connection, null).isSymbolicLink()) {
+            RemoteFile file = connection == FTPSystem.getConnection() ? new RemoteFile(path):new RemoteFile(path, connection, null);
+            if (!canonical || file.isSymbolicLink()) {
                 path = canonicalizeRemotePath(path); // if the path doesn't contain . or .. but is a symbolic link, it's not canonical
             }
 

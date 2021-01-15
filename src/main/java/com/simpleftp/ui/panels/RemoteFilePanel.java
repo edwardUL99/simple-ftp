@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@ import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
+import com.simpleftp.ui.directories.RemoteDirectoryPane;
 import com.simpleftp.ui.files.LineEntry;
 
 import java.io.File;
@@ -140,7 +141,9 @@ final class RemoteFilePanel extends FilePanel {
                 boolean parentPathMatchesPanelsPath = currentPath.equals(parentPath);
 
                 if (parentPathMatchesPanelsPath) {
-                    directoryPane.refresh(); // only need to refresh if the path the file is created in matches the cwd
+                    directoryPane.refreshCurrentDirectory(); // only need to refresh if the path the file is created in matches the cwd
+                } else {
+                    ((RemoteDirectoryPane)directoryPane).refreshCache(parentPath); // refresh the cache for the parent path as remote directory pane uses caching
                 }
 
                return true;
@@ -227,12 +230,12 @@ final class RemoteFilePanel extends FilePanel {
             boolean canonicalize = remoteFile.isADirectory() && (!remoteFile.isSymbolicLink() || !UI.doSymbolicPathDialog(symbolicPath)); // only open dialog if it a directory, opening a file doesn't matter
             if (canonicalize) {
                 path = UI.resolveRemotePath(symbolicPath, currWorkingDir, true, fileSystem.getFTPConnection());
-                remoteFile = new RemoteFile(path, connection, null);
+                remoteFile = new RemoteFile(path);
             }
 
             if (remoteFile.isADirectory()) {
                 directoryPane.setDirectory(remoteFile);
-                directoryPane.refresh();
+                directoryPane.cacheRefresh(); // go to path refreshing using cache if the entered directory is cached
             } else if (remoteFile.isNormalFile()) {
                 LineEntry lineEntry = LineEntry.newInstance(remoteFile, directoryPane); // we are not sure the path is a sym link, so use this work around in case. See the JavaDoc for that method to see why it is a workaround
                 if (lineEntry != null)

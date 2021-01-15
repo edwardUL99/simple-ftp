@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@ import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.background.BackgroundTask;
 import com.simpleftp.ui.directories.DirectoryPane;
+import com.simpleftp.ui.files.LineEntry;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
@@ -44,7 +45,10 @@ import java.io.IOException;
  */
 @Log4j2
 public class FileStringDownloader implements BackgroundTask {
-    private final CommonFile file;
+    /**
+     * The line entry to download contents of
+     */
+    private final LineEntry lineEntry;
     /**
      * Need a separate connection for downloading files so it doesn't hog the main connection
      */
@@ -68,14 +72,14 @@ public class FileStringDownloader implements BackgroundTask {
 
     /**
      * Creates a FileStringDownloader object
-     * @param file the file to download contents of. Assumed to be a file, not a directory
+     * @param lineEntry the line entry to download contents of. Assumed to be a file, not a directory
      * @param fileSystem the file system to download the file to
      * @param creatingPanel the panel that created this downloader
      */
-    public FileStringDownloader(CommonFile file, FileSystem fileSystem, DirectoryPane creatingPanel) throws FTPException {
-        this.file = file;
+    public FileStringDownloader(LineEntry lineEntry, FileSystem fileSystem, DirectoryPane creatingPanel) throws FTPException {
+        this.lineEntry = lineEntry;
         this.creatingPanel = creatingPanel;
-        if (file instanceof RemoteFile) {
+        if (!lineEntry.isLocal()) {
             this.readingConnection = FTPConnection.createTemporaryConnection(fileSystem.getFTPConnection());
             this.readingConnection.connect();
             this.readingConnection.login();
@@ -156,7 +160,7 @@ public class FileStringDownloader implements BackgroundTask {
             finished = true;
             if (!errorOccurred) {
                 String contents = (String) e.getSource().getValue();
-                UI.showFileEditor(creatingPanel, file, contents);
+                UI.showFileEditor(creatingPanel, lineEntry, contents);
             }
             disconnectConnection();
             UI.removeBackgroundTask(this);
@@ -176,7 +180,7 @@ public class FileStringDownloader implements BackgroundTask {
      * Disconnects the ftp connection if it was connected
      */
     private void disconnectConnection() {
-        if (file instanceof RemoteFile) {
+        if (!lineEntry.isLocal()) {
             try {
                 readingConnection.disconnect();
             } catch (FTPException ex) {
@@ -193,8 +197,7 @@ public class FileStringDownloader implements BackgroundTask {
         return new Task<>() {
             @Override
             protected String call() throws Exception {
-                String str = fileToString(file);
-                return str;
+                return fileToString(lineEntry.getFile());
             }
         };
     }
@@ -235,11 +238,10 @@ public class FileStringDownloader implements BackgroundTask {
 
                 LocalFile downloaded;
                 if (remoteFile.isSymbolicLink()) {
-                    remoteFile = new RemoteFile(remoteFile.getSymbolicLinkTarget());
+                    remoteFile = new RemoteFile(remoteFile.getSymbolicLinkTarget(), readingConnection, null);
                 }
 
                 downloaded = new LocalFile(FileUtils.appendPath(FileUtils.TEMP_DIRECTORY, remoteFile.getName(), true));
-
 
                 if (new LocalFileSystem(readingConnection).addFile(remoteFile, downloaded.getParentFile().getAbsolutePath())) { // download the file
                     String ret = fileToString(downloaded);

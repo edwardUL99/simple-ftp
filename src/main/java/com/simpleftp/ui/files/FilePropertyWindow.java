@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -603,15 +603,12 @@ public class FilePropertyWindow extends VBox implements Window {
                             permissionsField.setText(permissions);
                             String lastOctal = currentOctal;
                             currentOctal = permissions;
-                            CommonFile file = lineEntry.getFile();
-                            file.refresh();
-                            propertiesPanel.permissionsString.setText(file.getPermissions());
+                            propertiesPanel.permissionsString.setText(lineEntry.getFile().getPermissions());
                             UI.doInfo("Permissions Changed", "Permissions have been changed successfully from " + lastOctal + " to " + permissions);
 
                             DirectoryPane directoryPane = lineEntry.getOwningPane();
-                            if (directoryPane.getCurrentWorkingDirectory().equals(FileUtils.getParentPath(file.getFilePath(), lineEntry.isLocal())))
-                                directoryPane.refresh();
-
+                            if (directoryPane.getCurrentWorkingDirectory().equals(FileUtils.getParentPath(lineEntry.getFilePath(), lineEntry.isLocal())))
+                                lineEntry.refresh();
                         }
                     } catch (Exception ex) {
                         if (FTPSystem.isDebugEnabled())

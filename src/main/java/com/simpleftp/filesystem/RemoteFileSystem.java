@@ -188,7 +188,10 @@ public class RemoteFileSystem extends AbstractFileSystem {
             FTPConnection connection = getFTPConnection();
             FTPFile ftpFile = connection.getFTPFile(fileName);
             if (ftpFile != null) {
-                return new RemoteFile(fileName, connection, ftpFile);
+                if (isTemporaryFileSystem())
+                    return new RemoteFile(fileName, connection, ftpFile);
+                else
+                    return new RemoteFile(fileName, ftpFile);
             }
 
             return null;
@@ -206,11 +209,7 @@ public class RemoteFileSystem extends AbstractFileSystem {
      */
     @Override
     public boolean fileExists(String fileName) throws FileSystemException {
-        try {
-            return getFTPConnection().remotePathExists(fileName);
-        } catch (FTPException ex) {
-            throw new FileSystemException("A FTP Exception occurred when checking if the remote file exists", ex);
-        }
+        return getFile(fileName) != null;
     }
 
     /**
@@ -309,7 +308,7 @@ public class RemoteFileSystem extends AbstractFileSystem {
                 throw new FileSystemException("Failed to upload the local temp copy to the destination");
         }
 
-        return new RemoteFile(destPath).exists();
+        return isTemporaryFileSystem() ? new RemoteFile(destPath, connection, null).exists():new RemoteFile(destPath).exists();
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -131,6 +131,16 @@ public final class UI {
      * The width for file editors
      */
     public static final int FILE_EDITOR_WIDTH = Integer.parseInt(Properties.getProperty(Property.FILE_EDITOR_WIDTH));
+
+    /**
+     * The property to determine if remote listings should be cached
+     */
+    public static final boolean CACHE_REMOTE_DIRECTORY_LISTING = Boolean.parseBoolean(Properties.getProperty(Property.CACHE_REMOTE_DIRECTORY_LISTING));
+
+    /**
+     * To property to determine if all LineEntries that are cached should be removed on a refresh or just the current directory
+     */
+    public static final boolean REMOVE_ALL_LISTING_CACHE_REFRESH = Boolean.parseBoolean(Properties.getProperty(Property.REMOVE_ALL_LISTING_CACHE_REFRESH));
 
     /**
      * The width for the DirectoryPane ComboBox
@@ -467,11 +477,11 @@ public final class UI {
     /**
      * Shows a file editor
      * @param panel the panel opening the editor
-     * @param file the file to edit
+     * @param lineEntry the line entry to edit
      * @param fileContents the contents of the file
      */
-    public static void showFileEditor(DirectoryPane panel, CommonFile file, String fileContents) {
-        FileEditorWindow editorWindow = FileEditorWindow.newInstance(panel, fileContents,file);
+    public static void showFileEditor(DirectoryPane panel, LineEntry lineEntry, String fileContents) {
+        FileEditorWindow editorWindow = FileEditorWindow.newInstance(panel, fileContents, lineEntry);
         editorWindow.show();
     }
 

@@ -24,6 +24,7 @@ import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ui.UI;
+import com.simpleftp.ui.files.LineEntries;
 import com.simpleftp.ui.files.LineEntry;
 
 import java.io.File;
@@ -32,7 +33,7 @@ import java.util.ArrayList;
 /**
  * This DirectoryPane is for use displaying local files
  */
-final class LocalDirectoryPane extends DirectoryPane {
+public final class LocalDirectoryPane extends DirectoryPane {
     /**
      * Constructs a LocalDirectoryPane with the given directory to initialise this panel with
      * @param directory the initial directory to display
@@ -54,7 +55,7 @@ final class LocalDirectoryPane extends DirectoryPane {
     }
 
     /**
-     * Checks the directory passed in to see if the type matches the dfile type this DirectoryPane is for.
+     * Checks the directory passed in to see if the type matches the file type this DirectoryPane is for.
      * setDirectory calls this
      *
      * @param directory the directory to check
@@ -93,9 +94,10 @@ final class LocalDirectoryPane extends DirectoryPane {
 
     /**
      * Renames the specified local file
-     * @param localFile the file to rename
+     * @param lineEntry the line entry to rename
      */
-    private void renameLocalFile(final LocalFile localFile) {
+    private void renameLocalFile(final LineEntry lineEntry) {
+        LocalFile localFile = (LocalFile)lineEntry.getFile();
         String fileName = localFile.getName();
         String newPath = UI.doRenameDialog(fileName);
 
@@ -103,12 +105,13 @@ final class LocalDirectoryPane extends DirectoryPane {
             try {
                 newPath = FileUtils.addPwdToPath(getCurrentWorkingDirectory(), newPath, "/");
                 newPath = UI.resolveSymbolicPath(newPath, "/", FileUtils.getRootPath(true)); // we will use symbolic path resolving as we may want to rename a file to a symbolic path
-                if (overwriteExistingFile(new LocalFile(newPath))) {
+                LocalFile newFile = new LocalFile(newPath);
+                if (overwriteExistingFile(newFile)) {
                     if (localFile.renameTo(new File(newPath))) {
                         UI.doInfo("File Renamed", "File has been renamed successfully");
                         double vPosition = entriesScrollPane.getVvalue();
                         double hPosition = entriesScrollPane.getHvalue();
-                        refresh();
+                        refreshCurrentDirectory();
                         entriesScrollPane.setVvalue(vPosition);
                         entriesScrollPane.setHvalue(hPosition); // resets the position of the scrollbars to where they were before the refresh
                     } else {
@@ -132,7 +135,7 @@ final class LocalDirectoryPane extends DirectoryPane {
         String filePath = file.getFilePath();
 
         if (!UI.isFileOpened(filePath, true)) {
-            renameLocalFile((LocalFile) file);
+            renameLocalFile(lineEntry);
         } else {
             UI.doError("File Open", "The file " + file.getName() + " is open, it cannot be renamed");
         }
@@ -143,12 +146,13 @@ final class LocalDirectoryPane extends DirectoryPane {
      * @param lineEntries the list of line entries to populate
      * @param localFile the file to list
      */
-    private void constructListOfLocalFiles(ArrayList<LineEntry> lineEntries, LocalFile localFile) {
+    private void constructListOfLocalFiles(LineEntries lineEntries, LocalFile localFile) {
         try {
             CommonFile[] files = fileSystem.listFiles(localFile.getFilePath());
             if (files == null || files.length == 0) {
                 lineEntries.clear();
             } else {
+                ArrayList<LineEntry> entries = lineEntries.getLineEntries();
                 for (CommonFile file : files) {
                     LocalFile file1 = (LocalFile) file;
                     boolean showFile = showFile(file, e -> showHiddenFiles || !file1.isHidden());
@@ -157,7 +161,7 @@ final class LocalDirectoryPane extends DirectoryPane {
                         LineEntry constructed = createLineEntry(file1);
 
                         if (constructed != null)
-                            lineEntries.add(constructed);
+                            entries.add(constructed);
                     }
                 }
             }
@@ -169,13 +173,15 @@ final class LocalDirectoryPane extends DirectoryPane {
 
     /**
      * Constructs the list of line entries to display
-     *
+     * @param useCache local directory pane does not cache, so pass in any value here
+     * @param removeAllCache if useCache is false, then removeAllCache means that all cached line entries should be removed, if false, just current directory
      * @return the list of constructed line entries
      */
     @Override
-    ArrayList<LineEntry> constructListOfFiles() {
-        ArrayList<LineEntry> lineEntries = new ArrayList<>();
+    LineEntries constructListOfFiles(boolean useCache, boolean removeAllCache) {
+        LineEntries lineEntries = new LineEntries();
         constructListOfLocalFiles(lineEntries, (LocalFile)directory);
+        lineEntries.setSort(true);
 
         return lineEntries;
     }

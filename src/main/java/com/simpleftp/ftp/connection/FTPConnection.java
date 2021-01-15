@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -857,14 +857,12 @@ public class FTPConnection {
      * @return true if the path exists
      * @throws FTPNotConnectedException     if this is called when isConnected returns false
      * @throws FTPConnectionFailedException if a connection error occurs
-     * @throws FTPError                     if a general error occurs
      * @throws FTPCommandFailedException    if an error occurs sending or receiving the command
      */
     public synchronized boolean remotePathExists(String remotePath) throws FTPNotConnectedException,
             FTPConnectionFailedException,
-            FTPError,
             FTPCommandFailedException {
-        return remotePathExists(remotePath, true) || remotePathExists(remotePath, false);
+        return getFTPFile(remotePath) != null;
     }
 
     /**

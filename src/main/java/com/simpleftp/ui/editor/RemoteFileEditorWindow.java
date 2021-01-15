@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@ import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
+import com.simpleftp.ui.files.LineEntry;
 
 /**
  * This class provides a FileEditorWindow for remote files
@@ -31,10 +32,10 @@ public class RemoteFileEditorWindow extends FileEditorWindow {
      *
      * @param creatingPane the DirectoryPane opening this window
      * @param fileContents the contents of the file as this class does not download the contents
-     * @param file         the file the contents belongs to
+     * @param lineEntry the line entry this editor window is for
      */
-    RemoteFileEditorWindow(DirectoryPane creatingPane, String fileContents, CommonFile file) {
-        super(creatingPane, fileContents, file);
+    RemoteFileEditorWindow(DirectoryPane creatingPane, String fileContents, LineEntry lineEntry) {
+        super(creatingPane, fileContents, lineEntry);
     }
 
     /**
@@ -45,6 +46,7 @@ public class RemoteFileEditorWindow extends FileEditorWindow {
     @Override
     String getSaveFilePath() throws Exception {
         // the default option if it is an unknown file type
+        CommonFile file = lineEntry.getFile();
         if (file.isSymbolicLink()) {
             String targetPath = file.getSymbolicLinkTarget();
 
@@ -67,7 +69,7 @@ public class RemoteFileEditorWindow extends FileEditorWindow {
      */
     @Override
     String getFilePath() {
-        return "ftp:/" + file.getFilePath();
+        return "ftp:/" + lineEntry.getFilePath();
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,7 +18,6 @@
 package com.simpleftp.ui.editor.tasks;
 
 import com.simpleftp.filesystem.FileUtils;
-import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.FTPSystem;
@@ -29,13 +28,13 @@ import com.simpleftp.ui.background.BackgroundTask;
 import com.simpleftp.ui.background.scheduling.TaskScheduler;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.editor.FileEditorWindow;
+import com.simpleftp.ui.files.LineEntry;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.concurrent.Worker;
 
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
@@ -120,16 +119,24 @@ public abstract class FileUploader implements BackgroundTask {
 
         if (!errorOccurred) {
             DirectoryPane directoryPane = editorWindow.getCreatingPane();
-            String parentPath = new File(filePath).getParent();
-            parentPath = parentPath == null ? FileUtils.getRootPath(directoryPane.isLocal()) :parentPath; // if windows, find the root
-            final String finalParent = parentPath;
+            String parentPath = FileUtils.getParentPath(filePath, directoryPane.isLocal());
 
             editorWindow.setResetFileContents(savedFileContents); // we have now successfully saved the file contents. Our reset string should now match what is actually saved
 
             UI.doInfo("File Saved", "File " + filePath + " saved successfully");
 
-            if (finalParent.equals(directoryPane.getCurrentWorkingDirectory())) {
-                directoryPane.refresh();
+            if (parentPath.equals(directoryPane.getCurrentWorkingDirectory())) {
+                try {
+                    LineEntry lineEntry = editorWindow.getLineEntry();
+                    if (directoryPane.filesDisplayed().getLineEntries().contains(lineEntry))
+                        editorWindow.getLineEntry().refresh(); // just refresh the line entry. No point refreshing entire FilePanel if this LineEntry is still on it
+                    else {
+                        directoryPane.refreshCurrentDirectory(); // the directory pane no longer contains this line entry reference, so refresh file panel to refresh the new instance of this line entry
+                    }
+                } catch (FileSystemException ex) {
+                    if (FTPSystem.isDebugEnabled())
+                        ex.printStackTrace();
+                }
             }
         }
 
@@ -267,7 +274,7 @@ public abstract class FileUploader implements BackgroundTask {
      * @return the FileUploader instance
      */
     public static FileUploader newInstance(FileEditorWindow editorWindow, String filePath, String savedFileContents) {
-        boolean local = editorWindow.getFile() instanceof LocalFile;
+        boolean local = editorWindow.getLineEntry().isLocal();
         if (local)
             return new LocalFileUploader(editorWindow, filePath, savedFileContents);
         else
