@@ -572,6 +572,15 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
+     * Displays the entries box is entries is true or empty folder pane if false as the directory listing
+     * @param entries true to display entriesBox, false to display emptyFolderPane
+     */
+    private void displayDirectoryListing(boolean entries) {
+        getChildren().clear();
+        getChildren().addAll(statusPanel, entries ? entriesScrollPane:emptyFolderPane);
+    }
+
+    /**
      * Checks if the current directory still exists and if it doesn't it sets the directory to the next available parent
      */
     private void checkCurrentDirExistence() throws FileSystemException {
@@ -608,15 +617,12 @@ public abstract class DirectoryPane extends VBox {
         LineEntries lineEntries = constructListOfFiles(useCache, removeAllCache);
         lineEntries.sort();
 
-        getChildren().clear();
-        getChildren().add(statusPanel);
+        boolean displayEntries = lineEntries.size() > 0;
         entriesBox.getChildren().clear();
-        if (lineEntries.size() > 0) {
+        if (displayEntries)
             addLineEntriesFromList(lineEntries);
-            getChildren().add(entriesScrollPane);
-        } else {
-            getChildren().add(emptyFolderPane);
-        }
+        displayDirectoryListing(displayEntries);
+
         this.lineEntries = lineEntries;
 
         if (filePanel != null)
@@ -753,6 +759,20 @@ public abstract class DirectoryPane extends VBox {
     abstract boolean doRemove(CommonFile commonFile) throws Exception;
 
     /**
+     * Removes the line entry from the directory's line entries list, and if the size is 0, displays the empty directory pane
+     * @param lineEntry the line entry to remove
+     */
+    private void removeLineEntry(LineEntry lineEntry) {
+        entriesBox.getChildren().remove(lineEntry);
+        lineEntries.remove(lineEntry);
+
+        if (lineEntries.size() == 0) {
+            // display the empty folder pane
+            displayDirectoryListing(false);
+        }
+    }
+
+    /**
      * Attempts to delete the specified line entry and the file associated with it
      * @param lineEntry the line entry to remove
      * @param removeFile remove the file from the filesystem also, leave false if you just want to delete the entry from the directory pane
@@ -763,8 +783,7 @@ public abstract class DirectoryPane extends VBox {
 
         try {
             if (!removeFile || doRemove(file)) {
-                entriesBox.getChildren().remove(lineEntry);
-                lineEntries.remove(lineEntry);
+                removeLineEntry(lineEntry);
 
                 return true;
             }
