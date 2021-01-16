@@ -31,6 +31,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
@@ -220,6 +221,26 @@ public class FilePropertyWindow extends VBox implements Window {
          * The permissions string to display for permissions
          */
         private Label permissionsString;
+        /**
+         * Radio button for choosing to display size in bytes
+         */
+        private RadioButton bytes;
+        /**
+         * Radio button for choosing to display size in kilobytes
+         */
+        private RadioButton kilos;
+        /**
+         * Radio button for choosing to display size in megabytes
+         */
+        private RadioButton mega;
+        /**
+         * Radio button for choosing to display size in gigabytes
+         */
+        private RadioButton giga;
+        /**
+         * The toggle group containing the radio buttons
+         */
+        private ToggleGroup toggleGroup;
 
         /**
          * Creates a properties panel
@@ -401,6 +422,45 @@ public class FilePropertyWindow extends VBox implements Window {
         }
 
         /**
+         * Returns true if this key event represents an arrow key
+         * @param keyEvent the key event to check
+         * @return true if arrow key, false if not
+         */
+        private boolean isKeyArrow(KeyEvent keyEvent) {
+            KeyCode code = keyEvent.getCode();
+            return code == KeyCode.LEFT || code == KeyCode.RIGHT || code == KeyCode.UP || code == KeyCode.DOWN;
+        }
+
+        /**
+         * Handles an arrow key pressed on the associated key event
+         * @param keyEvent the associated key event
+         */
+        private void handleArrowKey(KeyEvent keyEvent) {
+            Toggle selectedToggle = toggleGroup.getSelectedToggle();
+            if (isKeyArrow(keyEvent) && selectedToggle != null) {
+                if (selectedToggle.equals(bytes)) {
+                    setSizeUnits(SizeUnit.BYTES);
+                } else if (selectedToggle.equals(kilos)) {
+                    setSizeUnits(SizeUnit.KILOBYTES);
+                } else if (selectedToggle.equals(mega)) {
+                    setSizeUnits(SizeUnit.MEGABYTES);
+                } else if (selectedToggle.equals(giga)) {
+                    setSizeUnits(SizeUnit.GIGABYTES);
+                }
+            }
+        }
+
+        /**
+         * Sets up the arrow key handler for selecting radio buttons.
+         */
+        private void setArrowKeyHandler() {
+            bytes.setOnKeyPressed(this::handleArrowKey);
+            kilos.setOnKeyPressed(this::handleArrowKey);
+            mega.setOnKeyPressed(this::handleArrowKey);
+            giga.setOnKeyPressed(this::handleArrowKey);
+        }
+
+        /**
          * Initialises the size options for choosing file size unit
          */
         private void initSizeOptions() {
@@ -411,46 +471,23 @@ public class FilePropertyWindow extends VBox implements Window {
             HBox buttonsPanel = new HBox();
             buttonsPanel.setSpacing(20);
 
-            RadioButton bytes = new RadioButton("Bytes");
+            bytes = new RadioButton("Bytes");
             bytes.setSelected(true);
-            bytes.setOnAction(e -> {
-                try {
-                    setSizeUnits(SizeUnit.BYTES);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            });
+            bytes.setOnAction(e -> setSizeUnits(SizeUnit.BYTES));
 
-            RadioButton kilos = new RadioButton("Kilobytes");
-            kilos.setOnAction(e -> {
-                try {
-                    setSizeUnits(SizeUnit.KILOBYTES);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            });
+            kilos = new RadioButton("Kilobytes");
+            kilos.setOnAction(e -> setSizeUnits(SizeUnit.KILOBYTES));
 
-            RadioButton mega = new RadioButton("Megabytes");
-            mega.setOnAction(e -> {
-                try {
-                    setSizeUnits(SizeUnit.MEGABYTES);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            });
+            mega = new RadioButton("Megabytes");
+            mega.setOnAction(e -> setSizeUnits(SizeUnit.MEGABYTES));
 
-            RadioButton giga = new RadioButton("Gigabytes");
-            giga.setOnAction(e -> {
-                try {
-                    setSizeUnits(SizeUnit.GIGABYTES);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            });
+            giga = new RadioButton("Gigabytes");
+            giga.setOnAction(e -> setSizeUnits(SizeUnit.GIGABYTES));
 
-            ToggleGroup toggleGroup = new ToggleGroup();
+            toggleGroup = new ToggleGroup();
             toggleGroup.getToggles().addAll(bytes, kilos, mega, giga);
 
+            setArrowKeyHandler();
             buttonsPanel.getChildren().addAll(bytes, kilos, mega, giga);
             sizeOptionsPanel.getChildren().add(buttonsPanel);
             getChildren().add(sizeOptionsPanel);
