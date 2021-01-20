@@ -37,12 +37,7 @@ public class SessionFile {
     /**
      * Comparator to sort the set based on ID
      */
-    private static final Comparator<Session> SET_COMPARATOR = new Comparator<>() {
-        @Override
-        public int compare(Session o1, Session o2) {
-            return o1.getSessionId() - o2.getSessionId();
-        }
-    };
+    private static final Comparator<Session> SET_COMPARATOR = (o1, o2) -> o1.getSessionId() - o2.getSessionId();
     /**
      * A set to keep track of session ids so we can validate uniqueness quickly
      */

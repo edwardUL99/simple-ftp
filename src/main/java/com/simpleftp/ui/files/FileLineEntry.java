@@ -24,8 +24,7 @@ import com.simpleftp.ui.directories.DirectoryPane;
 /**
  * A line entry implementation for a File.
  */
-final class FileLineEntry extends LineEntry {
-
+public final class FileLineEntry extends LineEntry {
     /**
      * Constructs a FileLineEntry
      * @param file the file that this entry represents. It is not this class' responsibility to ensure file is a normal file
@@ -33,6 +32,7 @@ final class FileLineEntry extends LineEntry {
      */
     FileLineEntry(CommonFile file, DirectoryPane owningPanel) throws FileSystemException {
         super(file.isSymbolicLink() ? "file_icon_symlink.png":"file_icon.png", file, owningPanel);
+        initDragAndDrop();
     }
 
     /**
@@ -48,10 +48,18 @@ final class FileLineEntry extends LineEntry {
     /**
      * Can be used to determine the type of this LineEntry
      *
-     * @return true if the file this LineEntry represents is a file (could be a symlink too)
+     * @return true if the file this LineEntry represents is a directory (could be a symlink too)
      */
     @Override
     public boolean isDirectory() {
         return false;
+    }
+
+    /**
+     * This method initialises drag and drop
+     */
+    private void initDragAndDrop() {
+        setOnMouseDragged(e -> e.setDragDetect(false));
+        setOnDragDetected(e -> dragStarted());
     }
 }

@@ -21,6 +21,7 @@ import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.ftp.connection.FTPConnection;
+import com.simpleftp.properties.Properties;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.exceptions.UIException;
@@ -72,12 +73,12 @@ public final class PanelView extends VBox {
      */
     public PanelView(LocalFile localDirectory) throws UIException {
         panelsBox = new HBox();
-        panelsBox.setPrefHeight(UI.FILE_EDITOR_HEIGHT + 10);
+        panelsBox.setPrefHeight(Properties.FILE_EDITOR_HEIGHT.getValue() + 10);
         panelsBox.setPrefWidth(UI.FILE_PANEL_WIDTH);
         setMaxHeight(UI.PANEL_VIEW_HEIGHT);
         setMaxWidth(UI.PANEL_VIEW_WIDTH);
 
-        connectionMonitor = new ConnectionMonitor(this, UI.CONNECTION_MONITOR_INTERVAL);
+        connectionMonitor = new ConnectionMonitor(this, Properties.CONNECTION_MONITOR_INTERVAL.getValue());
 
         initialiseLocalPanel(localDirectory);
         createEmptyRemotePanel();
@@ -133,8 +134,9 @@ public final class PanelView extends VBox {
      * Creates the panel representing a connection not established
      */
     private void createEmptyRemotePanel() {
+        int height = Properties.FILE_EDITOR_HEIGHT.getValue();
         VBox emptyPane = new VBox();
-        emptyPane.setPrefHeight(UI.FILE_EDITOR_HEIGHT);
+        emptyPane.setPrefHeight(height);
         emptyPane.setPrefWidth(UI.FILE_PANEL_WIDTH);
 
         HBox labelBox = new HBox();
@@ -144,7 +146,7 @@ public final class PanelView extends VBox {
         labelBox.getChildren().add(getRemotePanelLabel());
 
         StackPane connectionPane = new StackPane();
-        connectionPane.setPrefHeight(UI.FILE_EDITOR_HEIGHT - 5);
+        connectionPane.setPrefHeight(height - 5);
         connectionPane.setAlignment(Pos.CENTER);
         Label connectionLabel = new Label("Remote connection not established");
         connectionLabel.setFont(Font.font(20));
@@ -168,10 +170,12 @@ public final class PanelView extends VBox {
      * of the panel may fail. getDirectoryPane().getDirectory() should always succeed however
      */
     public void emptyRemotePanel() {
-        FTPConnection connection = remotePanel.getDirectoryPane()
+        DirectoryPane directoryPane = remotePanel.getDirectoryPane();
+        FTPConnection connection = directoryPane
                 .getFileSystem()
                 .getFTPConnection();
         if (!connection.isConnected() && !connection.isLoggedIn()) {
+            directoryPane.removeInstance(); // we are no longer using this directory pane instance. Remove it so mouse events etc. are not propagated to it
             createEmptyRemotePanel();
         }
     }

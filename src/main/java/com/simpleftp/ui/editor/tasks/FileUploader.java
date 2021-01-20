@@ -47,11 +47,11 @@ public abstract class FileUploader implements BackgroundTask {
     /**
      * The editor window saving the file
      */
-    protected FileEditorWindow editorWindow;
+    protected final FileEditorWindow editorWindow;
     /**
      * The path to save the file to
      */
-    protected String filePath;
+    protected final String filePath;
     /**
      * The contents of the file to upload
      */

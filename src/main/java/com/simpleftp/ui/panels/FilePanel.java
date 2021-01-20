@@ -352,6 +352,8 @@ public abstract class FilePanel extends VBox {
     private void checkComboBoxValue() {
         LineEntry lineEntry = getLineEntryFromComboBox(); // the line entry in question
         if (lineEntry != null) {
+            if (!lineEntry.isSelected())
+                lineEntry.setSelected(true);
             CommonFile file = lineEntry.getFile();
             symLinkDestButton.setVisible(file.isSymbolicLink());
             propertiesButton.setVisible(true);
@@ -360,6 +362,7 @@ public abstract class FilePanel extends VBox {
         } else {
             symLinkDestButton.setVisible(false);
             propertiesButton.setVisible(false);
+            LineEntry.unselectLastEntry(directoryPane);
         }
     }
 
@@ -410,6 +413,14 @@ public abstract class FilePanel extends VBox {
         } else {
             return null;
         }
+    }
+
+    /**
+     * Gets the selected entry from the combobox
+     * @return selected LineEntry, may be null
+     */
+    public LineEntry getSelectedEntry() {
+        return getLineEntryFromComboBox();
     }
 
     /**

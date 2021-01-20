@@ -29,11 +29,12 @@ import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.properties.Properties;
-import com.simpleftp.properties.Property;
 import com.simpleftp.ui.background.BackgroundTask;
 import com.simpleftp.ui.background.FileService;
 import com.simpleftp.ui.dialogs.*;
 import com.simpleftp.ui.exceptions.UIException;
+import com.simpleftp.ui.files.DirectoryLineEntry;
+import com.simpleftp.ui.files.FileLineEntry;
 import com.simpleftp.ui.files.LineEntry;
 import com.simpleftp.ui.interfaces.ActionHandler;
 import com.simpleftp.ui.directories.DirectoryPane;
@@ -43,14 +44,16 @@ import com.simpleftp.ui.interfaces.Window;
 import javafx.application.Platform;
 import javafx.event.EventTarget;
 import javafx.geometry.Insets;
-import javafx.scene.Node;
-import javafx.scene.Parent;
+import javafx.scene.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Tooltip;
+import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Pair;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.tika.Tika;
 
 import java.io.IOException;
@@ -123,26 +126,6 @@ public final class UI {
     public static final String PANEL_COLOUR = "-fx-background-color: #cff8fa;";
 
     /**
-     * The height for file editors
-     */
-    public static final int FILE_EDITOR_HEIGHT = Integer.parseInt(Properties.getProperty(Property.FILE_EDITOR_HEIGHT));
-
-    /**
-     * The width for file editors
-     */
-    public static final int FILE_EDITOR_WIDTH = Integer.parseInt(Properties.getProperty(Property.FILE_EDITOR_WIDTH));
-
-    /**
-     * The property to determine if remote listings should be cached
-     */
-    public static final boolean CACHE_REMOTE_DIRECTORY_LISTING = Boolean.parseBoolean(Properties.getProperty(Property.CACHE_REMOTE_DIRECTORY_LISTING));
-
-    /**
-     * To property to determine if all LineEntries that are cached should be removed on a refresh or just the current directory
-     */
-    public static final boolean REMOVE_ALL_LISTING_CACHE_REFRESH = Boolean.parseBoolean(Properties.getProperty(Property.REMOVE_ALL_LISTING_CACHE_REFRESH));
-
-    /**
      * The width for the DirectoryPane ComboBox
      */
     public static final int PANEL_COMBO_WIDTH = 195;
@@ -198,11 +181,6 @@ public final class UI {
     private static final ArrayList<Window> openedWindows = new ArrayList<>();
 
     /**
-     * The interval to monitor the connection at for the PanelView
-     */
-    public static final int CONNECTION_MONITOR_INTERVAL = Integer.parseInt(Properties.getProperty(Property.CONNECTION_MONITOR_INTERVAL));
-
-    /**
      * An enum to determine which type of dialog to show for a given exception
      */
     public enum ExceptionType {
@@ -224,6 +202,14 @@ public final class UI {
      * Lost of paths of opened local files
      */
     private static final Set<String> openedLocalFiles = new HashSet<>();
+
+    /**
+     * The Scene this application is being displayed in.
+     * Should be set in the start() method of the main class
+     */
+    @Getter
+    @Setter
+    public static Scene applicationScene;
 
     /**
      * Prevent instantiation
@@ -744,6 +730,34 @@ public final class UI {
      */
     public static final class MouseEvents {
         /**
+         * The colour for when drag enters any other object
+         */
+        public static final String DRAG_ENTERED_BACKGROUND = "-fx-background-color: rgb(135,206,250, 0.4);";
+
+        /**
+         * The colour for when drag enters an object where there's already a drag entered colour
+         */
+        public static final String DRAG_ENTERED_BACKGROUND_CLEAR = "-fx-background-color: rgb(135,206,250, 0.0);";
+
+        /**
+         * This set contains the classes that are supported drag and drop targets
+         */
+        private static final Set<Class<?>> DRAG_DROP_TARGETS = new HashSet<>();
+
+        static {
+            DRAG_DROP_TARGETS.add(DirectoryPane.UpButton.class);
+            DRAG_DROP_TARGETS.add(DirectoryPane.EntriesBox.class);
+            DRAG_DROP_TARGETS.add(DirectoryLineEntry.class);
+        }
+
+        /**
+         * If a drag event is in progress, this determines the cursor hand to use in a move
+         */
+        @Getter
+        @Setter
+        private static boolean dragInProgress = false;
+
+        /**
          * This method attempts to select the LineEntry that may have been picked by the MouseEvent target.
          * If the target is a LineEntry, it is returned. If it is not, the parent of it is checked to be a LineEntry.
          * <p>
@@ -762,8 +776,15 @@ public final class UI {
          * @return the LineEntry if found, null if not
          */
         public static LineEntry selectLineEntry(MouseEvent mouseEvent) {
-            EventTarget target = mouseEvent.getTarget();
+            return selectLineEntry(mouseEvent.getTarget());
+        }
 
+        /**
+         * Determines if this event target represents a LineEntry and returns it
+         * @param target the event target to extract the LineEntry from
+         * @return the line entry if found, null if now
+         */
+        public static LineEntry selectLineEntry(EventTarget target) {
             if (target instanceof LineEntry) {
                 return (LineEntry)target;
             } else {
@@ -775,6 +796,95 @@ public final class UI {
                     return null;
                 }
             }
+        }
+
+        /**
+         * Selects a line entry from the provided object if it is an instance of EventTarget
+         * @param object the object to select line entry from
+         * @return the selected LineEntry if found, null if not EventTarget or not found
+         */
+        public static LineEntry selectLineEntry(Object object) {
+            if (object instanceof EventTarget)
+                return selectLineEntry(((EventTarget)object));
+            else
+                return null;
+        }
+
+        /**
+         * This method attempts to identify if the target is a valid target, i.e. directory line entry or EntriesBox
+         * @param target the target of the event
+         * @return true if a valid target, false if not
+         */
+        public static boolean validDragAndDropTarget(EventTarget target) {
+            if (!DRAG_DROP_TARGETS.contains(target.getClass())) {
+                if (target instanceof FileLineEntry)
+                    return validDragAndDropTarget(((LineEntry)target).getParent());
+                else
+                    return false;
+            } else {
+                return true;
+            }
+        }
+
+        /**
+         * Gets the directory pane from the given object
+         * @param eventObject the object to find directory pane from
+         * @return the found directory pane, null if not found
+         */
+        public static DirectoryPane getDirectoryPane(Object eventObject) {
+            if (eventObject instanceof Node) {
+                Node node = (Node)eventObject;
+                if (node instanceof DirectoryPane) {
+                    return (DirectoryPane)node;
+                } else if (node instanceof DirectoryPane.EntriesBox) {
+                    return ((DirectoryPane.EntriesBox)eventObject).getDirectoryPane();
+                } else {
+                    LineEntry lineEntry = selectLineEntry(eventObject);
+
+                    if (lineEntry != null)
+                        return lineEntry.getOwningPane();
+                    else
+                        return null;
+                }
+            } else {
+                return null;
+            }
+        }
+
+        /**
+         * Sets the cursor image for the drag event based on the source line entry if the Application Scene is not null
+         * @param source the source line entry. This is ignored if DRAG_DROP_CURSOR_FILE_ICON property is false
+         */
+        public static void setDragCursorImage(LineEntry source) {
+           if (applicationScene != null && dragInProgress) {
+               if (!Properties.DRAG_DROP_CURSOR_FILE_ICON.getValue()) {
+                   applicationScene.setCursor(Cursor.MOVE);
+               } else {
+                   boolean symlink = source.getFile().isSymbolicLink();
+                   Image image = source.isDirectory() ? new Image(symlink ? "dir_icon_symlink.png" : "dir_icon.png") : new Image(symlink ? "file_icon_symlink.png" : "file_icon.png");
+                   applicationScene.setCursor(new ImageCursor(image));
+               }
+            }
+        }
+
+        /**
+         * Sets the cursor image for the drag entry event based on the source line entry if the Application Scene is not null
+         * if DRAG_DROP_CURSOR_FILE_ICON property is false
+         */
+        public static void setDragCursorEnteredImage() {
+            if (applicationScene != null && dragInProgress) {
+                if (!Properties.DRAG_DROP_CURSOR_FILE_ICON.getValue()) {
+                    applicationScene.setCursor(Cursor.OPEN_HAND);
+                }
+            }
+        }
+
+        /**
+         * If Application scene is not null, the mouse cursor is reset to default
+         */
+        public static void resetMouseCursor() {
+            if (applicationScene != null && dragInProgress)
+                applicationScene.setCursor(Cursor.DEFAULT);
         }
     }
 }

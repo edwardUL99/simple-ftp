@@ -286,15 +286,15 @@ public class LocalFileSystem extends AbstractFileSystem {
                 } else if (isFile) {
                     LocalFile downloaded = ftpConnection.downloadFile(filePath, destPath);
                     if (downloaded == null || !downloaded.exists())
-                        throw new FileSystemException("Failed to download file: " + filePath + " with FTP Reply: " + ftpConnection.getReplyString());
+                        throw new FileSystemException("Failed to download file: " + filePath);
 
                     if (!copy && !ftpConnection.removeFile(filePath))
-                        throw new FileSystemException("Failed to remove file: " + filePath + " with FTP Reply: " + ftpConnection.getReplyString());
+                        throw new FileSystemException("Failed to remove file: " + filePath);
                 }
             }
 
             if (!copy && !ftpConnection.removeDirectory(listPath))
-                throw new FileSystemException("Failed to remove file: " + listPath + " with FTP Reply: " + ftpConnection.getReplyString());
+                throw new FileSystemException("Failed to remove file: " + listPath);
         }
     }
 

@@ -25,11 +25,12 @@ import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
+import com.simpleftp.properties.Properties;
 import com.simpleftp.ui.UI;
+import com.simpleftp.ui.background.FileService;
 import com.simpleftp.ui.files.LineEntries;
 import com.simpleftp.ui.files.LineEntry;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 
 /**
@@ -40,10 +41,6 @@ public final class RemoteDirectoryPane extends DirectoryPane {
      * A cached list of entries to reduce time spent navigating without an update in already visited directories on a remote pane
      */
     private final HashMap<String, LineEntries> cachedEntries;
-    /**
-     * A boolean flag to determine if caching of line entries is enabled
-     */
-    private final boolean CACHING_ENABLED = UI.CACHE_REMOTE_DIRECTORY_LISTING;
 
     /**
      * Constructs a RemoteDirectoryPane with the given directory to initialise this panel with
@@ -52,7 +49,7 @@ public final class RemoteDirectoryPane extends DirectoryPane {
     RemoteDirectoryPane(RemoteFile directory) throws FileSystemException {
         super();
         fileSystem = new RemoteFileSystem();
-        cachedEntries = CACHING_ENABLED ? new HashMap<>():null;
+        cachedEntries = Properties.CACHE_REMOTE_DIRECTORY_LISTING.getValue() ? new HashMap<>():null;
         initDirectory(directory);
     }
 
@@ -163,7 +160,6 @@ public final class RemoteDirectoryPane extends DirectoryPane {
      */
     private void constructListOfRemoteFiles(LineEntries lineEntries, String path) {
         try {
-            ArrayList<LineEntry> entries = lineEntries.getLineEntries();
             for (CommonFile f : fileSystem.listFiles(path)) {
                 boolean showFile = showFile(f, e -> {
                     String fileName = f.getName();
@@ -174,7 +170,7 @@ public final class RemoteDirectoryPane extends DirectoryPane {
                     LineEntry constructed = createLineEntry(f);
 
                     if (constructed != null)
-                        entries.add(constructed);
+                        lineEntries.add(constructed);
                 }
             }
         } catch (FileSystemException ex) {
@@ -242,7 +238,7 @@ public final class RemoteDirectoryPane extends DirectoryPane {
         String currentDirectory = getCurrentWorkingDirectory();
         LineEntries lineEntries;
 
-        if (CACHING_ENABLED) {
+        if (Properties.CACHE_REMOTE_DIRECTORY_LISTING.getValue()) {
             lineEntries = cachedEntries.get(currentDirectory);
             if (lineEntries != null && lineEntries.size() > 0 && useCache) {
                 lineEntries.setSort(false);
@@ -274,8 +270,40 @@ public final class RemoteDirectoryPane extends DirectoryPane {
      * @param filePath the file path to refresh
      */
     public void refreshCache(String filePath) {
-        if (CACHING_ENABLED)
+        if (Properties.CACHE_REMOTE_DIRECTORY_LISTING.getValue())
             cachedEntries.remove(filePath); // removing the cache for this file path will force a refresh on the next visit to this directory
+    }
+
+    /**
+     * This method creates and schedules the file service used for copying/moving the source to destination
+     *
+     * @param source      the source file to be copied/moved
+     * @param destination the destination directory to be copied/moved to
+     * @param copy        true to copy, false to move
+     * @param targetPane  the target pane if a different pane. Leave null if not different
+     */
+    @Override
+    void scheduleCopyMoveService(CommonFile source, CommonFile destination, boolean copy, DirectoryPane targetPane) {
+        String operationHeader = copy ? "Copy":"Move", operationMessage = copy? "copy":"move";
+        FileService.newInstance(source, destination, copy ? FileService.Operation.COPY:FileService.Operation.MOVE, destination.isLocal())
+                .setOnOperationSucceeded(() -> {
+                    String destinationPath = destination.getFilePath();
+                    UI.doInfo(operationHeader + " Successful", "The " + operationMessage + " of " + source.getFilePath()
+                    + " to " + destinationPath + " has completed successfully");
+
+                    if (!copy)
+                        refreshCurrentDirectory(); // if it was a move, we refresh so that the file no longer exists
+
+                    if (!destinationPath.equals(directory.getFilePath()))
+                        refreshCache(destinationPath);
+
+                    if (targetPane != null && targetPane.isLocal()) {
+                        targetPane.refresh();
+                    }
+                })
+                .setOnOperationFailed(() -> UI.doError(operationHeader + " Failed", "The " + operationMessage + " of " + source.getFilePath()
+                + " to " + destination.getFilePath() + " has failed"))
+                .schedule();
     }
 
     /**

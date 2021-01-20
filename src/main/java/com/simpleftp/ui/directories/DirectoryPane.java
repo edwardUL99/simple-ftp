@@ -25,30 +25,33 @@ import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.exceptions.FTPException;
+import com.simpleftp.properties.Properties;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.tasks.FileStringDownloader;
 import com.simpleftp.ui.files.FilePropertyWindow;
 import com.simpleftp.ui.files.LineEntries;
 import com.simpleftp.ui.files.LineEntry;
 import com.simpleftp.ui.panels.FilePanel;
+import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
+import javafx.scene.input.*;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import lombok.Getter;
 
 import java.util.ArrayList;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
-
-/*
-The conditions for determining if an exception or error dialog show up may have to be reconsidered
- */
 
 /**
  * Represents a panel of Files. These files may be in different locations, hence why the class is abstract.
@@ -61,15 +64,7 @@ public abstract class DirectoryPane extends VBox {
     /**
      * The status panel which contains all the buttons and current symbolicLink label
      */
-    private HBox statusPanel;
-    /**
-     * The label outlining current symbolicLink
-     */
-    private Label currentDirectoryLabel;
-    /**
-     * The label showing the path to the current symbolicLink
-     */
-    private Label currentDirectory;
+    private StatusPanel statusPanel;
     /**
      * A tool tip for displaying the current symbolicLink when mouse is hovered over currentDirectory in case it is abbreviated
      */
@@ -81,7 +76,8 @@ public abstract class DirectoryPane extends VBox {
     /**
      * Button for moving up to the parent symbolicLink
      */
-    private Button up;
+    @Getter
+    private UpButton upButton;
     /**
      * The list of line entries inside in entries box
      */
@@ -101,9 +97,10 @@ public abstract class DirectoryPane extends VBox {
      */
     protected ScrollPane entriesScrollPane;
     /**
-     * The VBox which will hold all the LineEntries
+     * The entries box which will hold all the LineEntries
      */
-    private VBox entriesBox;
+    @Getter
+    private EntriesBox entriesBox;
     /**
      * The file system this DirectoryPane is connected to. Expected to be initialised by sub-classes
      */
@@ -135,6 +132,10 @@ public abstract class DirectoryPane extends VBox {
      * The directory representing root
      */
     protected CommonFile rootDirectory;
+    /**
+     * This list keeps track of DirectoryPane instances for use with drag and drop etc
+     */
+    private static final ArrayList<DirectoryPane> instances = new ArrayList<>();
 
     /**
      * Constructs a DirectoryPane object.
@@ -149,6 +150,7 @@ public abstract class DirectoryPane extends VBox {
         initEntriesBox();
         initEmptyFolderPane();
         setOnMouseClicked(this::unselectFile);
+        instances.add(this);
     }
 
     /**
@@ -165,7 +167,7 @@ public abstract class DirectoryPane extends VBox {
     public void goToRoot() throws FileSystemException {
         if (!isAtRootDirectory()) {
             setDirectory(getRootDirectory());
-            refresh(true, UI.REMOVE_ALL_LISTING_CACHE_REFRESH);
+            refresh(true, Properties.REMOVE_ALL_LISTING_CACHE_REFRESH.getValue());
         }
     }
 
@@ -195,24 +197,6 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
-     * Initialises the CurrentDirectory labels of the DirectoryPane and returns the header label
-     * @return header label with value "Current Directory:"
-     */
-    private Label initCurrentDirectoryLabel() {
-        currentDirectoryLabel = new Label("Current Directory:");
-        currentDirectoryLabel.setPadding(new Insets(5, 0, 0, 0));
-        currentDirectoryLabel.setAlignment(Pos.CENTER_LEFT);
-        currentDirectoryLabel.setFont(Font.font("Monospaced", FontWeight.BOLD, currentDirectoryLabel.getFont().getSize()));
-
-        currentDirectory = new Label();
-        currentDirectory.setPadding(new Insets(5, 0, 0, 0));
-        currentDirectory.setAlignment(Pos.CENTER_LEFT);
-        currentDirectory.setFont(Font.font("Monospaced"));
-
-        return currentDirectoryLabel;
-    }
-
-    /**
      * Initialises the buttons and sets their respective actions
      */
     private void initButtons() {
@@ -220,35 +204,31 @@ public abstract class DirectoryPane extends VBox {
         refresh.setTooltip(new Tooltip("Refresh the files listing on this panel"));
         refresh.setOnAction(e -> refresh());
 
-        up = new Button("Up");
-        up.setTooltip(new Tooltip("Move up to the parent directory"));
-        up.setOnAction(e -> up());
+        upButton = new UpButton();
+        upButton.setTooltip(new Tooltip("Move up to the parent directory\nDrop files here to copy/move to parent"));
+        upButton.setAction(e -> up());
     }
 
     /**
-     * Intialises the status panel which contains the buttons and current symbolicLink
+     * Initialises the status panel which contains the buttons and current symbolicLink
      */
     private void initStatusPanel() {
-        statusPanel = new HBox();
-        statusPanel.setPadding(new Insets(UI.UNIVERSAL_PADDING));
-        statusPanel.setSpacing(10);
-        statusPanel.getChildren().addAll(refresh, up, initCurrentDirectoryLabel(), currentDirectory);
-        statusPanel.setBorder(new Border(new BorderStroke(Paint.valueOf("BLACK"), BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));
-        statusPanel.setStyle(UI.GREY_BACKGROUND);
+        statusPanel = new StatusPanel();
+        statusPanel.init();
     }
 
     /**
      * Initialises the VBox containing file entries
      */
     private void initEntriesBox() {
-        entriesBox = new VBox();
+        entriesBox = new EntriesBox();
+        entriesBox.initDragAndDrop();
         entriesScrollPane = new ScrollPane();
         entriesScrollPane.setFitToWidth(true);
         entriesScrollPane.setFitToHeight(true);
         entriesScrollPane.setContent(entriesBox);
         entriesScrollPane.setStyle(UI.WHITE_BACKGROUND);
         entriesScrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
-        entriesBox.setStyle(UI.WHITE_BACKGROUND);
         entriesScrollPane.setPrefHeight(UI.FILE_PANEL_HEIGHT);
     }
 
@@ -260,7 +240,7 @@ public abstract class DirectoryPane extends VBox {
         setDirectory(directory);
         refresh();
 
-        setCurrDirText(directory.getFilePath());
+        statusPanel.setCurrDirText(directory.getFilePath());
     }
 
     /**
@@ -272,31 +252,6 @@ public abstract class DirectoryPane extends VBox {
         this.filePanel = filePanel;
         if (this.filePanel.getDirectoryPane() != this) // prevent a cycle of infinite recursion
             this.filePanel.setDirectoryPane(this);
-    }
-
-    /**
-     * Sets the text of the current symbolicLink text in the status panel and abbreviates it if it is too long
-     * @param currentDirectory the symbolicLink to change the text to
-     */
-    private void setCurrDirText(String currentDirectory) {
-        if (currentDirectory.length() >= MAX_FILE_PATH_LENGTH) {
-            String currentDirectoryShortened = currentDirectory.substring(0, MAX_FILE_PATH_LENGTH - 3) + "...";
-            if (currentDirectoryTooltip == null) {
-                currentDirectoryTooltip = new Tooltip(currentDirectory);
-                Tooltip.install(this.currentDirectory, currentDirectoryTooltip);
-            } else {
-                currentDirectoryTooltip.setText(currentDirectory);
-            }
-
-            this.currentDirectory.setText(currentDirectoryShortened);
-        } else {
-            if (currentDirectoryTooltip != null) {
-                Tooltip.uninstall(this.currentDirectory, currentDirectoryTooltip);
-                currentDirectoryTooltip = null;
-            }
-
-            this.currentDirectory.setText(currentDirectory);
-        }
     }
 
     /**
@@ -314,7 +269,7 @@ public abstract class DirectoryPane extends VBox {
         if (!isAtRootDirectory()) {
             try {
                 setDirectory(directory.getExistingParent());
-                refresh(true, UI.REMOVE_ALL_LISTING_CACHE_REFRESH);
+                refresh(true, Properties.REMOVE_ALL_LISTING_CACHE_REFRESH.getValue());
             } catch (FileSystemException ex) {
                 UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
             }
@@ -369,7 +324,7 @@ public abstract class DirectoryPane extends VBox {
         String path = directory.getFilePath();
         UI.openFile(path, local); // open the new symbolicLink
 
-        setCurrDirText(path);
+        statusPanel.setCurrDirText(path);
      }
 
     /**
@@ -408,7 +363,7 @@ public abstract class DirectoryPane extends VBox {
 
         CommonFile targetFile = fileSystem.getFile(path);
         setDirectory(targetFile); // need to use the checked setDirectory as this is a public method
-        refresh(true, UI.REMOVE_ALL_LISTING_CACHE_REFRESH);
+        refresh(true, Properties.REMOVE_ALL_LISTING_CACHE_REFRESH.getValue());
     }
 
     /**
@@ -567,8 +522,8 @@ public abstract class DirectoryPane extends VBox {
      * @param lineEntries the line entries to add
      */
     private void addLineEntriesFromList(LineEntries lineEntries) {
-        ArrayList<LineEntry> entries = lineEntries.getLineEntries();
-        entries.forEach(entriesBox.getChildren()::add);
+        entriesBox.getChildren().addAll(lineEntries.getLineEntries());
+        entriesBox.addBottomSpacing();
     }
 
     /**
@@ -599,7 +554,7 @@ public abstract class DirectoryPane extends VBox {
     public void refresh() {
         try {
             checkCurrentDirExistence();
-            refresh(false, UI.REMOVE_ALL_LISTING_CACHE_REFRESH);
+            refresh(false, Properties.REMOVE_ALL_LISTING_CACHE_REFRESH.getValue());
         } catch (FileSystemException ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
@@ -611,7 +566,7 @@ public abstract class DirectoryPane extends VBox {
      * @param removeAllCache if useCache is false, then removeAllCache means that all cached line entries should be removed, if false, just current directory
      */
     protected void refresh(boolean useCache, boolean removeAllCache) {
-        if (!UI.CACHE_REMOTE_DIRECTORY_LISTING)
+        if (!Properties.CACHE_REMOTE_DIRECTORY_LISTING.getValue())
             useCache = false; // always use false if properties have set cache to false
 
         LineEntries lineEntries = constructListOfFiles(useCache, removeAllCache);
@@ -646,7 +601,7 @@ public abstract class DirectoryPane extends VBox {
      * Calls refresh but using cached information
      */
     public void cacheRefresh() {
-        refresh(true, UI.REMOVE_ALL_LISTING_CACHE_REFRESH);
+        refresh(true, Properties.REMOVE_ALL_LISTING_CACHE_REFRESH.getValue());
     }
 
     /**
@@ -656,7 +611,7 @@ public abstract class DirectoryPane extends VBox {
     private void doubleClickDirectoryEntry(final LineEntry lineEntry) {
         CommonFile file = lineEntry.getFile();
         setDirectoryUnchecked(file);
-        refresh(true, UI.REMOVE_ALL_LISTING_CACHE_REFRESH);
+        refresh(true, Properties.REMOVE_ALL_LISTING_CACHE_REFRESH.getValue());
     }
 
     /**
@@ -720,15 +675,6 @@ public abstract class DirectoryPane extends VBox {
         } catch (FileSystemException ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
-    }
-
-    /**
-     * Provides the click action for the specified line entry
-     * @param lineEntry the line entry to click
-     */
-    public void click(final LineEntry lineEntry) {
-        if (filePanel != null)
-            filePanel.setComboBoxSelection(lineEntry);
     }
 
     /**
@@ -845,15 +791,116 @@ public abstract class DirectoryPane extends VBox {
 
         if (fileMask == null) {
             fileMaskRegex = null;
-            currentDirectoryLabel.setText("Current Directory:");
+            statusPanel.currentDirectoryLabel.setText("Current Directory:");
             MAX_FILE_PATH_LENGTH = 30;
         } else {
             fileMaskRegex = createRegexFromGlob(fileMask);
-            currentDirectoryLabel.setText("Current Directory (masked): ");
+            statusPanel.currentDirectoryLabel.setText("Current Directory (masked): ");
             MAX_FILE_PATH_LENGTH = 20;
         }
 
-        setCurrDirText(getCurrentWorkingDirectory());
+        statusPanel.setCurrDirText(getCurrentWorkingDirectory());
+    }
+
+    /**
+     * This method creates and schedules the file service used for copying/moving the source to destination
+     * @param source the source file to be copied/moved
+     * @param destination the destination directory to be copied/moved to
+     * @param copy true to copy, false to move
+     * @param targetPane  the target pane if a different pane. Leave null if not different
+     */
+    abstract void scheduleCopyMoveService(CommonFile source, CommonFile destination, boolean copy, DirectoryPane targetPane);
+
+    /**
+     * Validates that the target entry is a directory if not null and that the target isLocal matches this isLocal.
+     * If not, throws IllegalArgumentException
+     * @param target the target line entry to check. If null, this method is a no-op
+     */
+    private void validateTarget(LineEntry target) {
+        if (target != null) {
+            if (!target.isDirectory())
+                throw new IllegalArgumentException("The target LineEntry must be a directory");
+
+            boolean targetLocal = target.isLocal();
+            boolean isLocal = isLocal();
+
+            if (targetLocal != isLocal) {
+                if (isLocal)
+                    throw new IllegalArgumentException("The target LineEntry is remote but the DirectoryPane is local, they must both be local");
+                else
+                    throw new IllegalArgumentException("The target LineEntry is local but the DirectoryPane is remote, they must both be remote");
+            }
+        }
+    }
+
+    /**
+     * This method handles a DragEvent that source and target is on the same DirectoryPane.
+     * This check is expected to be already done. This method consumes the events and completes the drop
+     * @param dragEvent the drag event
+     * @param target the target line entry. Should be a directory. If it's null the current directory is taken as the directory
+     */
+    public void handleDragAndDropOnSamePane(MouseDragEvent dragEvent, LineEntry target) {
+        validateTarget(target);
+
+        CommonFile destination = target != null ? target.getFile():directory;
+        CommonFile source;
+
+        LineEntry sourceEntry = UI.MouseEvents.selectLineEntry(dragEvent.getGestureSource());
+
+        if (sourceEntry != null) {
+            source = sourceEntry.getFile();
+            boolean copy = !Properties.DRAG_DROP_SAME_PANEL_OPERATION.getValue().equals("MOVE"); // only 2 possible values for this property, so just check value of one, if true it means copy was chosen
+            if (dragEvent.isControlDown()) {
+                copy = !copy;
+            }
+
+            if (!copy && UI.isFileLockedByFileService(source))
+                UI.doError("File Locked", "File " + source.getName() + " is currently locked by a background task, file can't be moved");
+            else
+                scheduleCopyMoveService(source, destination, copy, null); // same panel is a move operation
+        }
+    }
+
+    /**
+     * This method handles a DragEvent that target is on a different DirectoryPane.
+     * This check is expected to be already done. This method consumes the events and completes the drop
+     * @param dragEvent the drag event
+     * @param sourcePane the directory pane that's the source of the drag and drop
+     * @param target the target line entry. Should be a directory. If it's null the current directory is taken as the directory
+     */
+    public void handleDragAndDropToDifferentPane(MouseDragEvent dragEvent, DirectoryPane sourcePane, LineEntry target) {
+        CommonFile destination = target != null ? target.getFile():directory;
+        CommonFile source;
+
+        LineEntry sourceEntry = UI.MouseEvents.selectLineEntry(dragEvent.getGestureSource());
+
+        if (sourceEntry != null) {
+            source = sourceEntry.getFile();
+            boolean copy = Properties.DRAG_DROP_DIFFERENT_PANEL_OPERATION.getValue().equals("COPY"); // only 2 possible values for this property, so just check value of one, if false it means move was chosen
+            if (dragEvent.isControlDown()) {
+                copy = !copy;
+            }
+            sourcePane.scheduleCopyMoveService(source, destination, copy, this); // different panel is a copy operation
+        }
+
+        dragEvent.consume();
+    }
+
+    /**
+     * If you are not using this DirectoryPane anymore, you should call this method so that Drag and Drop etc. is not
+     * propagated to it anymore
+     */
+    public void removeInstance() {
+        instances.remove(this);
+    }
+
+    /**
+     * Apply the given consumer for each instance of directory pane registered.
+     * This method is useful for applying mouse events to each pane etc.
+     * @param consumer the consumer to apply to each instance.
+     */
+    public static void forEachInstance(Consumer<DirectoryPane> consumer) {
+        instances.forEach(consumer);
     }
 
     /**
@@ -870,5 +917,284 @@ public abstract class DirectoryPane extends VBox {
             return new LocalDirectoryPane((LocalFile)directory);
         else
             return new RemoteDirectoryPane((RemoteFile)directory);
+    }
+
+    /**
+     * This class holds buttons related to current directory and a label with the directory
+     */
+    public class StatusPanel extends HBox {
+        /**
+         * The label outlining current symbolicLink
+         */
+        private Label currentDirectoryLabel;
+        /**
+         * The label showing the path to the current symbolicLink
+         */
+        private Label currentDirectory;
+
+        /**
+         * Constructs a status panel
+         */
+        private StatusPanel() {
+            setPadding(new Insets(UI.UNIVERSAL_PADDING));
+            setSpacing(10);
+            setBorder(new Border(new BorderStroke(Paint.valueOf("BLACK"), BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));
+            setStyle(UI.GREY_BACKGROUND);
+        }
+
+        /**
+         * This method initialises the children of the StatusPanel.
+         */
+        private void init() {
+            getChildren().addAll(refresh, upButton, initCurrentDirectoryLabel(), currentDirectory);
+        }
+
+        /**
+         * Initialises the CurrentDirectory labels of the DirectoryPane and returns the header label
+         * @return header label with value "Current Directory:"
+         */
+        private Label initCurrentDirectoryLabel() {
+            currentDirectoryLabel = new Label("Current Directory:");
+            currentDirectoryLabel.setPadding(new Insets(5, 0, 0, 0));
+            currentDirectoryLabel.setAlignment(Pos.CENTER_LEFT);
+            currentDirectoryLabel.setFont(Font.font("Monospaced", FontWeight.BOLD, currentDirectoryLabel.getFont().getSize()));
+
+            currentDirectory = new Label();
+            currentDirectory.setPadding(new Insets(5, 0, 0, 0));
+            currentDirectory.setAlignment(Pos.CENTER_LEFT);
+            currentDirectory.setFont(Font.font("Monospaced"));
+
+            return currentDirectoryLabel;
+        }
+
+        /**
+         * Sets the text of the current symbolicLink text in the status panel and abbreviates it if it is too long
+         * @param currentDirectory the symbolicLink to change the text to
+         */
+        private void setCurrDirText(String currentDirectory) {
+            if (currentDirectory.length() >= MAX_FILE_PATH_LENGTH) {
+                String currentDirectoryShortened = currentDirectory.substring(0, MAX_FILE_PATH_LENGTH - 3) + "...";
+                if (currentDirectoryTooltip == null) {
+                    currentDirectoryTooltip = new Tooltip(currentDirectory);
+                    Tooltip.install(this.currentDirectory, currentDirectoryTooltip);
+                } else {
+                    currentDirectoryTooltip.setText(currentDirectory);
+                }
+
+                this.currentDirectory.setText(currentDirectoryShortened);
+            } else {
+                if (currentDirectoryTooltip != null) {
+                    Tooltip.uninstall(this.currentDirectory, currentDirectoryTooltip);
+                    currentDirectoryTooltip = null;
+                }
+
+                this.currentDirectory.setText(currentDirectory);
+            }
+        }
+    }
+
+    /**
+     * This class represents a box for the line entries
+     */
+    public class EntriesBox extends VBox {
+        /**
+         * Constructs an entries box object
+         */
+        private EntriesBox() {
+            setStyle(UI.WHITE_BACKGROUND);
+            setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
+            VBox.setVgrow(this, Priority.ALWAYS);
+            setMaxHeight(Double.MAX_VALUE);
+        }
+
+        /**
+         * Adds the bottom spacing to the end of the entries box to allow drag drop to occur if the entries box is full
+         */
+        public void addBottomSpacing() {
+            /*
+               There are children.size() (y) line entries of x height.
+               We want to set the minimum height of our HBox to (x * y) height with a little offset to
+                allow space to drag and drop into the current directory if it is full.
+              */
+            ObservableList<Node> children = getChildren();
+            double entryHeight = ((LineEntry)children.get(0)).getHeight() * children.size();
+            setHeight(entryHeight);
+            setMinHeight(entryHeight + 50.00);
+        }
+
+        /**
+         * This method handles the logic for handling a drag event that has been entered on a target on this DirectoryPane
+         * @param dragEvent the drag event representing the entry
+         */
+        private void dragEntered(MouseDragEvent dragEvent) {
+            LineEntry sourceEntry = UI.MouseEvents.selectLineEntry(dragEvent.getGestureSource());
+            LineEntry targetEntry = UI.MouseEvents.selectLineEntry(dragEvent.getTarget());
+
+            if (sourceEntry != null && sourceEntry.getOwningPane() != DirectoryPane.this
+                    && (targetEntry == null || targetEntry.isFile())) {
+                setStyle(UI.MouseEvents.DRAG_ENTERED_BACKGROUND);
+                UI.MouseEvents.setDragCursorEnteredImage();
+            }
+        }
+
+        /**
+         * This method handles the logic for handling a drag event that has exited a target on this DirectoryPane
+         * @param dragEvent the drag event representing the exit
+         */
+        private void dragExited(MouseDragEvent dragEvent) {
+            setStyle(UI.WHITE_BACKGROUND);
+            if (!Properties.DRAG_DROP_CURSOR_FILE_ICON.getValue())
+                UI.MouseEvents.setDragCursorImage(null); // leave null as we don't need it her
+        }
+
+        /**
+         * This method handles the logic for handling a drag event that has been dropped on this DirectoryPane
+         * @param dragEvent the drag event representing the drop
+         */
+        private void dragDropped(MouseDragEvent dragEvent) {
+            LineEntry sourceEntry = UI.MouseEvents.selectLineEntry(dragEvent.getGestureSource());
+            DirectoryPane sourcePane = sourceEntry != null ? sourceEntry.getOwningPane():null;
+            if (sourcePane != null && sourcePane != DirectoryPane.this) {
+                LineEntry targetEntry = UI.MouseEvents.selectLineEntry(dragEvent.getTarget());
+
+                if (targetEntry == null || (targetEntry.isFile() && targetEntry.getOwningPane() == DirectoryPane.this))
+                    DirectoryPane.this.handleDragAndDropToDifferentPane(dragEvent, sourcePane,
+                            LineEntry.newInstance(directory, DirectoryPane.this));
+            }
+
+            dragEvent.consume();
+        }
+
+        /**
+         * Initialises the logic for drag and drop
+         */
+        private void initDragAndDrop() {
+            setOnMouseDragEntered(this::dragEntered);
+            setOnMouseDragExited(this::dragExited);
+            setOnMouseDragReleased(this::dragDropped);
+        }
+
+        /**
+         * Retrieves the directory pane that contains this EntriesBox
+         * @return directory pane containing this EntriesBox
+         */
+        public DirectoryPane getDirectoryPane() {
+            return DirectoryPane.this;
+        }
+    }
+
+    /**
+     * This class represents the Up button so that mouse events can be registered on it
+     */
+    public class UpButton extends Button {
+        /**
+         * The original style before any edits
+         */
+        private final String originalStyle = getStyle();
+        /**
+         * The original event handler before the button was disabled
+         */
+        private EventHandler<ActionEvent> originalHandler;
+
+        /**
+         * Constructs an Up Button
+         */
+        private UpButton() {
+            setText("Up");
+            initDragAndDrop();
+        }
+
+        /**
+         * If true, displays this up button as a drag drop target.
+         * While the button is a target it becomes unusable so when drag is detected this should be called with true, but when the drag
+         * is finished, call this with false to make it usable again
+         * @param display true to display as target, false to not
+         */
+        public final void displayDragDropTarget(boolean display) {
+            if (display) {
+                setStyle(UI.MouseEvents.DRAG_ENTERED_BACKGROUND);
+                setOnAction(null);
+            } else {
+                setStyle(originalStyle);
+                setOnAction(originalHandler);
+            }
+        }
+
+        /**
+         * Retrieves the DirectoryPane this up button is a member of
+         * @return directory pane containing this up button
+         */
+        public DirectoryPane getDirectoryPane() {
+            return DirectoryPane.this;
+        }
+
+        /**
+         * This method should be called instead of setOnAction or else a dragAndDrop will effect the action of the button
+         * @param actionHandler the action handler to set
+         */
+        public void setAction(EventHandler<ActionEvent> actionHandler) {
+            originalHandler = actionHandler;
+            setOnAction(actionHandler);
+        }
+
+        /**
+         * Handles mouse entry event to the up button
+         * @param mouseDragEvent the mouse event representing the entry
+         */
+        private void dragEntered(MouseDragEvent mouseDragEvent) {
+            LineEntry sourceEntry = UI.MouseEvents.selectLineEntry(mouseDragEvent.getGestureSource());
+
+            if (mouseDragEvent.getGestureSource() != this && sourceEntry != null) {
+                UI.MouseEvents.setDragCursorEnteredImage();
+            }
+        }
+
+        /**
+         * Handles mouse exit event from the up button
+         * @param mouseDragEvent the mouseevent representing the exit
+         */
+        private void dragExited(MouseDragEvent mouseDragEvent) {
+            if (!Properties.DRAG_DROP_CURSOR_FILE_ICON.getValue())
+                UI.MouseEvents.setDragCursorImage(null);
+        }
+
+        /**
+         * This method handles a drag being dropped onto the up button
+         * @param mouseDragEvent the mouse drag event representing the drag being dropped
+         */
+        private void dragDropped(MouseDragEvent mouseDragEvent) {
+            mouseDragEvent.consume();
+            if (!isAtRootDirectory()) {
+                Object source = mouseDragEvent.getGestureSource();
+                if (source != this) {
+                    LineEntry sourceEntry = UI.MouseEvents.selectLineEntry(mouseDragEvent.getGestureSource());
+
+                    if (sourceEntry != null) {
+                        DirectoryPane sourcePane = sourceEntry.getOwningPane();
+
+                        try {
+                            CommonFile destination = directory.getExistingParent();
+                            if (sourcePane == DirectoryPane.this)
+                                handleDragAndDropOnSamePane(mouseDragEvent, LineEntry.newInstance(destination, DirectoryPane.this));
+                            else
+                                handleDragAndDropToDifferentPane(mouseDragEvent, sourcePane, LineEntry.newInstance(destination, sourcePane));
+                        } catch (FileSystemException ex) {
+                            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+                        }
+                    }
+                }
+            }
+
+            displayDragDropTarget(false);
+        }
+
+        /**
+         * This method initialises the drag and drop onto the Up button
+         */
+        private void initDragAndDrop() {
+            setOnMouseDragEntered(this::dragEntered);
+            setOnMouseDragExited(this::dragExited);
+            setOnMouseDragReleased(this::dragDropped);
+        }
     }
 }

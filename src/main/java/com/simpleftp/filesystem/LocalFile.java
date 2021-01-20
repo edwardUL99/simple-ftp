@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020 Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@ import com.simpleftp.filesystem.exceptions.PathResolverException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.filesystem.paths.PathResolverFactory;
 import com.simpleftp.ftp.FTPSystem;
+import com.simpleftp.properties.Properties;
 
 import java.io.File;
 import java.io.IOException;
@@ -100,7 +101,7 @@ public class LocalFile extends File implements CommonFile {
      */
     @Override
     public long getSize() throws FileSystemException {
-        if (!isSymbolicLink() || !FileUtils.FILE_SIZE_FOLLOW_LINK) {
+        if (!isSymbolicLink() || !Properties.FILE_SIZE_FOLLOW_LINK.getValue()) {
             return length();
         } else {
             return new LocalFile(getSymbolicLinkTarget()).getSize();
@@ -116,7 +117,7 @@ public class LocalFile extends File implements CommonFile {
 
         if (path.getFileSystem().supportedFileAttributeViews().contains("posix")) {
             try {
-                Set<PosixFilePermission> permissionsSet = FileUtils.FILE_PERMS_FOLLOW_LINK ? Files.getPosixFilePermissions(path):Files.getPosixFilePermissions(path, LinkOption.NOFOLLOW_LINKS);
+                Set<PosixFilePermission> permissionsSet = Properties.FILE_PERMS_FOLLOW_LINK.getValue() ? Files.getPosixFilePermissions(path):Files.getPosixFilePermissions(path, LinkOption.NOFOLLOW_LINKS);
                 String[] permissionsStringArr = new String[9]; // first 3 indices, owner rwx, next 3, group, last 3 others
                 for (int i = 0; i < 9; i++)
                     permissionsStringArr[i] = "-";
@@ -154,7 +155,7 @@ public class LocalFile extends File implements CommonFile {
      * @return the permissions string
      */
     private String resolveNonPosixPermissions() {
-        if (FileUtils.FILE_PERMS_FOLLOW_LINK) {
+        if (Properties.FILE_PERMS_FOLLOW_LINK.getValue()) {
             try {
                 return new LocalFile(getSymbolicLinkTarget()).resolveNonPosixPermissions();
             } catch (FileSystemException ex) {
@@ -215,7 +216,7 @@ public class LocalFile extends File implements CommonFile {
      */
     @Override
     public String getPermissions() {
-        if (isSymbolicLink() && FileUtils.FILE_PERMS_FOLLOW_LINK) {
+        if (isSymbolicLink() && Properties.FILE_PERMS_FOLLOW_LINK.getValue()) {
             try {
                 return new LocalFile(getSymbolicLinkTarget()).getPermissions();
             } catch (FileSystemException ex) {

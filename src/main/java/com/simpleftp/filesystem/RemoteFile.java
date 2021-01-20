@@ -24,6 +24,7 @@ import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.*;
+import com.simpleftp.properties.Properties;
 import com.simpleftp.ui.UI;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -428,7 +429,7 @@ public class RemoteFile implements CommonFile {
     @Override
     public long getSize() throws FileSystemException {
         if (size == null) {
-            boolean getTargetSize = ftpFile.isSymbolicLink() && FileUtils.FILE_SIZE_FOLLOW_LINK;
+            boolean getTargetSize = ftpFile.isSymbolicLink() && Properties.FILE_SIZE_FOLLOW_LINK.getValue();
             if (!exists) {
                 size = -1L;
             } else if (ftpFile.isValid() && !getTargetSize) {
@@ -574,7 +575,7 @@ public class RemoteFile implements CommonFile {
     @Override
     public String getPermissions() {
         if (permissions == null) {
-            if (isSymbolicLink() && FileUtils.FILE_PERMS_FOLLOW_LINK) {
+            if (isSymbolicLink() && Properties.FILE_PERMS_FOLLOW_LINK.getValue()) {
                 permissions = getPermissions(targetFile);
             } else {
                 permissions = getPermissions(ftpFile);
@@ -596,7 +597,7 @@ public class RemoteFile implements CommonFile {
             try {
                 FTPFile ftpFile = getFtpFile();
                 String filePath = getFilePath();
-                String fileModTime = FileUtils.SERVER_REMOTE_MODIFICATION_TIME ? getConnection().getModificationTime(filePath):null;
+                String fileModTime = Properties.SERVER_REMOTE_MODIFICATION_TIME.getValue() ? getConnection().getModificationTime(filePath):null;
                 if (fileModTime != null) {
                     LocalDateTime dateTime = LocalDateTime.parse(fileModTime, DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy"));
                     modificationTime = dateTime.format(DateTimeFormatter.ofPattern(UI.FILE_DATETIME_FORMAT));

@@ -20,83 +20,59 @@ package com.simpleftp.properties;
 import lombok.Getter;
 
 /**
- * This class represents a possible property
+ * This class represents a possible property and its property type.
+ * This does not contain a value from the file. To get a property, call Properties.getProperty with a pre-defined property
+ * constant.
+ *
+ * Based on the type, you will want to parse the String returned by getProperty. If it is an ENUM type, it returns the String, Boolean, call Boolean.parseBoolean,
+ * Integer, Integer.parseInteger etc.
  */
-public class Property {
-    /**
-     * This enum represents the type of the enum. Whenever adding a new property and type,
-     * add it to this enum as the type is used by Properties class to validate the value
-     */
-    enum Type {
-        /**
-         * The property is an Integer
-         */
-        INTEGER,
-        /**
-         * The property is a true/false value
-         */
-        BOOLEAN
-    }
-
-    /**
-     * This represents how often the connection monitor should check if the connection is still active
-     */
-    public static final Property CONNECTION_MONITOR_INTERVAL = new Property("CONNECTION_MONITOR_INTERVAL", Type.INTEGER);
-
-    /**
-     * This defines the initial height of the file editor
-     */
-    public static final Property FILE_EDITOR_HEIGHT = new Property("FILE_EDITOR_HEIGHT", Type.INTEGER);
-
-    /**
-     * This defines the initial width of the file editor
-     */
-    public static final Property FILE_EDITOR_WIDTH = new Property("FILE_EDITOR_WIDTH", Type.INTEGER);
-
-    /**
-     * If true, the file size retrieved by CommonFile.getSize() is that of the target, not the link
-     */
-    public static final Property FILE_SIZE_FOLLOW_LINK = new Property("FILE_SIZE_FOLLOW_LINK", Type.BOOLEAN);
-
-    /**
-     * If true, the permissions retrieved by CommonFile.getPermissions() is that of the target, not the link
-     */
-    public static final Property FILE_PERMS_FOLLOW_LINK = new Property("FILE_PERMS_FOLLOW_LINK", Type.BOOLEAN);
-
-    /**
-     * If true, FTPConnection.getModificationTime(path) is attempted, else (or if this can't be determined), it is the time of the FTPFile returned
-     */
-    public static final Property SERVER_REMOTE_MODIFICATION_TIME = new Property("SERVER_REMOTE_MODIFICATION_TIME", Type.BOOLEAN);
-
-    /**
-     * If true, LineEntries on a RemoteDirectoryPane will be cached up until the first refresh() method call
-     */
-    public static final Property CACHE_REMOTE_DIRECTORY_LISTING = new Property("CACHE_REMOTE_DIRECTORY_LISTING", Type.BOOLEAN);
-
-    /**
-     * If true, all cached LineEntries are removed when DirectoryPane.refresh() is called (or refresh(false)). If false,
-     * just the cached entries for the current directory are cleared
-     */
-    public static final Property REMOVE_ALL_LISTING_CACHE_REFRESH = new Property("REMOVE_ALL_LISTING_CACHE_REFRESH", Type.BOOLEAN);
-
-    /**
-     * The type of this property
-     */
-    @Getter
-    private final Type type;
+public abstract class Property {
     /**
      * The name of the property
      */
     @Getter
     private final String propertyName;
+    /**
+     * The value of the property
+     */
+    private Object value;
 
     /**
      * Constructs a property and the type.
      * @param propertyName the name of the property. This should match the name of the property in the properties file
-     * @param type the type of the property
+     * @param value the properties value. A value should be specified here as default
      */
-    Property(String propertyName, Type type) {
+    Property(String propertyName, Object value) {
         this.propertyName = propertyName;
-        this.type = type;
+        this.value = value;
+    }
+
+    /**
+     * Validates the value parsed in from properties
+     * @param value the value parsed from properties file
+     */
+    abstract void validateValue(String value);
+
+    /**
+     * Parses the value to the appropriate type
+     * @param value the value to parse
+     */
+    abstract void parseValue(String value);
+
+    /**
+     * Returns the value behind this Property
+     * @return the property value
+     */
+    public Object getValue() {
+        return value;
+    }
+
+    /**
+     * Sets the value for this property
+     * @param value the value to set it to
+     */
+    public void setValue(Object value) {
+        this.value = value;
     }
 }

@@ -24,11 +24,11 @@ import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ui.UI;
+import com.simpleftp.ui.background.FileService;
 import com.simpleftp.ui.files.LineEntries;
 import com.simpleftp.ui.files.LineEntry;
 
 import java.io.File;
-import java.util.ArrayList;
 
 /**
  * This DirectoryPane is for use displaying local files
@@ -152,7 +152,6 @@ public final class LocalDirectoryPane extends DirectoryPane {
             if (files == null || files.length == 0) {
                 lineEntries.clear();
             } else {
-                ArrayList<LineEntry> entries = lineEntries.getLineEntries();
                 for (CommonFile file : files) {
                     LocalFile file1 = (LocalFile) file;
                     boolean showFile = showFile(file, e -> showHiddenFiles || !file1.isHidden());
@@ -161,7 +160,7 @@ public final class LocalDirectoryPane extends DirectoryPane {
                         LineEntry constructed = createLineEntry(file1);
 
                         if (constructed != null)
-                            entries.add(constructed);
+                            lineEntries.add(constructed);
                     }
                 }
             }
@@ -186,5 +185,42 @@ public final class LocalDirectoryPane extends DirectoryPane {
         return lineEntries;
     }
 
+    /**
+     * This method creates and schedules the file service used for copying/moving the source to destination
+     *
+     * @param source      the source file to be copied/moved
+     * @param destination the destination directory to be copied/moved to
+     * @param copy        true to copy, false to move
+     * @param targetPane  the target pane if a different pane. Leave null if not different
+     */
+    @Override
+    void scheduleCopyMoveService(CommonFile source, CommonFile destination, boolean copy, DirectoryPane targetPane) {
+        String operationHeader = copy ? "Copy":"Move", operationMessage = copy? "copy":"move";
+        FileService.newInstance(source, destination, copy ? FileService.Operation.COPY:FileService.Operation.MOVE, destination.isLocal())
+                .setOnOperationSucceeded(() -> {
+                    String destinationPath = destination.getFilePath();
+                    UI.doInfo(operationHeader + " Successful", "The " + operationMessage + " of " + source.getFilePath()
+                            + " to " + destinationPath + " has completed successfully");
 
+                    if (!copy)
+                        refresh(); // if it was a move, we refresh so that the file no longer exists
+
+                    if (targetPane != null) {
+                        if (targetPane.isLocal()) {
+                            targetPane.refresh();
+                        } else {
+                            RemoteDirectoryPane remotePane = (RemoteDirectoryPane)targetPane;
+                            String parentPath = FileUtils.getParentPath(destinationPath, false);
+                            if (remotePane.getCurrentWorkingDirectory().equals(parentPath)) {
+                                remotePane.refreshCurrentDirectory();
+                            } else {
+                                remotePane.refreshCache(parentPath);
+                            }
+                        }
+                    }
+                })
+                .setOnOperationFailed(() -> UI.doError(operationHeader + " Failed", "The " + operationMessage + " of " + source.getFilePath()
+                        + " to " + destination.getFilePath() + " has failed"))
+                .schedule();
+    }
 }

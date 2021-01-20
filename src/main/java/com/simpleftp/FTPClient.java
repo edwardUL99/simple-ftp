@@ -83,5 +83,7 @@ public class FTPClient extends Application {
             UI.doQuit();
             e.consume(); // consume so you don't close if user doesn't want to quit
         });
+
+        UI.setApplicationScene(scene);
     }
 }

@@ -21,6 +21,7 @@ import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
 import com.simpleftp.ftp.exceptions.FTPNotConnectedException;
+import com.simpleftp.properties.Properties;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.files.LineEntry;
@@ -350,7 +351,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
             initWindow();
             stage = new Stage();
             stage.setTitle("File Editor - " + getFilePath());
-            stage.setScene(new Scene(this, UI.FILE_EDITOR_WIDTH, UI.FILE_EDITOR_HEIGHT));
+            stage.setScene(new Scene(this, Properties.FILE_EDITOR_WIDTH.getValue(), Properties.FILE_EDITOR_HEIGHT.getValue()));
             stage.show();
             editor.requestFocus();
             stage.setOnCloseRequest(e -> {

@@ -41,21 +41,69 @@ public final class Properties {
      */
     @Getter
     private static boolean initialised = false;
-    /**
-     * The location of the properties file
-     */
-    private static String propertiesLocation;
 
-    static {
-        initialiseProperties();
-    }
+    /**
+     * This represents how often the connection monitor should check if the connection is still active
+     */
+    public static final IntegerProperty CONNECTION_MONITOR_INTERVAL = new IntegerProperty("CONNECTION_MONITOR_INTERVAL", 2000);
+
+    /**
+     * This defines the initial height of the file editor
+     */
+    public static final IntegerProperty FILE_EDITOR_HEIGHT = new IntegerProperty("FILE_EDITOR_HEIGHT", 700);
+
+    /**
+     * This defines the initial width of the file editor
+     */
+    public static final IntegerProperty FILE_EDITOR_WIDTH = new IntegerProperty("FILE_EDITOR_WIDTH", 700);
+
+    /**
+     * If true, the file size retrieved by CommonFile.getSize() is that of the target, not the link
+     */
+    public static final BooleanProperty FILE_SIZE_FOLLOW_LINK = new BooleanProperty("FILE_SIZE_FOLLOW_LINK", true);
+
+    /**
+     * If true, the permissions retrieved by CommonFile.getPermissions() is that of the target, not the link
+     */
+    public static final BooleanProperty FILE_PERMS_FOLLOW_LINK = new BooleanProperty("FILE_PERMS_FOLLOW_LINK", false);
+
+    /**
+     * If true, FTPConnection.getModificationTime(path) is attempted, else (or if this can't be determined), it is the time of the FTPFile returned
+     */
+    public static final BooleanProperty SERVER_REMOTE_MODIFICATION_TIME = new BooleanProperty("SERVER_REMOTE_MODIFICATION_TIME", false);
+
+    /**
+     * If true, LineEntries on a RemoteDirectoryPane will be cached up until the first refresh() method call
+     */
+    public static final BooleanProperty CACHE_REMOTE_DIRECTORY_LISTING = new BooleanProperty("CACHE_REMOTE_DIRECTORY_LISTING", true);
+
+    /**
+     * If true, all cached LineEntries are removed when DirectoryPane.refresh() is called (or refresh(false)). If false,
+     * just the cached entries for the current directory are cleared
+     */
+    public static final BooleanProperty REMOVE_ALL_LISTING_CACHE_REFRESH = new BooleanProperty("REMOVE_ALL_LISTING_CACHE_REFRESH", true);
+
+    /**
+     * Defines the operation for drag drop on the same panel. Ctrl will do the opposite of this property
+     */
+    public static final StringProperty DRAG_DROP_SAME_PANEL_OPERATION = new StringProperty("DRAG_DROP_SAME_PANEL_OPERATION", "MOVE", "COPY", "MOVE");
+
+    /**
+     * Defines the operation for drag drop onto different panels. Ctrl will do the opposite of this property
+     */
+    public static final StringProperty DRAG_DROP_DIFFERENT_PANEL_OPERATION = new StringProperty("DRAG_DROP_DIFFERENT_PANEL_OPERATION", "Copy", "COPY", "MOVE");
+
+    /**
+     * The property representing if the LineEntry icon should replace the cursor on a drag/drop or the Cursor.MOVE
+     */
+    public static final BooleanProperty DRAG_DROP_CURSOR_FILE_ICON = new BooleanProperty("DRAG_DROP_CURSOR_FILE_ICON", false);
 
     /**
      * Initialises the properties object
      */
-    private static void initialiseProperties() {
+    static void initialiseProperties() {
         try {
-            propertiesLocation = System.getProperty("simpleftp.properties");
+            String propertiesLocation = System.getProperty("simpleftp.properties");
             propertiesLocation = propertiesLocation == null ? "simpleftp.properties" : propertiesLocation;
 
             File file = new File(propertiesLocation);
@@ -74,24 +122,11 @@ public final class Properties {
 
     /**
      * Validates the the property's value matches the value in the properties file
-     * @param propertyName the name of the property
+     * @param property the property
      * @param propertyValue the value of the property
-     * @param propertyType the type of the property
      */
-    private static void validatePropertyValue(String propertyName, String propertyValue, Property.Type propertyType) {
-        switch (propertyType) {
-            case INTEGER: try {
-                Integer.parseInt(propertyValue);
-            } catch (NumberFormatException ex) {
-                throw new PropertyException("The property with name " + propertyName + " with value " + propertyValue + " is not a valid value of type " + propertyType.toString());
-            }
-            break;
-            case BOOLEAN: propertyValue = propertyValue.toLowerCase();
-            if (!propertyValue.equals("true") && !propertyValue.equals("false")) {
-                throw new PropertyException("The property with name " + propertyName + " with value " + propertyValue + " is not a valid value of type " + propertyType.toString());
-            }
-
-        }
+    private static void validatePropertyValue(Property property, String propertyValue) {
+        property.validateValue(propertyValue);
     }
 
     /**
@@ -100,14 +135,14 @@ public final class Properties {
      */
     private static void validateProperty(Property property) {
         String propertyName = property.getPropertyName();
-        Property.Type propertyType = property.getType();
         String value = properties.getProperty(property.getPropertyName());
-        if (value == null)
-            throw new PropertyException("Property with name " + propertyName + " with type " + propertyType.toString() + " not found in properties file " + propertiesLocation);
-        else if (value.equals(""))
-            throw new PropertyException("Property with name " + propertyName + " with type " + propertyType.toString() + " cannot have an empty value");
+        if (value != null) {
+            if (value.equals(""))
+                throw new PropertyException("Property with name " + propertyName + " cannot have an empty value");
 
-        validatePropertyValue(propertyName, value, propertyType);
+            validatePropertyValue(property, value);
+            property.parseValue(value);
+        }
     }
 
     /**
@@ -115,7 +150,7 @@ public final class Properties {
      * @param property the property to get the value of
      * @return the property value if found
      */
-    public static String getProperty(Property property) {
+    static String getProperty(Property property) {
         validateProperty(property);
         return properties.getProperty(property.getPropertyName());
     }

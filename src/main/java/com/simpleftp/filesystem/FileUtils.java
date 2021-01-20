@@ -20,8 +20,6 @@ package com.simpleftp.filesystem;
 import com.simpleftp.filesystem.exceptions.PathResolverException;
 import com.simpleftp.filesystem.paths.PathResolverFactory;
 import com.simpleftp.ftp.FTPSystem;
-import com.simpleftp.properties.Properties;
-import com.simpleftp.properties.Property;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -88,21 +86,6 @@ public final class FileUtils {
      * The separator for local file paths
      */
     public static final String PATH_SEPARATOR = System.getProperty("file.separator");
-
-    /**
-     * The boolean value for file sizes and following links
-     */
-    static final boolean FILE_SIZE_FOLLOW_LINK = Boolean.parseBoolean(Properties.getProperty(Property.FILE_SIZE_FOLLOW_LINK));
-
-    /**
-     * The boolean value for file permissions and following links
-     */
-    static final boolean FILE_PERMS_FOLLOW_LINK = Boolean.parseBoolean(Properties.getProperty(Property.FILE_PERMS_FOLLOW_LINK));
-
-    /**
-     * The boolean value for retrieving modification time from server or FTPFile
-     */
-    static final boolean SERVER_REMOTE_MODIFICATION_TIME = Boolean.parseBoolean(Properties.getProperty(Property.SERVER_REMOTE_MODIFICATION_TIME));
 
     /**
      * Parses the calendar object to the FILE_DATETIME_FORMAT

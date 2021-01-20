@@ -22,6 +22,7 @@ import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
+import com.simpleftp.ui.panels.FilePanel;
 import javafx.geometry.Pos;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
@@ -33,6 +34,8 @@ import javafx.scene.text.Text;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
+
+import java.util.HashMap;
 
 /**
  * This is an abstract class representing a line entry on the panel.
@@ -63,7 +66,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
      */
     @Getter
     @Setter
-    private DirectoryPane owningPane;
+    protected DirectoryPane owningPane;
     /**
      * Stores the retrieved file size so you are not making constant calls to the FTPConnection for opening property window etc
      */
@@ -76,6 +79,27 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
      * If this file is a symbolic link, store the target on initial resolving, to cache it so we don't have to keep resolving the path
      */
     private String symLinkTarget;
+    /**
+     * A boolean flag to determine if a drag has been started
+     */
+    protected boolean dragStarted;
+    /**
+     * A boolean variable to determine if mouse entry is allowed on any LineEntry
+     */
+    protected static boolean enableMouseEntry;
+    /**
+     * A boolean variable to detect if this is selected
+     */
+    @Getter
+    protected boolean selected;
+    /**
+     * This flag is true if this line entry is the source of a ddrag event
+     */
+    protected boolean dragEventSource;
+    /**
+     * The last selected line entry for that directory pane
+     */
+    private static final HashMap<DirectoryPane, LineEntry> lastSelected = new HashMap<>();
 
     /**
      * Creates a base LineEntry with the specified image URL (which is assumed to be in the jar), file and panel
@@ -90,10 +114,60 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         image.setFitWidth(UI.FILE_ICON_SIZE);
         image.setFitHeight(UI.FILE_ICON_SIZE);
         image.setImage(new Image(imageURL));
+        setHeight(UI.FILE_ICON_SIZE);
         this.file = file;
         this.owningPane = owningPane;
+        enableMouseEntry = true;
 
         init();
+    }
+
+    /**
+     * Sets this LineEntry to be the one that is selected on it's parent FilePanel if not null
+     * @param selected true if selected, false if not
+     */
+    public void setSelected(boolean selected) {
+        if (owningPane != null) {
+            if (selected) {
+                this.selected = true;
+                LineEntry lastSelected = LineEntry.lastSelected.get(owningPane);
+                if (lastSelected != null)
+                    lastSelected.setSelected(false);
+
+                LineEntry.lastSelected.put(owningPane, this);
+                setStyle(UI.GREY_BACKGROUND_TRANSPARENT);
+            } else {
+                this.selected = false;
+                setStyle(UI.WHITE_BACKGROUND);
+            }
+
+            FilePanel filePanel = owningPane.getFilePanel();
+            if (filePanel != null) {
+                if (selected)
+                    filePanel.setComboBoxSelection(this);
+                else
+                    filePanel.setComboBoxSelection(null);
+            }
+        }
+    }
+
+    /**
+     * If any line entry was selected for that directory pane
+     * @param directoryPane the directory pane to unselect for
+     */
+    public static void unselectLastEntry(DirectoryPane directoryPane) {
+        LineEntry lineEntry = lastSelected.remove(directoryPane);
+        if (lineEntry != null)
+            lineEntry.setSelected(false);
+    }
+
+    /**
+     * This method sets the height of the line entry but is final as the behaviour cannot be changed by sub-classes
+     * @param height the height to set this line entry to
+     */
+    @Override
+    protected final void setHeight(double height) {
+        super.setHeight(height);
     }
 
     /**
@@ -114,17 +188,54 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         text.setFont(Font.font("Monospaced"));
         getChildren().addAll(image, text);
 
-        setOnMouseEntered(e -> setStyle(UI.GREY_BACKGROUND_TRANSPARENT));
-        setOnMouseExited(e -> setStyle(UI.WHITE_BACKGROUND));
+        initMouseEvents();
+    }
+
+    /**
+     * This method initialises mouse events so that we can interact with line entries with the mouse
+     */
+    private void initMouseEvents() {
+        setOnMouseEntered(e -> {
+            if (enableMouseEntry)
+                setStyle(UI.GREY_BACKGROUND_TRANSPARENT);
+        });
+        setOnMouseExited(e -> {
+            if (!selected)
+                setStyle(UI.WHITE_BACKGROUND);
+            if (dragStarted) {
+                DirectoryPane.forEachInstance(pane -> pane.getUpButton().displayDragDropTarget(true));
+                enableMouseEntry = false;
+                dragEventSource = true;
+                setStyle(UI.GREY_BACKGROUND_TRANSPARENT);
+
+                UI.MouseEvents.setDragCursorImage(this);
+                UI.MouseEvents.setDragInProgress(true);
+            }
+        });
         setOnMouseClicked(e -> {
             if (!e.isConsumed()) {
+                e.setDragDetect(false);
                 if (e.getClickCount() == 1) {
-                    owningPane.click(this);
-                } else {
+                    setSelected(!selected);
+                } else if (e.getClickCount() == 2) {
                     owningPane.openLineEntry(this);
                 }
             }
             owningPane.requestFocus();
+        });
+        setOnMousePressed(e -> e.setDragDetect(true));
+        setOnMouseReleased(e -> {
+            DirectoryPane.forEachInstance(pane -> pane.getUpButton().displayDragDropTarget(false));
+            if (dragStarted) {
+                dragEventSource = false;
+                if (!selected)
+                    setStyle(UI.WHITE_BACKGROUND);
+            }
+
+            UI.MouseEvents.resetMouseCursor();
+            UI.MouseEvents.setDragInProgress(false);
+            dragStarted = false;
+            enableMouseEntry = true;
         });
     }
 
@@ -242,6 +353,9 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
      */
     public static LineEntry newInstance(CommonFile file, DirectoryPane owningPanel) {
         try {
+            if (owningPanel == null)
+                throw new NullPointerException("The provided DirectoryPane is null. A LineEntry cannot exist without an owning DirectoryPane");
+
             if (file.isADirectory())
                 return new DirectoryLineEntry(file, owningPanel);
             else if (file.isNormalFile())
@@ -276,13 +390,10 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     }
 
     /**
-     * Sets the file of this LineEntry. refresh() should be called afterwards to propagate the changes
-     * @param file the file to set.
+     * This method defines how the drag event starts for a line entry
      */
-    public void setFile(CommonFile file) {
-        if (isLocal() != file.isLocal())
-            throw new IllegalArgumentException("The provided file must match the LineEntry's isLocal()");
-
-        this.file = file;
+    protected void dragStarted() {
+        startFullDrag();
+        dragStarted = true;
     }
 }
