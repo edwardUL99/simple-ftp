@@ -67,7 +67,7 @@ public abstract class FilePanel extends VBox {
     /**
      * The HBox with combo box and buttons
      */
-    private final FlowPane toolBar;
+    protected final FlowPane toolBar;
     /**
      * The button for deleting chosen files
      */
@@ -99,7 +99,7 @@ public abstract class FilePanel extends VBox {
     /**
      * The button for opening a properties window
      */
-    private Button propertiesButton;
+    protected Button propertiesButton;
     /**
      * A button to take you to symbolic link destination. Should be the last button on the toolbar
      */

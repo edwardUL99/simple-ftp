@@ -132,8 +132,9 @@ public final class Properties {
     /**
      * Validates that the property is in the properties value and type matches that value
      * @param property the property to validate
+     * @return the value from the properties file if valid, null if not found
      */
-    private static void validateProperty(Property property) {
+    private static String validateProperty(Property property) {
         String propertyName = property.getPropertyName();
         String value = properties.getProperty(property.getPropertyName());
         if (value != null) {
@@ -141,17 +142,16 @@ public final class Properties {
                 throw new PropertyException("Property with name " + propertyName + " cannot have an empty value");
 
             validatePropertyValue(property, value);
-            property.parseValue(value);
         }
+
+        return value;
     }
 
     /**
      * Retrieves the property identified by the provided property name. If the value in the file is not found or invalid type, PropertyException is thrown
      * @param property the property to get the value of
-     * @return the property value if found
      */
-    static String getProperty(Property property) {
-        validateProperty(property);
-        return properties.getProperty(property.getPropertyName());
+    static void getProperty(Property property) {
+        property.parseValue(validateProperty(property));
     }
 }

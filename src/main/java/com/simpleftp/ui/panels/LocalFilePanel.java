@@ -26,6 +26,10 @@ import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.files.LineEntry;
+import javafx.collections.ObservableList;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.Tooltip;
 import javafx.util.Pair;
 
 import java.io.IOException;
@@ -45,6 +49,37 @@ final class LocalFilePanel extends FilePanel {
      */
     LocalFilePanel(DirectoryPane directoryPane) {
         super(directoryPane);
+        initButtons();
+    }
+
+    /**
+     * Initialises any buttons on the LocalFilePanel
+     */
+    private void initButtons() {
+        Button homeButton = new Button("Home");
+        homeButton.setTooltip(new Tooltip("Go to user's home directory"));
+        String homePath = System.getProperty("user.home");
+        LocalFile homeFile;
+        if (homePath != null && (homeFile = new LocalFile(homePath)).isADirectory()) {
+            // only add the home button if there is a user.home property defined and it exists as a directory
+            homeButton.setOnAction(e -> home(homeFile));
+            ObservableList<Node> children = toolBar.getChildren();
+            children.add(children.indexOf(propertiesButton), homeButton);
+        }
+    }
+
+    /**
+     * Goes to the user.home directory. Handler for the homeButton
+     */
+    private void home(LocalFile homeFile) {
+        try {
+            if (!homeFile.getFilePath().equals(directoryPane.getCurrentWorkingDirectory())) {
+                directoryPane.setDirectory(homeFile);
+                directoryPane.refresh();
+            }
+        } catch (FileSystemException ex) {
+            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+        }
     }
 
     /**

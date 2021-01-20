@@ -49,7 +49,8 @@ public abstract class Property {
     }
 
     /**
-     * Validates the value parsed in from properties
+     * Validates the value parsed in from properties.
+     * This should throw a PropertyException if not valid
      * @param value the value parsed from properties file
      */
     abstract void validateValue(String value);
