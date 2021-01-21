@@ -133,13 +133,25 @@ public class LocalFileSystem extends AbstractFileSystem {
             return null;
     }
 
+    /**
+     * Checks if the specified file name exists file/dir
+     *
+     * @param fileName the name/path to the file
+     * @return true if the file exists, false if not
+     */
     @Override
     public boolean fileExists(String fileName) {
         return new LocalFile(fileName).exists();
     }
 
+    /**
+     * List the files in the specified dir in the file system
+     *
+     * @param dir the directory path
+     * @return an array of files if found, null if not
+     */
     @Override
-    public CommonFile[] listFiles(String dir) {
+    public LocalFile[] listFiles(String dir) {
         File file = new File(dir);
 
         if (file.isDirectory()) {

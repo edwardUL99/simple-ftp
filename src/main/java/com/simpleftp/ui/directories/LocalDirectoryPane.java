@@ -148,8 +148,11 @@ public final class LocalDirectoryPane extends DirectoryPane {
      */
     private void constructListOfLocalFiles(LineEntries lineEntries, LocalFile localFile) {
         try {
-            CommonFile[] files = fileSystem.listFiles(localFile.getFilePath());
-            if (files == null || files.length == 0) {
+            String path = localFile.getFilePath();
+            LocalFile[] files = (LocalFile[])fileSystem.listFiles(path);
+            if (files == null) {
+                UI.doError("Path does not exist", "The path " + path + " does not exist");
+            } else if (files.length == 0) {
                 lineEntries.clear();
             } else {
                 for (CommonFile file : files) {

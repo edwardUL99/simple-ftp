@@ -160,17 +160,24 @@ public final class RemoteDirectoryPane extends DirectoryPane {
      */
     private void constructListOfRemoteFiles(LineEntries lineEntries, String path) {
         try {
-            for (CommonFile f : fileSystem.listFiles(path)) {
-                boolean showFile = showFile(f, e -> {
-                    String fileName = f.getName();
-                    return (showHiddenFiles && !fileName.equals(".") && !fileName.startsWith("..")) || !fileName.startsWith(".");
-                });
+            RemoteFile[] files = (RemoteFile[])fileSystem.listFiles(path);
+            if (files == null) {
+                UI.doError("Path does not exist", "The path " + path + " does not exist");
+            } else if (files.length == 0) {
+                lineEntries.clear();
+            } else {
+                for (RemoteFile f : files) {
+                    boolean showFile = showFile(f, e -> {
+                        String fileName = f.getName();
+                        return (showHiddenFiles && !fileName.equals(".") && !fileName.startsWith("..")) || !fileName.startsWith(".");
+                    });
 
-                if (showFile) {
-                    LineEntry constructed = createLineEntry(f);
+                    if (showFile) {
+                        LineEntry constructed = createLineEntry(f);
 
-                    if (constructed != null)
-                        lineEntries.add(constructed);
+                        if (constructed != null)
+                            lineEntries.add(constructed);
+                    }
                 }
             }
         } catch (FileSystemException ex) {

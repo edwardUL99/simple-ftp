@@ -26,6 +26,7 @@ import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.files.LineEntry;
+import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -56,15 +57,21 @@ final class LocalFilePanel extends FilePanel {
      * Initialises any buttons on the LocalFilePanel
      */
     private void initButtons() {
-        Button homeButton = new Button("Home");
-        homeButton.setTooltip(new Tooltip("Go to user's home directory"));
         String homePath = System.getProperty("user.home");
-        LocalFile homeFile;
+        String errorHeader = "Home button initialisation error";
+        LocalFile homeFile = null;
         if (homePath != null && (homeFile = new LocalFile(homePath)).isADirectory()) {
             // only add the home button if there is a user.home property defined and it exists as a directory
-            homeButton.setOnAction(e -> home(homeFile));
+            Button homeButton = new Button("Home");
+            homeButton.setTooltip(new Tooltip("Go to user's home directory"));
+            final LocalFile finalFile = homeFile;
+            homeButton.setOnAction(e -> home(finalFile));
             ObservableList<Node> children = toolBar.getChildren();
             children.add(children.indexOf(propertiesButton), homeButton);
+        } else if (homePath == null) { // Platform runLater as this code may be executed before a stage is shown. A dialog can't be displayed without primary scene/stage being set up, so run later for when a scene is prepared
+            Platform.runLater(() -> UI.doError(errorHeader, "The system does not have a Java user.home property defined outlining the location of the user's home directory. Not enabling Home button"));
+        } else if (!homeFile.isADirectory()) {
+            Platform.runLater(() -> UI.doError(errorHeader, "The system Java property defined user home " + homePath + " is either not a directory or a file. Not enabling Home button"));
         }
     }
 

@@ -220,7 +220,7 @@ public class RemoteFileSystem extends AbstractFileSystem {
      * @throws FileSystemException if an error occurs
      */
     @Override
-    public CommonFile[] listFiles(String dir) throws FileSystemException {
+    public RemoteFile[] listFiles(String dir) throws FileSystemException {
         try {
             FTPConnection connection = getFTPConnection();
 
