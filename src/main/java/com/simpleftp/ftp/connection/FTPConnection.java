@@ -1056,7 +1056,6 @@ public class FTPConnection {
 
             ftpClient.setDefaultTimeout(mSeconds);
             ftpClient.setControlKeepAliveTimeout(seconds);
-            ftpClient.setControlKeepAliveReplyTimeout(mSeconds);
             ftpClient.setDataTimeout(0);
         }
     }

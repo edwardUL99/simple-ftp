@@ -17,7 +17,9 @@
 
 package com.simpleftp.ftp.connection;
 
+import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.LocalFile;
+import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.exceptions.FTPError;
 import lombok.AccessLevel;
@@ -98,10 +100,32 @@ public class FTPLookup {
 
                 return file;
             } else {
-                logDebug("File cannot be retrieved from server");
-                return null;
+                FTPFile file = getSymbolicFTPFile(path);
+
+                if (file == null) {
+                    logDebug("File cannot be retrieved from server");
+                    return null;
+                } else {
+                    return file;
+                }
             }
         }
+    }
+
+    /**
+     * Gets the FTPFile for the symbolic file
+     * @param filePath the file path of the link
+     * @return the FTPFile object
+     */
+    public FTPFile getSymbolicFTPFile(String filePath) throws IOException {
+        String parentPath = FileUtils.getParentPath(filePath, false);
+
+        FTPFile[] files = ftpClient.listFiles(parentPath);
+
+        return files != null ? Arrays.stream(files)
+                .filter(file1 -> file1.getName().equals(RemoteFile.getName(filePath)))
+                .findFirst()
+                .orElse(null):null;
     }
 
     /**
