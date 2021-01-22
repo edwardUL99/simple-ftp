@@ -328,7 +328,10 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
 
     @Override
     public int compareTo(LineEntry other) {
-        return file.getName().compareTo(other.file.getName());
+        if (isLocal() && System.getProperty("os.name").toLowerCase().contains("win"))
+            return file.getName().compareToIgnoreCase(other.file.getName()); // windows sorts case-insensitively
+        else
+            return file.getName().compareTo(other.file.getName()); // unix and remote is to be sorted by case
     }
 
     /**
