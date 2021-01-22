@@ -218,9 +218,9 @@ public class FilePropertyWindow extends VBox implements Window {
          */
         private Long fileSize;
         /**
-         * The permissions string to display for permissions
+         * The permissions label to display for permissions
          */
-        private Label permissionsString;
+        private Label permissions;
         /**
          * Radio button for choosing to display size in bytes
          */
@@ -353,14 +353,14 @@ public class FilePropertyWindow extends VBox implements Window {
         private void initFileStats() {
             HBox permissionsBox = new HBox();
             Label permissions = new Label("Permissions:\t\t\t\t\t");
-            permissionsString = new Label();
-            permissionsBox.getChildren().addAll(permissions, permissionsString);
+            this.permissions = new Label();
+            permissionsBox.getChildren().addAll(permissions, this.permissions);
             Label modificationTime = new Label("Modification Time:");
             sizeLabel = new Label("Size:");
 
             try {
                 CommonFile file = lineEntry.file;
-                permissionsString.setText(file.getPermissions());
+                this.permissions.setText(file.getPermissions());
                 modificationTime.setText("Modification Time:\t\t\t\t" + lineEntry.getModificationTime());
                 initFileSize();
                 sizeLabel.setText("Size:\t\t\t\t\t\t\t" + fileSize + "B");
@@ -641,7 +641,7 @@ public class FilePropertyWindow extends VBox implements Window {
                             permissionsField.setText(permissions);
                             String lastOctal = currentOctal;
                             currentOctal = permissions;
-                            propertiesPanel.permissionsString.setText(lineEntry.file.getPermissions());
+                            propertiesPanel.permissions.setText(lineEntry.file.getPermissions());
                             UI.doInfo("Permissions Changed", "Permissions have been changed successfully from " + lastOctal + " to " + permissions);
 
                             DirectoryPane directoryPane = lineEntry.getOwningPane();
