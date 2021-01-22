@@ -104,8 +104,10 @@ public class LocalFileSystem extends AbstractFileSystem {
         if (!file.isSymbolicLink() && file.isADirectory()) { // if file is a symbolic link just delete the link, not the target directory
             deleteDirectoryRecursively(file.getFilePath());
             return !file.exists();
-        } else {
+        } else if (file.isNormalFile()) {
             return ((LocalFile) file).delete();
+        } else {
+            return false;
         }
     }
 

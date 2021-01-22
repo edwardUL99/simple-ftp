@@ -187,17 +187,6 @@ public final class RemoteDirectoryPane extends DirectoryPane {
     }
 
     /**
-     * This method manually deletes the FileSystem remove method as there is a limitation when it comes to symbolic files, that the file system remove emthod fails
-     * @param file the file to manually remove
-     * @return the result
-     * @throws FTPException if any FTPException is thrown
-     */
-    private boolean manuallyRemoveFile(RemoteFile file) throws FTPException {
-        FTPConnection connection = fileSystem.getFTPConnection();
-        return connection.removeFile(file.getFilePath());
-    }
-
-    /**
      * Does the remove action for the file. Removal of a file may differ between local and remote file panels, hence why abstract
      *
      * @param commonFile the file to remove
@@ -206,17 +195,7 @@ public final class RemoteDirectoryPane extends DirectoryPane {
     @Override
     boolean doRemove(CommonFile commonFile) throws Exception {
         RemoteFile remoteFile = (RemoteFile)commonFile;
-
-        if (remoteFile.isSymbolicLink()) {
-            String filePath = remoteFile.getFilePath();
-            remoteFile = RemoteFile.getSymbolicFile(fileSystem.getFTPConnection(), filePath);
-            if (remoteFile == null)
-                return false;
-
-            return manuallyRemoveFile(remoteFile);
-        } else {
-            return fileSystem.removeFile(remoteFile);
-        }
+        return fileSystem.removeFile(remoteFile);
     }
 
     /**

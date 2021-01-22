@@ -154,9 +154,11 @@ public class RemoteFileSystem extends AbstractFileSystem {
 
             if (file.isNormalFile() || file.isSymbolicLink()) { // if file is a symbolic link just delete the link, not the target directory
                 return connection.removeFile(filePath);
-            } else {
+            } else if (file.isADirectory()){
                 deleteDirectoryRecursively(filePath, null, connection);
                 return !connection.remotePathExists(filePath, true);
+            } else {
+                return false;
             }
         } catch (FTPException ex) {
             throw new FileSystemException("A FTP Exception occurred when removing the specified file", ex);

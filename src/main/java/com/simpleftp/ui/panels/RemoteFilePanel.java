@@ -221,10 +221,9 @@ final class RemoteFilePanel extends FilePanel {
             if (symbolicPath == null)
                 return; // this is a rare case. UI.resolveSymbolicPath would have shown an error dialog
 
-            // if the path is not /, we do not know it is a symbolic link or not, so use the workaround just in case
-            RemoteFile remoteFile = !symbolicPath.equals("/") ? RemoteFile.getSymbolicFile(connection, symbolicPath):new RemoteFile(symbolicPath);
+            RemoteFile remoteFile = new RemoteFile(symbolicPath);
 
-            if (remoteFile == null || !remoteFile.exists())
+            if (!remoteFile.exists())
                 throw new FTPRemotePathNotFoundException("The path " + symbolicPath + " does not exist", symbolicPath);
 
             boolean canonicalize = remoteFile.isADirectory() && (!remoteFile.isSymbolicLink() || !UI.doSymbolicPathDialog(symbolicPath)); // only open dialog if it a directory, opening a file doesn't matter

@@ -113,17 +113,18 @@ public class FTPLookup {
     }
 
     /**
-     * Gets the FTPFile for the symbolic file
+     * Gets the FTPFile for the symbolic file. Apache FTPClient returns an empty array if listFiles is called on a symbolic link of a file.
+     * This method is a workaround
      * @param filePath the file path of the link
      * @return the FTPFile object
      */
-    public FTPFile getSymbolicFTPFile(String filePath) throws IOException {
+    private FTPFile getSymbolicFTPFile(String filePath) throws IOException {
         String parentPath = FileUtils.getParentPath(filePath, false);
 
         FTPFile[] files = ftpClient.listFiles(parentPath);
 
         return files != null ? Arrays.stream(files)
-                .filter(file1 -> file1.getName().equals(RemoteFile.getName(filePath)))
+                .filter(file -> file.getName().equals(RemoteFile.getName(filePath)))
                 .findFirst()
                 .orElse(null):null;
     }

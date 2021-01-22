@@ -157,53 +157,13 @@ public class RemoteFile implements CommonFile {
     }
 
     /**
-     * Retrieves a RemoteFile representing the symbolic file for the specified file path if it is symbolic from the listing, as listing the path itself produces an error.
-     * Apache FTPClient has a limitation where if you listFiles on a symbolic link file, it returns no file, so this method is a workaround.
-     * See the wiki Symbolic Links for the known issues.
-     * @param connection the connection used to list the file
-     * @param filePath the file path
-     * @return the FTPFile found, null if not found
-     * @throws Exception if any exception from the connection is thrown
-     */
-    public static RemoteFile getSymbolicFile(FTPConnection connection, String filePath) throws Exception {
-        FTPFile file = connection.getFtpLookup()
-                .getSymbolicFTPFile(filePath);
-
-        if (file != null) {
-            if (connection != FTPSystem.getConnection())
-                return new RemoteFile(filePath, connection, file); //using a temporary connection, so return a temporary file
-            else
-                return new RemoteFile(filePath, file);
-        }
-
-        return null;
-    }
-
-    /**
-     * If this is a symbolic path, getFTPFile may return null on it, so instead, find it in the listing of the parent directory.
-     * If not a symbolic link, this method returns null
-     * @param absolutePath the path to check
-     * @return the found file, null if not found
-     */
-    private FTPFile getSymbolicFTPFile(String absolutePath) throws Exception {
-        return getConnection()
-                .getFtpLookup()
-                .getSymbolicFTPFile(absolutePath);
-    }
-
-    /**
      * Initialises the FTPFile object backing this file.
      * @param ftpFile the file to initialise with. Leave null if you want to force a lookup on the Server using the filename provided
      */
     private void initialiseFTPFile(FTPFile ftpFile) throws FileSystemException {
        try {
            if (ftpFile == null) {
-               ftpFile = getConnection().getFTPFile(absolutePath);
-               if (ftpFile == null)
-                   this.ftpFile = getSymbolicFTPFile(absolutePath); // try and get the "symbolic" file workaround  as that may be why the file is null
-               else
-                   this.ftpFile = ftpFile;
-
+               this.ftpFile = getConnection().getFTPFile(absolutePath);
                exists = this.ftpFile != null;
            } else {
                this.ftpFile = ftpFile;
@@ -303,6 +263,8 @@ public class RemoteFile implements CommonFile {
             return linkPath;
     }
 
+    // TODO test if a single workaround in FTPLookup has removed the need for these methods and the getSymbolicFTPFile to be public in FTPLookup
+
     /**
      * Follows the link of this file if it is a symbolic link until it eventually gets to the destination
      * @return the FTPFile representing the destination of the link, null if not a symbolic link
@@ -311,14 +273,15 @@ public class RemoteFile implements CommonFile {
     private FTPFile followLink() throws Exception {
         if (isSymbolicLink()) {
             String linkPath = getLinkPath();
-            FTPFile file = getSymbolicFTPFile(linkPath); // we need to use this as we need our workaround for files
+            FTPConnection connection = getConnection();
+            FTPFile file = connection.getFTPFile(linkPath);
 
             while (file != null && file.isSymbolicLink()) {
                 String linkPath1 = FileUtils.getParentPath(linkPath, false);
                 String nextLink = file.getLink();
                 linkPath = !nextLink.startsWith("/") ? FileUtils.appendPath(linkPath1, nextLink, false):nextLink;
 
-                file = getSymbolicFTPFile(linkPath);
+                file = connection.getFTPFile(linkPath);
             }
 
             if (file != null)
