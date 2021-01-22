@@ -328,21 +328,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
 
     @Override
     public int compareTo(LineEntry other) {
-        String n1 = this.file.getName();
-        String n2 = other.file.getName();
-
-        int n1Ind = n1.lastIndexOf(".");
-        if (n1Ind != -1) {
-            n1 = n1.substring(0, n1Ind);
-        }
-
-        int n2Ind = n2.lastIndexOf(".");
-        if (n2Ind != -1) {
-            n2 = n2.substring(0, n2Ind);
-        }
-
-        // we want to compare without extensions
-        return n1.compareToIgnoreCase(n2);
+        return file.getName().compareTo(other.file.getName());
     }
 
     /**
