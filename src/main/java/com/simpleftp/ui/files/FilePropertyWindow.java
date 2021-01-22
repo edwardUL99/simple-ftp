@@ -637,10 +637,11 @@ public class FilePropertyWindow extends VBox implements Window {
                 } else {
                     try {
                         if (changePermissions(permissions)) {
+                            lineEntry.file.refresh();
                             permissionsField.setText(permissions);
                             String lastOctal = currentOctal;
                             currentOctal = permissions;
-                            propertiesPanel.permissionsString.setText(lineEntry.getFile().getPermissions());
+                            propertiesPanel.permissionsString.setText(lineEntry.file.getPermissions());
                             UI.doInfo("Permissions Changed", "Permissions have been changed successfully from " + lastOctal + " to " + permissions);
 
                             DirectoryPane directoryPane = lineEntry.getOwningPane();
