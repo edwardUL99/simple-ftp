@@ -402,7 +402,6 @@ public final class UI {
                     altEnterHandler.doAction();
                 }
             });
-            okButton.setOnKeyReleased(e -> altPressed.set(!(e.getCode() == KeyCode.CONTROL)));
         }
 
         return createPathDialog.showAndGetPath();
