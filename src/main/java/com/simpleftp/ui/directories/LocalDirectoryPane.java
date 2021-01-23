@@ -213,11 +213,10 @@ public final class LocalDirectoryPane extends DirectoryPane {
                             targetPane.refresh();
                         } else {
                             RemoteDirectoryPane remotePane = (RemoteDirectoryPane)targetPane;
-                            String parentPath = FileUtils.getParentPath(destinationPath, false);
-                            if (remotePane.getCurrentWorkingDirectory().equals(parentPath)) {
+                            if (remotePane.getCurrentWorkingDirectory().equals(destinationPath)) {
                                 remotePane.refreshCurrentDirectory();
                             } else {
-                                remotePane.refreshCache(parentPath);
+                                remotePane.refreshCache(destinationPath);
                             }
                         }
                     }
