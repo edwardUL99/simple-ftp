@@ -623,7 +623,7 @@ public abstract class DirectoryPane extends VBox {
     private boolean checkFileSize(CommonFile file) throws FileSystemException {
         long size = file.getSize();
 
-        if (size >= 100000000)  {
+        if (size >= Properties.FILE_EDITOR_SIZE_WARN_LIMIT.getValue())  {
             return UI.doFileSizeWarningDialog(file.getFilePath());
         }
 
@@ -639,6 +639,7 @@ public abstract class DirectoryPane extends VBox {
         if (checkFileSize(file)) {
             FileStringDownloader fileStringDownloader = new FileStringDownloader(lineEntry, fileSystem, this);
             fileStringDownloader.start();
+            UI.openFile(lineEntry.getFilePath(), isLocal()); // only open it if an error doesn't occur
         }
     }
 
@@ -659,7 +660,6 @@ public abstract class DirectoryPane extends VBox {
                 if (file.isNormalFile()) {
                     try {
                         doubleClickFileEntry(lineEntry);
-                        UI.openFile(filePath, local); // only open it if an error doesn't occur
                     } catch (FTPException ex) {
                         UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
                     }

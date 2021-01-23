@@ -22,7 +22,7 @@ import com.simpleftp.properties.exceptions.PropertyException;
 /**
  * Represents an IntegerProperty which getValue returns a Boolean object
  */
-public final class BooleanProperty extends Property {
+public class BooleanProperty extends Property {
     /**
      * Constructs a property and the type.
      *
@@ -65,10 +65,12 @@ public final class BooleanProperty extends Property {
      */
     @Override
     public void setValue(Object value) {
-        if (value instanceof Boolean)
+        if (value instanceof Boolean) {
+            validateValue(value.toString());
             super.setValue(value);
-        else
+        } else {
             throw new PropertyException("The provided value: " + value + " is not of type Boolean");
+        }
     }
 
     /**

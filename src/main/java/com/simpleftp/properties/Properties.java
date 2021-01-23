@@ -58,6 +58,22 @@ public final class Properties {
     public static final IntegerProperty FILE_EDITOR_WIDTH = new IntegerProperty("FILE_EDITOR_WIDTH", 700);
 
     /**
+     * The property representing the size threshold to display file size warning dialog in bytes.
+     * Specified in properties file as MB so this property creates an anonymous sub-class to multiply the value by 1000000 to convert to MB
+     */
+    public static final IntegerProperty FILE_EDITOR_SIZE_WARN_LIMIT = new IntegerProperty("FILE_EDITOR_SIZE_WARN_LIMIT", 100, 1, 100) {
+        /**
+         * Returns the value behind this Property in bytes
+         *
+         * @return the property value
+         */
+        @Override
+        public Integer getValue() {
+            return super.getValue() * 1000000;
+        }
+    };
+
+    /**
      * If true, the file size retrieved by CommonFile.getSize() is that of the target, not the link
      */
     public static final BooleanProperty FILE_SIZE_FOLLOW_LINK = new BooleanProperty("FILE_SIZE_FOLLOW_LINK", true);

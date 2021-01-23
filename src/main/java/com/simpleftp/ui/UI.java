@@ -588,7 +588,8 @@ public final class UI {
             return type.contains("xml") || type.contains("text")
                     || (type.contains("application") && !type.contains("octet-stream")
                     && !type.contains("executable") && !type.contains("java-vm")
-                    && !type.contains("sharedlib")) && !type.contains("lib") || file.length() == 0;
+                    && !type.contains("sharedlib")) && !type.contains("lib")
+                    && !type.contains("zip") && !type.contains("archive") || file.length() == 0;
         } catch (IOException ex) {
             return false;
         }

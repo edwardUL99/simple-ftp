@@ -22,7 +22,15 @@ import com.simpleftp.properties.exceptions.PropertyException;
 /**
  * Represents an IntegerProperty which getValue returns an Integer object
  */
-public final class IntegerProperty extends Property {
+public class IntegerProperty extends Property {
+    /**
+     * The minimum value for this IntegerProperty
+     */
+    private Integer minimum;
+    /**
+     * The maximum value for this IntegerProperty
+     */
+    private Integer maximum;
 
     /**
      * Constructs a property and the type.
@@ -31,10 +39,43 @@ public final class IntegerProperty extends Property {
      * @param value        the properties value. A value should be specified here as default
      */
     IntegerProperty(String propertyName, Integer value) {
+        this(propertyName, value, null, null); // construct an object with no maximum and minimum
+    }
+
+    /**
+     * Constructs a property and the type.
+     *
+     * @param propertyName the name of the property. This should match the name of the property in the properties file
+     * @param value        the properties value. A value should be specified here as default
+     * @param minimum      specifies a minimum value this integer value can take. Leave null to have no minimum. Comparison is done >=
+     * @param maximum      specifies a maximum value this integer value can take. Leave null to have no maximum. Comparison is done <=.
+     *                     If minimum is = maximum, a PropertyException is thrown. If minimum > maximum, they are swapped
+     */
+    IntegerProperty(String propertyName, Integer value, Integer minimum, Integer maximum) {
         super(propertyName, value);
         if (!Properties.isInitialised())
             Properties.initialiseProperties();
+        this.minimum = minimum;
+        this.maximum = maximum;
+        checkMinMaxValues();
         Properties.getProperty(this);
+    }
+
+    /**
+     * Checks the minimum maximum values and throws PropertyException if they are equal, or swaps if in wrong order
+     */
+    private void checkMinMaxValues() {
+        if (minimum != null && maximum != null) {
+            if (minimum.equals(maximum)) {
+                throw new PropertyException("The minimum and maximum values provided to an IntegerProperty cannot be the same");
+            } else {
+                int temp = minimum;
+                if (minimum > maximum) {
+                    maximum = minimum;
+                    minimum = temp;
+                }
+            }
+        }
     }
 
     /**
@@ -45,10 +86,34 @@ public final class IntegerProperty extends Property {
     @Override
     void validateValue(String value) {
         try {
-            Integer.parseInt(value);
+            int number = Integer.parseInt(value);
+            validateValue(number);
         } catch (NumberFormatException ex) {
             throw new PropertyException("An IntegerProperty must be a valid numeric type");
         }
+    }
+
+    /**
+     * Validates the int value against min and max if specified
+     *
+     * @param value the value parsed from properties file
+     */
+    private void validateValue(int value) {
+        boolean validated = true;
+        String errorMessage = "The value: " + value + " provided to this IntegerProperty should be ";
+
+        if (minimum != null) {
+            validated = value >= minimum;
+            errorMessage += ">= " + minimum;
+        }
+
+        if (maximum != null) {
+            validated = validated && value <= maximum;
+            errorMessage += " and <= " + maximum;
+        }
+
+        if (!validated)
+            throw new PropertyException(errorMessage);
     }
 
     /**
@@ -68,10 +133,12 @@ public final class IntegerProperty extends Property {
      */
     @Override
     public void setValue(Object value) {
-        if (value instanceof Integer)
+        if (value instanceof Integer) {
+            validateValue((Integer) value);
             super.setValue(value);
-        else
+        } else {
             throw new PropertyException("The provided value: " + value + " is not of type Integer");
+        }
     }
 
     /**

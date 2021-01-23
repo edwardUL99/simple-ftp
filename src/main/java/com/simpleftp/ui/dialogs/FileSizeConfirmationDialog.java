@@ -17,6 +17,7 @@
 
 package com.simpleftp.ui.dialogs;
 
+import com.simpleftp.properties.Properties;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
@@ -35,7 +36,7 @@ public class FileSizeConfirmationDialog extends Alert {
     public FileSizeConfirmationDialog(String path) {
         super(AlertType.WARNING);
         setHeaderText("File Size Warning");
-        setContentText("File " + path + " is over 100MB. Do you confirm that you still want to open it? (You may run out of memory)");
+        setContentText("File " + path + " is over " + Properties.FILE_EDITOR_SIZE_WARN_LIMIT.getValue() / 1000000 + "MB. Do you confirm that you still want to open it? (You may run out of memory)");
         setTitle("Editing Large File Dialog");
         getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
         getButtonTypes().clear();

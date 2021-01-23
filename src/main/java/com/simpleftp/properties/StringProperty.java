@@ -24,7 +24,7 @@ import java.util.List;
 /**
  * Represents a StringProperty which getValue returns a String object
  */
-public final class StringProperty extends Property {
+public class StringProperty extends Property {
     /**
      * A list of valid values the string value can take
      */
@@ -91,10 +91,12 @@ public final class StringProperty extends Property {
      */
     @Override
     public void setValue(Object value) {
-        if (value instanceof String)
+        if (value instanceof String) {
+            validateValue((String)value);
             super.setValue(value);
-        else
+        } else {
             throw new PropertyException("The provided value: " + value + " is not of type String");
+        }
     }
 
     /**
