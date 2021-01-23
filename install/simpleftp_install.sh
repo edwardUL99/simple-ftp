@@ -178,7 +178,9 @@ if [ -z "$java_command" ]; then
 fi
 
 if [ -n "$jar_file" ]; then
-  jar_file="$(pwd)/$jar_file" # make absolute before we change working directory
+  if [[ "$jar_file" != "/"* ]]; then
+    jar_file="$(pwd)/$jar_file" # make absolute before we change working directory
+  fi
 fi
 
 echo -e "\n\t[Set up installation environment]\n"
