@@ -62,11 +62,11 @@ import java.util.function.Predicate;
  */
 public abstract class DirectoryPane extends VBox {
     /**
-     * The status panel which contains all the buttons and current symbolicLink label
+     * The status panel which contains all the buttons and current directory label
      */
     private StatusPanel statusPanel;
     /**
-     * A tool tip for displaying the current symbolicLink when mouse is hovered over currentDirectory in case it is abbreviated
+     * A tool tip for displaying the current directory when mouse is hovered over currentDirectory in case it is abbreviated
      */
     private Tooltip currentDirectoryTooltip;
     /**
@@ -74,7 +74,7 @@ public abstract class DirectoryPane extends VBox {
      */
     private Button refresh;
     /**
-     * Button for moving up to the parent symbolicLink
+     * Button for moving up to the parent directory
      */
     @Getter
     private UpButton upButton;
@@ -83,7 +83,7 @@ public abstract class DirectoryPane extends VBox {
      */
     private LineEntries lineEntries;
     /**
-     * The symbolicLink that this DirectoryPane is currently listing
+     * The directory that this DirectoryPane is currently listing
      */
     @Getter
     protected CommonFile directory;
@@ -210,7 +210,7 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
-     * Initialises the status panel which contains the buttons and current symbolicLink
+     * Initialises the status panel which contains the buttons and current directory
      */
     private void initStatusPanel() {
         statusPanel = new StatusPanel();
@@ -263,7 +263,7 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
-     * Controls going up to parent symbolicLink
+     * Controls going up to parent directory
      */
     public void up() {
         if (!isAtRootDirectory()) {
@@ -277,16 +277,16 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
-     * Checks the symbolicLink passed in to see if the type matches the file type this DirectoryPane is for.
+     * Checks the directory passed in to see if the type matches the file type this DirectoryPane is for.
      * setDirectory calls this
-     * @param directory the symbolicLink to check
-     * @throws IllegalArgumentException if the type of symbolicLink is different to the type of the current one
+     * @param directory the directory to check
+     * @throws IllegalArgumentException if the type of directory is different to the type of the current one
      */
     abstract void checkFileType(CommonFile directory) throws IllegalArgumentException;
 
     /**
-     * Returns the path of the current working symbolicLink
-     * @return the current working symbolicLink path
+     * Returns the path of the current working directory
+     * @return the current working directory path
      */
     public String getCurrentWorkingDirectory() {
         return directory.getFilePath();
@@ -309,30 +309,30 @@ public abstract class DirectoryPane extends VBox {
     public abstract boolean isLocal();
 
     /**
-     * Changes symbolicLink but doesn't check the type of the symbolicLink or if it is a symbolicLink.
-     * This is used internally as it is called by doubleClickDirectoryEntry. Since, you knew it was a symbolicLink to create a symbolicLink entry, you don't need to check it again.
+     * Changes directory but doesn't check the type of the directory or if it is a directory.
+     * This is used internally as it is called by doubleClickDirectoryEntry. Since, you knew it was a directory to create a directory entry, you don't need to check it again.
      * The types will also always stay the same. The public method setDirectory is a wrapper for this, doing validation checks and then calling this.
      * While, internally these checks should be enforced, it can't be guaranteed an external class calling it would have stuck to them.
-     * @param directory the symbolicLink to set
+     * @param directory the directory to set
      */
      void setDirectoryUnchecked(CommonFile directory) {
         boolean local = isLocal();
 
         if (this.directory != null)
-            UI.closeFile(getCurrentWorkingDirectory(), local); // after successfully leaving this symbolicLink to the new one, close it
+            UI.closeFile(getCurrentWorkingDirectory(), local); // after successfully leaving this directory to the new one, close it
         this.directory = directory;
         String path = directory.getFilePath();
-        UI.openFile(path, local); // open the new symbolicLink
+        UI.openFile(path, local); // open the new directory
 
         statusPanel.setCurrDirText(path);
      }
 
     /**
-     * Changes symbolicLink. Refresh should be called after this action
-     * @param directory the symbolicLink to change to, local, or remote
-     * @throws FileSystemException if the symbolicLink is not a symbolicLink
-     * @throws IllegalArgumentException if type of the symbolicLink is different to the type that was initially passed in.
-     *              You're not allowed pass in RemoteFile to constructor and then suddenly set symbolicLink to a LocalFile or it's not a symbolicLink
+     * Changes directory. Refresh should be called after this action
+     * @param directory the directory to change to, local, or remote
+     * @throws FileSystemException if the directory is not a directory
+     * @throws IllegalArgumentException if type of the directory is different to the type that was initially passed in.
+     *              You're not allowed pass in RemoteFile to constructor and then suddenly set directory to a LocalFile or it's not a directory
      */
     public void setDirectory(CommonFile directory) throws FileSystemException, IllegalArgumentException {
         checkFileType(directory);
@@ -349,7 +349,7 @@ public abstract class DirectoryPane extends VBox {
      * setDirectory called on symbolic link follows it symbolically, represents it as a folder of the parent
      * @param symbolicLink the symbolic link to change to
      * @throws FileSystemException if an error occurs
-     * @throws IllegalArgumentException if the symbolicLink is not in fact a symbolicLink and is not a symbolic link
+     * @throws IllegalArgumentException if the directory is not in fact a directory and is not a symbolic link
      */
     private void setSymbolicLinkTargetDir(CommonFile symbolicLink) throws FileSystemException, IllegalArgumentException {
         checkFileType(symbolicLink);
@@ -367,7 +367,7 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
-     * Opens the given symbolic link. If it is a symbolicLink, it goes to the target symbolicLink. If it is a file, it goes to the parent of the target file
+     * Opens the given symbolic link. If it is a directory, it goes to the target directory. If it is a file, it goes to the parent of the target file
      * @param symbolicLink the symbolic link to open
      * @throws FileSystemException if an error occurs
      * @throws IllegalArgumentException if the file is not a symbolic link
@@ -605,8 +605,8 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
-     * Handles double click of the specified symbolicLink entry
-     * @param lineEntry the symbolicLink entry to double click
+     * Handles double click of the specified directory entry
+     * @param lineEntry the directory entry to double click
      */
     private void doubleClickDirectoryEntry(final LineEntry lineEntry) {
         CommonFile file = lineEntry.getFile();
@@ -679,7 +679,7 @@ public abstract class DirectoryPane extends VBox {
 
     /**
      * "Opens" the specified lineEntry. This is the equivalent to double clicking it
-     * If it is a symbolicLink, it will change the symbolicLink this file panel is in
+     * If it is a directory, it will change the directory this file panel is in
      * @param lineEntry the line entry to open
      */
     public void openLineEntry(final LineEntry lineEntry) {
@@ -904,8 +904,8 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
-     * Creates an instance of DirectoryPane based on the given symbolicLink
-     * @param directory the symbolicLink to initialise with
+     * Creates an instance of DirectoryPane based on the given directory
+     * @param directory the directory to initialise with
      * @return the constructed file panel
      * @throws NullPointerException if directory is null
      */
@@ -924,11 +924,11 @@ public abstract class DirectoryPane extends VBox {
      */
     public class StatusPanel extends HBox {
         /**
-         * The label outlining current symbolicLink
+         * The label outlining current directory
          */
         private Label currentDirectoryLabel;
         /**
-         * The label showing the path to the current symbolicLink
+         * The label showing the path to the current directory
          */
         private Label currentDirectory;
 
@@ -968,8 +968,8 @@ public abstract class DirectoryPane extends VBox {
         }
 
         /**
-         * Sets the text of the current symbolicLink text in the status panel and abbreviates it if it is too long
-         * @param currentDirectory the symbolicLink to change the text to
+         * Sets the text of the current directory text in the status panel and abbreviates it if it is too long
+         * @param currentDirectory the directory to change the text to
          */
         private void setCurrDirText(String currentDirectory) {
             if (currentDirectory.length() >= MAX_FILE_PATH_LENGTH) {
