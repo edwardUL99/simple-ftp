@@ -143,11 +143,12 @@ public class IntegerProperty extends Property {
 
     /**
      * Parses the value to the appropriate type
+     * Assumes validation is already done
      *
      * @param value the value to parse
      */
     @Override
     void parseValue(String value) {
-        setValue(Integer.parseInt(value));
+        super.setValue(Integer.parseInt(value));
     }
 }

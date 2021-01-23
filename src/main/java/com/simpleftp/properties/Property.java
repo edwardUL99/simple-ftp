@@ -56,7 +56,9 @@ public abstract class Property {
     abstract void validateValue(String value);
 
     /**
-     * Parses the value to the appropriate type
+     * Parses the value to the appropriate type.
+     * Assumes validation is already done
+     *
      * @param value the value to parse
      */
     abstract void parseValue(String value);

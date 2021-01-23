@@ -75,6 +75,7 @@ public class BooleanProperty extends Property {
 
     /**
      * Parses the value to the appropriate type
+     * Assumes validation is already done
      *
      * @param value the value to parse
      */

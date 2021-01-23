@@ -61,7 +61,7 @@ public final class Properties {
      * The property representing the size threshold to display file size warning dialog in bytes.
      * Specified in properties file as MB so this property creates an anonymous sub-class to multiply the value by 1000000 to convert to MB
      */
-    public static final IntegerProperty FILE_EDITOR_SIZE_WARN_LIMIT = new IntegerProperty("FILE_EDITOR_SIZE_WARN_LIMIT", 100, 1, 100) {
+    public static final IntegerProperty FILE_EDITOR_SIZE_WARN_LIMIT = new IntegerProperty("FILE_EDITOR_SIZE_WARN_LIMIT", 100, 1, null) {
         /**
          * Returns the value behind this Property in bytes
          *
@@ -137,27 +137,18 @@ public final class Properties {
     }
 
     /**
-     * Validates the the property's value matches the value in the properties file
-     * @param property the property
-     * @param propertyValue the value of the property
-     */
-    private static void validatePropertyValue(Property property, String propertyValue) {
-        property.validateValue(propertyValue);
-    }
-
-    /**
-     * Validates that the property is in the properties value and type matches that value
+     * Validates that the property is not empty if not null (if null, default value is used) and type matches that value
      * @param property the property to validate
      * @return the value from the properties file if valid, null if not found
      */
     private static String validateProperty(Property property) {
         String propertyName = property.getPropertyName();
-        String value = properties.getProperty(property.getPropertyName());
+        String value = properties.getProperty(propertyName);
         if (value != null) {
             if (value.equals(""))
                 throw new PropertyException("Property with name " + propertyName + " cannot have an empty value");
 
-            validatePropertyValue(property, value);
+            property.validateValue(value);
         }
 
         return value;
@@ -168,6 +159,9 @@ public final class Properties {
      * @param property the property to get the value of
      */
     static void getProperty(Property property) {
-        property.parseValue(validateProperty(property));
+        String validatedValue = validateProperty(property);
+
+        if (validatedValue != null)
+            property.parseValue(validatedValue);
     }
 }

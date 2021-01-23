@@ -100,12 +100,13 @@ public class StringProperty extends Property {
     }
 
     /**
-     * Parses the value to the appropriate type
+     * Parses the value to the appropriate type.
+     * Assumes validation is already done
      *
      * @param value the value to parse
      */
     @Override
     void parseValue(String value) {
-        setValue(value);
+        super.setValue(value);
     }
 }
