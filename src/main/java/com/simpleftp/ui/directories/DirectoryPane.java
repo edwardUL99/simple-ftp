@@ -83,6 +83,10 @@ public abstract class DirectoryPane extends VBox {
      */
     private LineEntries lineEntries;
     /**
+     * The LineEntry that has been copied
+     */
+    protected static LineEntry copiedEntry;
+    /**
      * The directory that this DirectoryPane is currently listing
      */
     @Getter
@@ -176,7 +180,7 @@ public abstract class DirectoryPane extends VBox {
      * @param mouseEvent the mouse event to query
      */
     private void unselectFile(MouseEvent mouseEvent) {
-        LineEntry lineEntry = UI.MouseEvents.selectLineEntry(mouseEvent); // attempt to "pick" the LineEntry out from the mouse selection. If null, we didn't select a line entry
+        LineEntry lineEntry = UI.Events.selectLineEntry(mouseEvent); // attempt to "pick" the LineEntry out from the mouse selection. If null, we didn't select a line entry
         if (lineEntry == null)
             filePanel.setComboBoxSelection(null);
     }
@@ -469,29 +473,82 @@ public abstract class DirectoryPane extends VBox {
         if (lineEntry == null)
             return null;
 
-        ContextMenu contextMenu = new ContextMenu();
-        MenuItem menuItem1 = new MenuItem("Open");
-        menuItem1.setOnAction(e -> openLineEntry(lineEntry));
-        MenuItem menuItem2 = new MenuItem("Rename");
-        menuItem2.setOnAction(e -> renameLineEntry(lineEntry));
-        MenuItem menuItem3 = new MenuItem("Delete");
-        menuItem3.setOnAction(e -> filePanel.delete()); // right clicking this would have selected it in the container's combo box. So use containers delete method to display confirmation dialog
-                                                             // as a consequence, this method also checks if the file is open or not. If this call is to be changed to this.delete(), add the isOpen check and confirmation dialog to that method
-                                                            // this.delete doesn't remove the file from the combo box anyway (although refresh would get that)
-        MenuItem menuItem4 = new MenuItem("Properties");
-        menuItem4.setOnAction(e -> openPropertiesWindow(lineEntry));
-
-        contextMenu.getItems().addAll(menuItem1, menuItem2, menuItem3, menuItem4);
-
-        if (file.isSymbolicLink()) {
-            MenuItem menuItem5 = new MenuItem("Go to Target");
-            menuItem5.setOnAction(e -> filePanel.goToSymLinkTarget());
-            contextMenu.getItems().add(menuItem5);
-        }
-
-        lineEntry.setOnContextMenuRequested(e -> contextMenu.show(lineEntry, e.getScreenX(), e.getScreenY()));
+        lineEntry.setOnContextMenuRequested(e -> {
+            ContextMenu contextMenu = createContextMenu(lineEntry);
+            contextMenu.show(lineEntry, e.getScreenX(), e.getScreenY());
+        });
 
         return lineEntry;
+    }
+
+    // TODO test copy paste
+
+    /**
+     * Creates a context menu for the provided LineEntry
+     * @param lineEntry the line entry to create a context menu for
+     * @return the constructed context menu
+     */
+    private ContextMenu createContextMenu(final LineEntry lineEntry) {
+        CommonFile file = lineEntry.getFile();
+
+        MenuItem open = new MenuItem("Open");
+        open.setOnAction(e -> openLineEntry(lineEntry));
+
+        MenuItem rename = new MenuItem("Rename");
+        rename.setOnAction(e -> renameLineEntry(lineEntry));
+
+        MenuItem copy = new MenuItem("Copy");
+        copy.setOnAction(e -> copiedEntry = lineEntry);
+        Label pasteLabel = new Label("Paste");
+
+        CustomMenuItem paste = new CustomMenuItem(pasteLabel); // custom menu item so we can use tooltips
+        String copiedEntryFilePath = copiedEntry == null ? null:copiedEntry.getFilePath();
+        String lineEntryPath = lineEntry.getFilePath();
+        boolean copiedLocal;
+        boolean disabled = copiedEntryFilePath == null || lineEntry.isFile() || copiedEntryFilePath.equals(lineEntryPath)
+                || (FileUtils.getParentPath(copiedEntryFilePath, (copiedLocal = copiedEntry.isLocal())).equals(lineEntryPath) && copiedLocal == lineEntry.isLocal());
+        paste.setDisable(disabled);
+        paste.setOnAction(e -> paste(file));
+        if (!disabled)
+            pasteLabel.setTooltip(new Tooltip("Copied File: " + copiedEntryFilePath + " (" + (copiedEntry.isLocal() ? "Local":"Remote") + ")"));
+
+        MenuItem delete = new MenuItem("Delete");
+        delete.setOnAction(e -> filePanel.delete()); // right clicking this would have selected it in the container's combo box. So use containers delete method to display confirmation dialog
+        // as a consequence, this method also checks if the file is open or not. If this call is to be changed to this.delete(), add the isOpen check and confirmation dialog to that method
+        // this.delete doesn't remove the file from the combo box anyway (although refresh would get that)
+
+        MenuItem properties = new MenuItem("Properties");
+        properties.setOnAction(e -> openPropertiesWindow(lineEntry));
+
+        ContextMenu contextMenu = new ContextMenu();
+        contextMenu.getItems().addAll(open, rename, copy, paste, delete, properties);
+
+        if (file.isSymbolicLink()) {
+            MenuItem target = new MenuItem("Go to Target");
+            target.setOnAction(e -> filePanel.goToSymLinkTarget());
+            contextMenu.getItems().add(target);
+        }
+
+        return contextMenu;
+    }
+
+    /**
+     * Pastes the copied LineEntry into target
+     * @param target the target file to paste (copy) into
+     */
+    private void paste(final CommonFile target) {
+        if (copiedEntry != null) {
+            CommonFile source = copiedEntry.getFile();
+
+            DirectoryPane sourcePane = copiedEntry.getOwningPane();
+            if (sourcePane == this) {
+                scheduleCopyMoveService(source, target, true, this);
+            } else {
+                sourcePane.scheduleCopyMoveService(source, target, true, this);
+            }
+
+            copiedEntry = null;
+        }
     }
 
     /**
@@ -730,6 +787,8 @@ public abstract class DirectoryPane extends VBox {
         try {
             if (!removeFile || doRemove(file)) {
                 removeLineEntry(lineEntry);
+                if (lineEntry.equals(copiedEntry))
+                    copiedEntry = null;
 
                 return true;
             }
@@ -845,7 +904,7 @@ public abstract class DirectoryPane extends VBox {
         CommonFile destination = target != null ? target.getFile():directory;
         CommonFile source;
 
-        LineEntry sourceEntry = UI.MouseEvents.selectLineEntry(dragEvent.getGestureSource());
+        LineEntry sourceEntry = UI.Events.selectLineEntry(dragEvent.getGestureSource());
 
         if (sourceEntry != null) {
             source = sourceEntry.getFile();
@@ -872,7 +931,7 @@ public abstract class DirectoryPane extends VBox {
         CommonFile destination = target != null ? target.getFile():directory;
         CommonFile source;
 
-        LineEntry sourceEntry = UI.MouseEvents.selectLineEntry(dragEvent.getGestureSource());
+        LineEntry sourceEntry = UI.Events.selectLineEntry(dragEvent.getGestureSource());
 
         if (sourceEntry != null) {
             source = sourceEntry.getFile();
@@ -1005,6 +1064,31 @@ public abstract class DirectoryPane extends VBox {
             setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
             VBox.setVgrow(this, Priority.ALWAYS);
             setMaxHeight(Double.MAX_VALUE);
+            setOnContextMenuRequested(e -> {
+                LineEntry target = UI.Events.selectLineEntry(e.getTarget());
+                if (target == null) { // we didn't request a line entry's context menu, so display the EntriesBox's context menu
+                    ContextMenu contextMenu = createContextMenu();
+                    contextMenu.show(this, e.getScreenX(), e.getScreenY());
+                }
+            });
+        }
+
+        /**
+         * Creates and returns the context menu for this EntriesBox
+         */
+        private ContextMenu createContextMenu() {
+            MenuItem paste = new MenuItem("Paste");
+            boolean copiedLocal;
+            boolean disabled = copiedEntry == null
+                    || (FileUtils.getParentPath(copiedEntry.getFilePath(), (copiedLocal = copiedEntry.isLocal())).equals(DirectoryPane.this.getCurrentWorkingDirectory())
+                    && copiedLocal == DirectoryPane.this.directory.isLocal());
+            paste.setDisable(disabled);
+            paste.setOnAction(e -> paste(DirectoryPane.this.directory));
+
+            ContextMenu contextMenu = new ContextMenu();
+            contextMenu.getItems().add(paste);
+
+            return contextMenu;
         }
 
         /**
@@ -1027,13 +1111,13 @@ public abstract class DirectoryPane extends VBox {
          * @param dragEvent the drag event representing the entry
          */
         private void dragEntered(MouseDragEvent dragEvent) {
-            LineEntry sourceEntry = UI.MouseEvents.selectLineEntry(dragEvent.getGestureSource());
-            LineEntry targetEntry = UI.MouseEvents.selectLineEntry(dragEvent.getTarget());
+            LineEntry sourceEntry = UI.Events.selectLineEntry(dragEvent.getGestureSource());
+            LineEntry targetEntry = UI.Events.selectLineEntry(dragEvent.getTarget());
 
             if (sourceEntry != null && sourceEntry.getOwningPane() != DirectoryPane.this
                     && (targetEntry == null || targetEntry.isFile())) {
-                setStyle(UI.MouseEvents.DRAG_ENTERED_BACKGROUND);
-                UI.MouseEvents.setDragCursorEnteredImage();
+                setStyle(UI.Events.DRAG_ENTERED_BACKGROUND);
+                UI.Events.setDragCursorEnteredImage();
             }
         }
 
@@ -1044,7 +1128,7 @@ public abstract class DirectoryPane extends VBox {
         private void dragExited(MouseDragEvent dragEvent) {
             setStyle(UI.WHITE_BACKGROUND);
             if (!Properties.DRAG_DROP_CURSOR_FILE_ICON.getValue())
-                UI.MouseEvents.setDragCursorImage(null); // leave null as we don't need it her
+                UI.Events.setDragCursorImage(null); // leave null as we don't need it her
         }
 
         /**
@@ -1052,10 +1136,10 @@ public abstract class DirectoryPane extends VBox {
          * @param dragEvent the drag event representing the drop
          */
         private void dragDropped(MouseDragEvent dragEvent) {
-            LineEntry sourceEntry = UI.MouseEvents.selectLineEntry(dragEvent.getGestureSource());
+            LineEntry sourceEntry = UI.Events.selectLineEntry(dragEvent.getGestureSource());
             DirectoryPane sourcePane = sourceEntry != null ? sourceEntry.getOwningPane():null;
             if (sourcePane != null && sourcePane != DirectoryPane.this) {
-                LineEntry targetEntry = UI.MouseEvents.selectLineEntry(dragEvent.getTarget());
+                LineEntry targetEntry = UI.Events.selectLineEntry(dragEvent.getTarget());
 
                 if (targetEntry == null || (targetEntry.isFile() && targetEntry.getOwningPane() == DirectoryPane.this))
                     DirectoryPane.this.handleDragAndDropToDifferentPane(dragEvent, sourcePane,
@@ -1112,7 +1196,7 @@ public abstract class DirectoryPane extends VBox {
          */
         public final void displayDragDropTarget(boolean display) {
             if (display) {
-                setStyle(UI.MouseEvents.DRAG_ENTERED_BACKGROUND);
+                setStyle(UI.Events.DRAG_ENTERED_BACKGROUND);
                 setOnAction(null);
             } else {
                 setStyle(originalStyle);
@@ -1142,10 +1226,10 @@ public abstract class DirectoryPane extends VBox {
          * @param mouseDragEvent the mouse event representing the entry
          */
         private void dragEntered(MouseDragEvent mouseDragEvent) {
-            LineEntry sourceEntry = UI.MouseEvents.selectLineEntry(mouseDragEvent.getGestureSource());
+            LineEntry sourceEntry = UI.Events.selectLineEntry(mouseDragEvent.getGestureSource());
 
             if (mouseDragEvent.getGestureSource() != this && sourceEntry != null) {
-                UI.MouseEvents.setDragCursorEnteredImage();
+                UI.Events.setDragCursorEnteredImage();
             }
         }
 
@@ -1155,7 +1239,7 @@ public abstract class DirectoryPane extends VBox {
          */
         private void dragExited(MouseDragEvent mouseDragEvent) {
             if (!Properties.DRAG_DROP_CURSOR_FILE_ICON.getValue())
-                UI.MouseEvents.setDragCursorImage(null);
+                UI.Events.setDragCursorImage(null);
         }
 
         /**
@@ -1167,7 +1251,7 @@ public abstract class DirectoryPane extends VBox {
             if (!isAtRootDirectory()) {
                 Object source = mouseDragEvent.getGestureSource();
                 if (source != this) {
-                    LineEntry sourceEntry = UI.MouseEvents.selectLineEntry(mouseDragEvent.getGestureSource());
+                    LineEntry sourceEntry = UI.Events.selectLineEntry(mouseDragEvent.getGestureSource());
 
                     if (sourceEntry != null) {
                         DirectoryPane sourcePane = sourceEntry.getOwningPane();

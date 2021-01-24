@@ -62,4 +62,32 @@ public final class FileLineEntry extends LineEntry {
         setOnMouseDragged(e -> e.setDragDetect(false));
         setOnDragDetected(e -> dragStarted());
     }
+
+    /**
+     * Returns the hash code of the file behind this instance
+     * @return hash code for this directory line entry
+     */
+    @Override
+    public int hashCode() {
+        return file.hashCode();
+    }
+
+    /**
+     * Determines if this DirectoryLineEntry is equal to another.
+     * Does equality based on the backing file
+     * @param obj the object to check
+     * @return true if equal, false if not.
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof FileLineEntry)) {
+            return false;
+        } else if (obj == this) {
+            return true;
+        } else {
+            FileLineEntry fileLineEntry = (FileLineEntry)obj;
+
+            return file.equals(fileLineEntry.file);
+        }
+    }
 }

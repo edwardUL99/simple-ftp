@@ -263,8 +263,6 @@ public class RemoteFile implements CommonFile {
             return linkPath;
     }
 
-    // TODO test if a single workaround in FTPLookup has removed the need for these methods and the getSymbolicFTPFile to be public in FTPLookup
-
     /**
      * Follows the link of this file if it is a symbolic link until it eventually gets to the destination
      * @return the FTPFile representing the destination of the link, null if not a symbolic link
@@ -413,12 +411,12 @@ public class RemoteFile implements CommonFile {
     }
 
     /**
-     * Returns the hashcode of this file's path
+     * Returns the hashcode of this file's path + 1 for remote
      * @return hash code for use in hash data structures
      */
     @Override
     public int hashCode() {
-        return getPathWithoutSeparators().hashCode();
+        return getPathWithoutSeparators().hashCode() + 1;
     }
 
     /**

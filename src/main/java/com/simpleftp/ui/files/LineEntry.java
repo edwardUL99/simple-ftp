@@ -208,8 +208,8 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
                 dragEventSource = true;
                 setStyle(UI.GREY_BACKGROUND_TRANSPARENT);
 
-                UI.MouseEvents.setDragCursorImage(this);
-                UI.MouseEvents.setDragInProgress(true);
+                UI.Events.setDragCursorImage(this);
+                UI.Events.setDragInProgress(true);
             }
         });
         setOnMouseClicked(e -> {
@@ -232,8 +232,8 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
                     setStyle(UI.WHITE_BACKGROUND);
             }
 
-            UI.MouseEvents.resetMouseCursor();
-            UI.MouseEvents.setDragInProgress(false);
+            UI.Events.resetMouseCursor();
+            UI.Events.setDragInProgress(false);
             dragStarted = false;
             enableMouseEntry = true;
         });
@@ -385,4 +385,20 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         startFullDrag();
         dragStarted = true;
     }
+
+    /**
+     * Returns the backing file's hash code
+     * @return hash code for this line entry
+     */
+    @Override
+    public abstract int hashCode();
+
+    /**
+     * Determine if this LineEntry is equals to another.
+     * Equality is done by calling the file's equals() method
+     * @param obj the object to check.
+     * @return true if equal, false if not
+     */
+    @Override
+    public abstract boolean equals(Object obj);
 }

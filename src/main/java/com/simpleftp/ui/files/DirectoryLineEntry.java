@@ -68,19 +68,19 @@ public final class DirectoryLineEntry extends LineEntry {
         EventTarget target = dragEvent.getTarget();
         Object gestureSource = dragEvent.getGestureSource();
 
-        if (gestureSource != this && UI.MouseEvents.validDragAndDropTarget(target)) {
-            LineEntry sourceEntry = UI.MouseEvents.selectLineEntry(gestureSource);
+        if (gestureSource != this && UI.Events.validDragAndDropTarget(target)) {
+            LineEntry sourceEntry = UI.Events.selectLineEntry(gestureSource);
             if (sourceEntry == null || sourceEntry.owningPane == owningPane) {
-                setStyle(UI.MouseEvents.DRAG_ENTERED_BACKGROUND);
+                setStyle(UI.Events.DRAG_ENTERED_BACKGROUND);
             } else {
                 ObservableList<Node> children = owningPane.getEntriesBox().getChildren();
                 if (this == children.get(children.size() - 1))
-                    setStyle(UI.MouseEvents.DRAG_ENTERED_BACKGROUND); // bit darker to distinguish from drag entry of entries box
+                    setStyle(UI.Events.DRAG_ENTERED_BACKGROUND); // bit darker to distinguish from drag entry of entries box
                 else
-                    setStyle(UI.MouseEvents.DRAG_ENTERED_BACKGROUND_CLEAR);
+                    setStyle(UI.Events.DRAG_ENTERED_BACKGROUND_CLEAR);
             }
 
-            UI.MouseEvents.setDragCursorEnteredImage();
+            UI.Events.setDragCursorEnteredImage();
         }
     }
 
@@ -92,7 +92,7 @@ public final class DirectoryLineEntry extends LineEntry {
         if (!dragEventSource && !selected)
             setStyle(UI.WHITE_BACKGROUND);
 
-        UI.MouseEvents.setDragCursorImage(this);
+        UI.Events.setDragCursorImage(this);
     }
 
     /**
@@ -102,7 +102,7 @@ public final class DirectoryLineEntry extends LineEntry {
     private void dragDropped(MouseDragEvent dragEvent) {
         Object source = dragEvent.getGestureSource();
         if (source != this) {
-            DirectoryPane directoryPane = UI.MouseEvents.getDirectoryPane(source);
+            DirectoryPane directoryPane = UI.Events.getDirectoryPane(source);
 
             if (directoryPane != null) {
                 if (directoryPane == owningPane) {
@@ -113,7 +113,7 @@ public final class DirectoryLineEntry extends LineEntry {
             }
         }
 
-        UI.MouseEvents.resetMouseCursor();
+        UI.Events.resetMouseCursor();
 
         dragEvent.consume();
     }
@@ -127,5 +127,33 @@ public final class DirectoryLineEntry extends LineEntry {
         setOnMouseDragEntered(this::dragEntered);
         setOnMouseDragExited(this::dragExited);
         setOnMouseDragReleased(this::dragDropped);
+    }
+
+    /**
+     * Returns the hash code of the file behind this instance
+     * @return hash code for this directory line entry
+     */
+    @Override
+    public int hashCode() {
+        return file.hashCode();
+    }
+
+    /**
+     * Determines if this DirectoryLineEntry is equal to another.
+     * Does equality based on the backing file
+     * @param obj the object to check
+     * @return true if equal, false if not.
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof DirectoryLineEntry)) {
+            return false;
+        } else if (obj == this) {
+            return true;
+        } else {
+            DirectoryLineEntry directoryLineEntry = (DirectoryLineEntry)obj;
+
+            return file.equals(directoryLineEntry.file);
+        }
     }
 }

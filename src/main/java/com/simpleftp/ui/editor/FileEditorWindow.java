@@ -61,7 +61,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
      * The editor being used
      */
     @Getter
-    private final StyleClassedTextArea editor;
+    private final FileEditor editor;
     /**
      * The ScrollPane for the editor
      */
@@ -73,7 +73,8 @@ public abstract class FileEditorWindow extends VBox implements Window {
     /**
      * This is true if the file is unedited or saved
      */
-    private boolean saved;
+    @Getter
+    boolean saved;
     /**
      * The button that will save the file
      */
@@ -93,7 +94,8 @@ public abstract class FileEditorWindow extends VBox implements Window {
     /**
      * The file contents that the reset button brings us back to
      */
-    private String resetFileContents;
+    @Getter
+    String resetFileContents;
 
     /**
      * Constructs a FileEditorWindow with the specified panel and file
@@ -105,16 +107,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
         this.creatingPane = creatingPane;
         this.fileContents = resetFileContents = fileContents;
         this.lineEntry = lineEntry;
-        editor = new StyleClassedTextArea() {
-            @Override
-            public void paste() {
-                super.paste();
-                if (saved) {
-                    saved = false;
-                    addStarToStageTitle();
-                }
-            }
-        };
+        this.editor = new FileEditor(this);
         editorScrollPane = new VirtualizedScrollPane<>(editor);
         buttonBar = new HBox();
         VBox.setVgrow(editorScrollPane, Priority.ALWAYS);
@@ -161,17 +154,8 @@ public abstract class FileEditorWindow extends VBox implements Window {
     /**
      * Resets the edited text to original
      */
-    private void reset() {
-        if (!saved) {
-            double hPos = editorScrollPane.estimatedScrollXProperty().getValue();
-            double vPos = editorScrollPane.estimatedScrollYProperty().getValue();
-            setEditorText(resetFileContents);
-            removeStarFromStageTitle();
-            saved = true;
-            editor.requestFocus();
-            editorScrollPane.estimatedScrollXProperty().setValue(hPos);
-            editorScrollPane.estimatedScrollYProperty().setValue(vPos);
-        }
+    public void reset() {
+        editor.undo();
     }
 
     /**
@@ -235,29 +219,12 @@ public abstract class FileEditorWindow extends VBox implements Window {
     }
 
     /**
-     * Sets the text of the editor
-     * @param text the text to set
-     */
-    private void setEditorText(String text) {
-        editor.clear();
-        editor.appendText(text);
-    }
-
-    /**
      * Initialises this window
      */
     private void initWindow() {
-        setEditorText(fileContents);
+        editor.setText(fileContents);
         editorScrollPane.scrollXToPixel(0);
         editorScrollPane.scrollYToPixel(0);
-        editor.setOnKeyTyped(e -> {
-            if (!e.isControlDown()) {
-                if (saved) {
-                    saved = false;
-                    addStarToStageTitle();
-                }
-            }
-        });
     }
 
     /**

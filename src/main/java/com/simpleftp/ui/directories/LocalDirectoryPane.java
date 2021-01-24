@@ -205,8 +205,12 @@ public final class LocalDirectoryPane extends DirectoryPane {
                     UI.doInfo(operationHeader + " Successful", "The " + operationMessage + " of " + source.getFilePath()
                             + " to " + destinationPath + " has completed successfully");
 
-                    if (!copy)
+                    if (!copy) {
                         refresh(); // if it was a move, we refresh so that the file no longer exists
+
+                        if (copiedEntry != null && copiedEntry.getFile().equals(source))
+                            copiedEntry = null; // After a move the copied entry will no longer be in the location it was
+                    }
 
                     if (targetPane != null) {
                         if (targetPane.isLocal()) {

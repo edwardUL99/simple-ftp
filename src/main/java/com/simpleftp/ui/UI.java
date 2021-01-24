@@ -726,9 +726,10 @@ public final class UI {
     }
 
     /**
-     * This class is used to provide static methods in the context of the UI for the help of processing Mouse events
+     * This class is used to provide static methods in the context of the UI for the help of processing any UI events
+     * such as mouse events etc.
      */
-    public static final class MouseEvents {
+    public static final class Events {
         /**
          * The colour for when drag enters any other object
          */
@@ -765,7 +766,7 @@ public final class UI {
          * <p>
          * This was required as when clicking a LineEntry, most of the time the target would be the text (or image view) inside it.
          * We need a method to determine the LineEntry that those clicked objects are a part of. This method provides the logic to do so.
-         * MouseEvents do not give enough control in picking the specific element so we need logic to "select" the LineEntry based on the actual object
+         * Events do not give enough control in picking the specific element so we need logic to "select" the LineEntry based on the actual object
          * that was clicked inside in the LineEntry (since a LineEntry extends HBox, it can be a parent). For example,
          * if the permissions string (a text object) is selected, the parent of that Text object will be the LineEntry. This
          * method selects the LineEntry from the mouse event.

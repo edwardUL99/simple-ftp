@@ -277,8 +277,16 @@ public final class RemoteDirectoryPane extends DirectoryPane {
                     UI.doInfo(operationHeader + " Successful", "The " + operationMessage + " of " + source.getFilePath()
                     + " to " + destinationPath + " has completed successfully");
 
-                    if (!copy)
-                        refreshCurrentDirectory(); // if it was a move, we refresh so that the file no longer exists
+                    if (!copy) {
+                        String parentPath = FileUtils.getParentPath(source.getFilePath(), source.isLocal());
+                        if (parentPath.equals(directory.getFilePath()))
+                            refreshCurrentDirectory();
+                        else
+                            refreshCache(parentPath); // if it was a move, we refresh so that the file no longer exists
+
+                        if (copiedEntry != null && copiedEntry.getFile().equals(source))
+                            copiedEntry = null; // After a move the copied entry will no longer be in the location it was
+                    }
 
                     if (!destinationPath.equals(directory.getFilePath()))
                         refreshCache(destinationPath);
