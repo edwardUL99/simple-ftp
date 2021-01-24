@@ -153,8 +153,36 @@ public abstract class DirectoryPane extends VBox {
         initStatusPanel();
         initEntriesBox();
         initEmptyFolderPane();
+        initKeyBinding();
         setOnMouseClicked(this::unselectFile);
         instances.add(this);
+    }
+
+    /**
+     * Initialises any key binding for this directory pane
+     */
+    private void initKeyBinding() {
+        setOnKeyPressed(e -> {
+            KeyCode code = e.getCode();
+            if (e.isControlDown()) {
+                if (filePanel != null) { // these operations require a FilePanel
+                    LineEntry selected = filePanel.getSelectedEntry();
+
+                    if (code == KeyCode.C) {
+                        if (selected != null)
+                            copiedEntry = selected;
+                    } else if (code == KeyCode.V) {
+                        if (selected != null) {
+                            if (canPaste(selected))
+                                paste(selected.getFile());
+                        } else {
+                            if (entriesBox.canPaste())
+                                paste(directory);
+                        }
+                    }
+                }
+            }
+        });
     }
 
     /**
@@ -481,8 +509,6 @@ public abstract class DirectoryPane extends VBox {
         return lineEntry;
     }
 
-    // TODO test copy paste
-
     /**
      * Creates a context menu for the provided LineEntry
      * @param lineEntry the line entry to create a context menu for
@@ -503,10 +529,7 @@ public abstract class DirectoryPane extends VBox {
 
         CustomMenuItem paste = new CustomMenuItem(pasteLabel); // custom menu item so we can use tooltips
         String copiedEntryFilePath = copiedEntry == null ? null:copiedEntry.getFilePath();
-        String lineEntryPath = lineEntry.getFilePath();
-        boolean copiedLocal;
-        boolean disabled = copiedEntryFilePath == null || lineEntry.isFile() || copiedEntryFilePath.equals(lineEntryPath)
-                || (FileUtils.getParentPath(copiedEntryFilePath, (copiedLocal = copiedEntry.isLocal())).equals(lineEntryPath) && copiedLocal == lineEntry.isLocal());
+        boolean disabled = !canPaste(lineEntry);
         paste.setDisable(disabled);
         paste.setOnAction(e -> paste(file));
         if (!disabled)
@@ -530,6 +553,20 @@ public abstract class DirectoryPane extends VBox {
         }
 
         return contextMenu;
+    }
+
+    /**
+     * Return true if the copied entry can be pasted into the provided line entry
+     * @param lineEntry the line entry to paste into
+     * @return true if can paste, false if not
+     */
+    private boolean canPaste(final LineEntry lineEntry) {
+        String copiedEntryFilePath = copiedEntry == null ? null:copiedEntry.getFilePath();
+        String lineEntryPath = lineEntry.getFilePath();
+        boolean copiedLocal;
+
+        return !(copiedEntryFilePath == null || lineEntry.isFile() || copiedEntryFilePath.equals(lineEntryPath)
+                || (FileUtils.getParentPath(copiedEntryFilePath, (copiedLocal = copiedEntry.isLocal())).equals(lineEntryPath) && copiedLocal == lineEntry.isLocal()));
     }
 
     /**
@@ -1078,10 +1115,7 @@ public abstract class DirectoryPane extends VBox {
          */
         private ContextMenu createContextMenu() {
             MenuItem paste = new MenuItem("Paste");
-            boolean copiedLocal;
-            boolean disabled = copiedEntry == null
-                    || (FileUtils.getParentPath(copiedEntry.getFilePath(), (copiedLocal = copiedEntry.isLocal())).equals(DirectoryPane.this.getCurrentWorkingDirectory())
-                    && copiedLocal == DirectoryPane.this.directory.isLocal());
+            boolean disabled = !canPaste();
             paste.setDisable(disabled);
             paste.setOnAction(e -> paste(DirectoryPane.this.directory));
 
@@ -1089,6 +1123,17 @@ public abstract class DirectoryPane extends VBox {
             contextMenu.getItems().add(paste);
 
             return contextMenu;
+        }
+
+        /**
+         * Returns true if the copiedEntry can be pasted here
+         * @return true if can paste, false if not
+         */
+        private boolean canPaste() {
+            boolean copiedLocal;
+            return !(copiedEntry == null
+                    || (FileUtils.getParentPath(copiedEntry.getFilePath(), (copiedLocal = copiedEntry.isLocal())).equals(DirectoryPane.this.getCurrentWorkingDirectory())
+                    && copiedLocal == DirectoryPane.this.directory.isLocal()));
         }
 
         /**
