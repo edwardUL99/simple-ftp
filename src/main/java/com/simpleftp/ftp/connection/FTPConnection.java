@@ -597,12 +597,15 @@ public class FTPConnection {
         FileOutputStream fileOutputStream = new FileOutputStream(new File(localPath));
 
         boolean retrieved = ftpClient.retrieveFile(remotePath, fileOutputStream);
+        LocalFile retrievedFile = new LocalFile(localPath);
 
         if (retrieved) {
             logDebug("Retrieved file successfully from server");
-            return new LocalFile(localPath); // the File object representing the file that was written to
+            return retrievedFile; // the File object representing the file that was written to
         } else {
             logDebug("Did not retrieve the file successfully from server");
+            if (!retrievedFile.delete())
+                logDebug("Failed to write remote contents to local file but couldn't delete empty local file");
             return null;
         }
     }

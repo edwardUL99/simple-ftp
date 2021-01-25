@@ -202,8 +202,8 @@ public final class LocalDirectoryPane extends DirectoryPane {
         FileService.newInstance(source, destination, copy ? FileService.Operation.COPY:FileService.Operation.MOVE, destination.isLocal())
                 .setOnOperationSucceeded(() -> {
                     String destinationPath = destination.getFilePath();
-                    UI.doInfo(operationHeader + " Successful", "The " + operationMessage + " of " + source.getFilePath()
-                            + " to " + destinationPath + " has completed successfully");
+                    UI.doInfo(operationHeader + " Completed", "The " + operationMessage + " of " + source.getFilePath()
+                            + " to " + destinationPath + " has completed");
 
                     if (!copy) {
                         refresh(); // if it was a move, we refresh so that the file no longer exists

@@ -214,6 +214,7 @@ public class LocalFileSystem extends AbstractFileSystem {
 
         Path sourcePath = source.toPath();
         Path destinationNioPath = destination.toPath();
+        AtomicReference<Boolean> fatalException = new AtomicReference<>(true);
 
         try {
             if (copy && source.isADirectory()) {
@@ -222,12 +223,22 @@ public class LocalFileSystem extends AbstractFileSystem {
 
                 Files.walk(sourcePath, FileVisitOption.FOLLOW_LINKS)
                         .forEach(source1 -> {
-                            if (Files.exists(source1)) {
+                            if (Files.exists(source1) && !fatalException.get()) {
+                                Path targetPath = null;
                                 try {
-                                    Path targetPath = finalDestinationNioPath.resolve(sourcePath.relativize(source1));
+                                    targetPath = finalDestinationNioPath.resolve(sourcePath.relativize(source1));
                                     Files.copy(source1, targetPath);
                                 } catch (IOException ex) {
-                                    thrownException.set(ex);
+                                    boolean fatal = Files.isDirectory(source1);
+
+                                    if (fatal) {
+                                        fatalException.set(true);
+                                        thrownException.set(ex);
+                                    } else {
+                                        fileOperationErrors.add(new FileOperationError("Failed to copy a file to destination directory",
+                                                source1.toAbsolutePath().toString(),
+                                                targetPath.toAbsolutePath().toString()));
+                                    }
                                 }
                             }
                         });
@@ -257,10 +268,11 @@ public class LocalFileSystem extends AbstractFileSystem {
      * @param destDirectory the destination directory to download to
      * @param currentDirectory the current directory traversed, leave null for initial state
      * @param ftpConnection the connection to use
+     * @param fileSystem the file system calling this method
      * @param copy if false, the files will be deleted from the server as they are copied
      * @throws FTPException if an error occurs related to the FTP connection
      */
-    static void recursivelyDownloadDirectory(String sourceDirectory, String destDirectory, String currentDirectory, FTPConnection ftpConnection, boolean copy) throws FTPException, FileSystemException {
+    static void recursivelyDownloadDirectory(String sourceDirectory, String destDirectory, String currentDirectory, FTPConnection ftpConnection, AbstractFileSystem fileSystem, boolean copy) throws FTPException, FileSystemException {
         String listPath = sourceDirectory;
         if (currentDirectory != null)
             listPath = FileUtils.appendPath(listPath, currentDirectory, false); // here this is appending a remote path
@@ -296,19 +308,19 @@ public class LocalFileSystem extends AbstractFileSystem {
                 boolean isFile = symLink ? file2.isNormalFile():file1.isFile();
 
                 if (directory) {
-                    recursivelyDownloadDirectory(listPath, destPath, currName, ftpConnection, copy);
+                    recursivelyDownloadDirectory(listPath, destPath, currName, ftpConnection, fileSystem, copy);
                 } else if (isFile) {
                     LocalFile downloaded = ftpConnection.downloadFile(filePath, destPath);
                     if (downloaded == null || !downloaded.exists())
-                        throw new FileSystemException("Failed to download file: " + filePath);
+                        fileSystem.fileOperationErrors.add(new FileOperationError("Failed to download file", filePath, destPath));
 
                     if (!copy && !ftpConnection.removeFile(filePath))
-                        throw new FileSystemException("Failed to remove file: " + filePath);
+                        fileSystem.fileOperationErrors.add(new FileOperationError("Failed to remove file from remote filesystem", filePath, destPath));
                 }
             }
 
             if (!copy && !ftpConnection.removeDirectory(listPath))
-                throw new FileSystemException("Failed to remove file: " + listPath);
+                fileSystem.fileOperationErrors.add(new FileOperationError("Failed to remove file from remote filesystem", listPath, destPath));
         }
     }
 
@@ -341,7 +353,7 @@ public class LocalFileSystem extends AbstractFileSystem {
             FTPConnection ftpConnection = getFTPConnection();
 
             if (sourceDir) {
-                recursivelyDownloadDirectory(sourcePath, destinationDir, null, ftpConnection, copy);
+                recursivelyDownloadDirectory(sourcePath, destinationDir, null, ftpConnection, this, copy);
                 return fileExists(destinationPath);
             } else {
                 LocalFile downloaded = ftpConnection.downloadFile(sourcePath, destinationDir);

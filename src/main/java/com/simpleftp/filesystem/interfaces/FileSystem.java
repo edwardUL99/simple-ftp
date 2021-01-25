@@ -17,6 +17,7 @@
 
 package com.simpleftp.filesystem.interfaces;
 
+import com.simpleftp.filesystem.FileOperationError;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.ftp.connection.FTPConnection;
 
@@ -37,6 +38,7 @@ import com.simpleftp.ftp.connection.FTPConnection;
  *
  * Implementing class' constructors, after calling super, can do their own necessary validations then.
  *
+ * All implementing FileSystems should extend AbstractFileSystem.
  */
 public interface FileSystem {
     /**
@@ -147,4 +149,17 @@ public interface FileSystem {
      * @return true if a success, false if not
      */
     boolean moveFiles(CommonFile source, CommonFile destination) throws FileSystemException;
+
+    /**
+     * Retrieves the next file operation error if there is one available. These errors are non-fatal errors produced by copyFiles or
+     * moveFiles/removeFile if source file is a directory.
+     * @return the next FileOperationError if available, null if not
+     */
+    FileOperationError getNextFileOperationError();
+
+    /**
+     * Returns true if there is a file operation error available to retrieve
+     * @return true if there is a FileOperationError, false if not
+     */
+    boolean hasNextFileOperationError();
 }

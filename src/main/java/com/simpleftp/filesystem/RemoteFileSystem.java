@@ -293,7 +293,7 @@ public class RemoteFileSystem extends AbstractFileSystem {
 
         if (source.isADirectory()) {
             String localPath = FileUtils.TEMP_DIRECTORY + FileUtils.PATH_SEPARATOR + sourceName;
-            LocalFileSystem.recursivelyDownloadDirectory(source.getFilePath(), FileUtils.TEMP_DIRECTORY, null, connection, true);
+            LocalFileSystem.recursivelyDownloadDirectory(source.getFilePath(), FileUtils.TEMP_DIRECTORY, null, connection, this, true);
 
             LocalFile localFile = new LocalFile(localPath);
             if (!localFile.exists())
@@ -386,15 +386,15 @@ public class RemoteFileSystem extends AbstractFileSystem {
                     recursivelyUploadDirectory(listPath, destPath, name, ftpConnection, copy);
                 } else if (file.isFile()) {
                     if (ftpConnection.uploadFile(file, destPath) == null)
-                        throw new FileSystemException("Failed to upload file: " + filePath);
+                        fileOperationErrors.add(new FileOperationError("Failed to upload file to destination", filePath, destPath));
 
                     if (!copy && !file.delete())
-                        throw new FileSystemException("Failed to remove file: " + filePath);
+                        fileOperationErrors.add(new FileOperationError("Failed to remove file from local filesystem", filePath, null));
                 }
             }
 
             if (!copy && !new LocalFile(listPath).delete())
-                throw new FileSystemException("Failed to remove file: " + listPath);
+                fileOperationErrors.add(new FileOperationError("Failed to remove file from local filesystem", listPath, null));
         }
     }
 

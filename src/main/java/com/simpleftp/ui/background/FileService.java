@@ -17,6 +17,7 @@
 
 package com.simpleftp.ui.background;
 
+import com.simpleftp.filesystem.FileOperationError;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.filesystem.interfaces.FileSystem;
@@ -26,6 +27,7 @@ import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.background.scheduling.TaskScheduler;
 import com.simpleftp.ui.interfaces.ActionHandler;
+import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.concurrent.Worker;
@@ -84,6 +86,11 @@ public abstract class FileService implements BackgroundTask {
      */
     private ActionHandler onOperationFailed;
     /**
+     * The monitor for watching FileOperationErrors
+     */
+    @Getter
+    private final ErrorMonitor errorMonitor;
+    /**
      * The scheduler that will schedule this service
      */
     private static final TaskScheduler<CommonFile, FileService> scheduler = new TaskScheduler<>();
@@ -133,6 +140,7 @@ public abstract class FileService implements BackgroundTask {
         checkDestinationNullity(destination);
         this.destination = destination;
         initService();
+        errorMonitor = new ErrorMonitor();
     }
 
     /**
@@ -201,6 +209,7 @@ public abstract class FileService implements BackgroundTask {
     private void doOperation() {
         try {
             FileSystem fileSystem = getFileSystem();
+            errorMonitor.start(); // start the error monitor after we initialise the file system to prevent different filesystems being created if a race condition was to occur
             switch (operation) {
                 case COPY: operationSucceeded = fileSystem.copyFiles(source, destination);
                             break;
@@ -233,6 +242,8 @@ public abstract class FileService implements BackgroundTask {
                 onOperationFailed.doAction();
         }
 
+        cancelErrorMonitor();
+
         try {
             FTPConnection connection = fileSystem.getFTPConnection();
             if (connection != null && connection.isConnected())
@@ -241,6 +252,18 @@ public abstract class FileService implements BackgroundTask {
             if (FTPSystem.isDebugEnabled())
                 ex.printStackTrace();
             UI.doError("Service Completion Error", "An error occurred disconnecting the service's connection because: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Cancels the ErrorMonitor service
+     */
+    private void cancelErrorMonitor() {
+        try {
+            errorMonitor.cancel();
+        } catch (FileSystemException ex) {
+            if (FTPSystem.isDebugEnabled())
+                ex.printStackTrace();
         }
     }
 
@@ -276,6 +299,7 @@ public abstract class FileService implements BackgroundTask {
                 connection.disconnect();
 
             scheduledServices.remove(this);
+            cancelErrorMonitor();
         } catch (FTPException ex) {
             if (FTPSystem.isDebugEnabled())
                 ex.printStackTrace();
@@ -401,6 +425,84 @@ public abstract class FileService implements BackgroundTask {
             return new LocalFileService(source, destination, operation);
         } else {
             return new RemoteFileService(source, destination, operation);
+        }
+    }
+
+    /**
+     * This class monitors FileOperationErrors in the file system during the operation
+     */
+    public class ErrorMonitor {
+        /**
+         * The backing service
+         */
+        private final Service<Void> service;
+        /**
+         * Returns true if cancelled
+         */
+        private boolean cancelled;
+
+        /**
+         * Constructs an ErrorMonitor instance
+         */
+        ErrorMonitor() {
+            service = new Service<>() {
+                @Override
+                protected Task<Void> createTask() {
+                    return new Task<>() {
+                        @Override
+                        protected Void call() throws Exception {
+                            FileSystem fileSystem = getFileSystem();
+
+                            while (!cancelled) {
+                                FileOperationError error = fileSystem.getNextFileOperationError();
+
+                                if (error != null)
+                                    displayOperationError(error);
+                            }
+
+                            return null;
+                        }
+                    };
+                }
+            };
+        }
+
+        /**
+         * Starts this ErrorMonitor
+         */
+        public void start() {
+            service.start();
+        }
+
+        /**
+         * Displays this file operation error
+         * @param fileOperationError the error to display
+         */
+        private void displayOperationError(FileOperationError fileOperationError) {
+            String sourcePath = fileOperationError.getSourcePath();
+            String destinationPath = fileOperationError.getDestinationPath();
+
+            String message = fileOperationError.getErrorMessage() + ".";
+            if (sourcePath != null)
+                message += " File: " + sourcePath;
+
+            if (destinationPath != null)
+                message += " Destination: " + destinationPath;
+
+            final String finalMessage = message;
+            Platform.runLater(() -> UI.doError("File Operation Error", finalMessage));
+        }
+
+        /**
+         * Cancels this error monitor displaying all file operations left if any
+         */
+        public void cancel() throws FileSystemException {
+            FileSystem fileSystem = getFileSystem();
+            while (fileSystem.hasNextFileOperationError())
+                displayOperationError(fileSystem.getNextFileOperationError());
+
+            cancelled = true;
+            service.cancel();
         }
     }
 }
