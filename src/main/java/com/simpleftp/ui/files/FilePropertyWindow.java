@@ -645,7 +645,8 @@ public class FilePropertyWindow extends VBox implements Window {
                             UI.doInfo("Permissions Changed", "Permissions have been changed successfully from " + lastOctal + " to " + permissions);
 
                             DirectoryPane directoryPane = lineEntry.getOwningPane();
-                            if (directoryPane.getCurrentWorkingDirectory().equals(FileUtils.getParentPath(lineEntry.getFilePath(), lineEntry.isLocal())))
+                            boolean local = lineEntry.isLocal();
+                            if (FileUtils.pathEquals(directoryPane.getCurrentWorkingDirectory(), FileUtils.getParentPath(lineEntry.getFilePath(), local), local))
                                 lineEntry.refresh();
                         }
                     } catch (Exception ex) {

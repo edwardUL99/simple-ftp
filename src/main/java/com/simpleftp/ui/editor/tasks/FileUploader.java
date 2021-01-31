@@ -125,7 +125,7 @@ public abstract class FileUploader implements BackgroundTask {
 
             UI.doInfo("File Saved", "File " + filePath + " saved successfully");
 
-            if (parentPath.equals(directoryPane.getCurrentWorkingDirectory())) {
+            if (FileUtils.pathEquals(parentPath, directoryPane.getCurrentWorkingDirectory(), directoryPane.isLocal())) {
                 try {
                     LineEntry lineEntry = editorWindow.getLineEntry();
                     if (directoryPane.filesDisplayed().getLineEntries().contains(lineEntry))

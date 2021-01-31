@@ -26,9 +26,12 @@ import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.filesystem.paths.interfaces.PathResolver;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
+import com.simpleftp.ftp.connection.Server;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.properties.Properties;
+import com.simpleftp.sessions.Sessions;
+import com.simpleftp.sessions.exceptions.SessionLoadException;
 import com.simpleftp.ui.background.BackgroundTask;
 import com.simpleftp.ui.background.FileService;
 import com.simpleftp.ui.dialogs.*;
@@ -41,6 +44,7 @@ import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.editor.FileEditorWindow;
 import com.simpleftp.ui.interfaces.WindowActionHandler;
 import com.simpleftp.ui.interfaces.Window;
+import com.simpleftp.ui.views.MainView;
 import javafx.application.Platform;
 import javafx.event.EventTarget;
 import javafx.geometry.Insets;
@@ -51,6 +55,7 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
+import javafx.stage.Stage;
 import javafx.util.Pair;
 import lombok.Getter;
 import lombok.Setter;
@@ -103,7 +108,7 @@ public final class UI {
     /**
      * Height of the File panel
      */
-    public static final int FILE_PANEL_HEIGHT = 500;
+    public static final int FILE_PANEL_HEIGHT = 600;
 
     /**
      * Width of the File panel
@@ -119,6 +124,16 @@ public final class UI {
      * Height for the panel view
      */
     public static final int PANEL_VIEW_HEIGHT = FILE_PANEL_HEIGHT + 15;
+
+    /**
+     * Height for main view
+     */
+    public static final int MAIN_VIEW_HEIGHT = PANEL_VIEW_HEIGHT + 100;
+
+    /**
+     * Width for main view
+     */
+    public static final int MAIN_VIEW_WIDTH = PANEL_VIEW_WIDTH;
 
     /**
      * The background colour for the file panel toolbar
@@ -208,8 +223,16 @@ public final class UI {
      * Should be set in the start() method of the main class
      */
     @Getter
-    @Setter
     public static Scene applicationScene;
+
+    /**
+     * The MainView that is the basis of the UI for this application.
+     * This is the window that the user interacts with. It contains all the separate components in one place.
+     *
+     * The value of this shouldn't be changed outside of the startApplication method
+     */
+    @Getter
+    public static MainView mainView;
 
     /**
      * Prevent instantiation
@@ -312,6 +335,10 @@ public final class UI {
             doException((Exception)cause, ExceptionType.ERROR, false);
     }
 
+    /**
+     * Handles an UIException by displaying the underlying exception
+     * @param ex the exception to display
+     */
     private static void handleUIException(Exception ex) {
         Throwable cause = ex.getCause();
         if (cause instanceof Exception)
@@ -436,6 +463,14 @@ public final class UI {
      * Opens the confirm quit dialog and if true, quits
      */
     public static void doQuit() {
+        doQuit(null);
+    }
+
+    /**
+     * Call this method to perform the specified action if quit is specified
+     * @param actionHandler the action to perform, null if no action requested
+     */
+    public static void doQuit(ActionHandler actionHandler) {
         QuitDialog quitDialog = new QuitDialog();
 
         if (quitDialog.showAndGetConfirmation()) {
@@ -445,8 +480,10 @@ public final class UI {
             }
 
             if (quit) {
+                if (actionHandler != null)
+                    actionHandler.doAction();
+
                 Platform.exit();
-                System.exit(0);
             }
         }
     }
@@ -679,6 +716,15 @@ public final class UI {
     }
 
     /**
+     * Removes all files from the specified opened files path
+     * @param local true if the path is local, false if not
+     */
+    public static void closeAllFiles(boolean local) {
+        Set<String> openedFiles = local ? openedLocalFiles:openedRemoteFiles;
+        openedFiles.clear();
+    }
+
+    /**
      * Checks if the specified file is opened in the UI. A LineEntry represents a file with a path, so more efficient to just pass in it's path.
      * Note that this method does not check if the path exists on the file system
      * @param filePath the path of the file to check. When opening a LineEntry, just call lineEntry.getFilePath to retrieve the path
@@ -723,6 +769,147 @@ public final class UI {
      */
     public static void forEachOpenedWindow(WindowActionHandler actionHandler) {
         getOpenedWindows().forEach(actionHandler::doAction);
+    }
+
+    /**
+     * Display an error message if connection of the system connection fails
+     */
+    public static void doConnectionError() {
+        FTPConnection connection = FTPSystem.getConnection();
+        if (connection != null) {
+            Server server = connection.getServer();
+            UI.doError("Connection Error", "Failed to connect to server " + server.getServer() + " with user " + server.getUser() + " and port " + server.getPort()
+                    + ". FTP Error: " + connection.getReplyString());
+        }
+    }
+
+    /**
+     * Connects to the server
+     * TODO temporary method until SFTP-14
+     */
+    private static void connectToServer() {
+        if (!mainView.connectToServer())
+            doConnectionError();
+    }
+
+    /**
+     * Initialises the Sessions functionality. This wraps the steps and error-handling initialisation may require.
+     * This should be called to initialise the Sessions package so that sessions can be retrieved using Sessions.getSession etc.
+     * This method, thus, does not set the current session
+     * @return true if initialised successfully, false if not
+     */
+    public static boolean initialiseSessions() {
+        boolean disabled = Sessions.isDisabled();
+
+        if (!disabled) {
+            return doSessionInitialisation();
+        }
+
+        return false;
+    }
+
+    /**
+     * A private method to carry out the initialisation logic. This does not check if sessions are disabled or not
+     * @return true if initialised, false if not
+     */
+    private static boolean doSessionInitialisation() {
+        boolean initialised = Sessions.isInitialised();
+        if (!initialised) {
+            Sessions.initialise(false);
+
+            initialised = Sessions.isInitialised();
+
+            if (!initialised) {
+                SessionLoadException exception = Sessions.getExistingLoadException();
+
+                String errorMessage = exception != null ? "Failed because of: " + exception.getMessage() + ". " : "";
+                if (UI.doConfirmation("Sessions Initialisation Failure", "Failed to initialise Sessions functionality correctly."
+                        + " It may be due to a corrupted sessions file on the disk. " + errorMessage + "Removing the existing sessions file and re-initialising "
+                        + "can fix the issue. Do you wish to do this? It cannot be undone")) {
+                    Sessions.initialise(true);
+                    initialised = Sessions.isInitialised();
+
+                    if (!initialised)
+                        UI.doError("Session Initialisation Failure", "Failed to initialise Sessions again. Proceeding without Session functionality");
+                }
+            }
+        }
+
+        return initialised;
+    }
+
+    /**
+     * Initialises the session if using sessions. TODO this is a temporary method to be removed in SFTP-14
+     * @param server the server to base the session on
+     */
+    private static void initialiseSession(Server server) {
+        boolean disabled = Sessions.isDisabled();
+
+        if (!disabled) {
+            if (doSessionInitialisation())
+                Sessions.setCurrentSession(Sessions.getSession(server));
+        }
+    }
+
+    /**
+     * This method is used to loosely simulate the LoginWindow functionality.
+     * @param useSessions true to use sessions, false not to
+     * TODO this should be removed as part of SFTP-14. The LoginWindow should follow this logic closely. The useSessions parameter will be the checkbox to use sessions for this login
+     */
+    public static void simulateLogin(boolean useSessions) {
+        String server = System.getenv("SIMPLEFTP_TEST_SERVER");
+        String user = System.getenv("SIMPLEFTP_TEST_USER");
+        String password = System.getenv("SIMPLEFTP_TEST_PASSWORD");
+        String portString = System.getenv("SIMPLEFTP_TEST_PORT");
+        int port = portString == null ? Server.DEFAULT_FTP_PORT:Integer.parseInt(portString);
+
+        FTPConnection systemConnection = FTPSystem.getConnection();
+        Server serverDetails = new Server(server, user, password, port, 200);
+        if (systemConnection == null)
+            FTPConnection.createSharedConnection(serverDetails);
+        else
+            systemConnection.setServer(serverDetails);
+
+        if (useSessions) {
+            mainView.enableSessions();
+            initialiseSession(serverDetails);
+        } else {
+            mainView.disableSessions();
+        }
+
+        connectToServer();
+        mainView.onLogin();
+    }
+
+    /**
+     * This method starts the login workflow by displaying the LoginWindow and interacting with the UI MainView instance.
+     * TODO this will display the LoginWindow in SFTP-14
+     */
+    public static void doLogin() {
+        simulateLogin(UI.doConfirmation("Login Session Initialisation", "Press OK to use Sessions functionality in this session"));
+    }
+
+    /**
+     * Starts the application with the primary stage passed into the Application.start() method.
+     * It initialises the Application Scene also which can be retrieved using UI.getApplicationScene()
+     * @param primaryStage the primary stage passed into the start() method.
+     * @throws UIException if the UI fails to be initialised
+     */
+    public static void startApplication(Stage primaryStage) throws UIException {
+        mainView = new MainView();
+
+        Scene scene = new Scene(mainView, UI.MAIN_VIEW_WIDTH, UI.MAIN_VIEW_HEIGHT);
+        primaryStage.setScene(scene);
+        primaryStage.setTitle("Test");
+        primaryStage.setResizable(false);
+        primaryStage.show();
+        primaryStage.setOnCloseRequest(e -> {
+            mainView.quit();
+            e.consume(); // consume if we don't want to quit
+        });
+
+        applicationScene = scene;
+        doLogin();
     }
 
     /**

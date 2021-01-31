@@ -115,6 +115,11 @@ public final class Properties {
     public static final BooleanProperty DRAG_DROP_CURSOR_FILE_ICON = new BooleanProperty("DRAG_DROP_CURSOR_FILE_ICON", false);
 
     /**
+     * The property representing if clipboard should be cleared after successful path paste through local and remote toolbar menus
+     */
+    public static final BooleanProperty CLEAR_CLIPBOARD_PATH_PASTE = new BooleanProperty("CLEAR_CLIPBOARD_PATH_PASTE", true);
+
+    /**
      * Initialises the properties object
      */
     static void initialiseProperties() {

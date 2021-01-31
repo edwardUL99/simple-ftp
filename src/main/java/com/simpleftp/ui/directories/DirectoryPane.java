@@ -168,16 +168,18 @@ public abstract class DirectoryPane extends VBox {
                 if (filePanel != null) { // these operations require a FilePanel
                     LineEntry selected = filePanel.getSelectedEntry();
 
-                    if (code == KeyCode.C) {
-                        if (selected != null)
-                            copiedEntry = selected;
-                    } else if (code == KeyCode.V) {
-                        if (selected != null) {
-                            if (canPaste(selected))
-                                paste(selected.getFile());
-                        } else {
-                            if (entriesBox.canPaste())
-                                paste(directory);
+                    if (!e.isShiftDown()) { // shift is pressed as well as ctrl for special operations, i.e. Ctrl+Shift+C is connect remote panel on MainView, but Ctrl+C without shift is C
+                        if (code == KeyCode.C) {
+                            if (selected != null)
+                                copiedEntry = selected;
+                        } else if (code == KeyCode.V) { // Ctrl+V is just Ctrl+V without Shift
+                            if (selected != null) {
+                                if (canPaste(selected))
+                                    paste(selected.getFile());
+                            } else {
+                                if (entriesBox.canPaste())
+                                    paste(directory);
+                            }
                         }
                     }
                 }
@@ -1132,8 +1134,8 @@ public abstract class DirectoryPane extends VBox {
         private boolean canPaste() {
             boolean copiedLocal;
             return !(copiedEntry == null
-                    || (FileUtils.getParentPath(copiedEntry.getFilePath(), (copiedLocal = copiedEntry.isLocal())).equals(DirectoryPane.this.getCurrentWorkingDirectory())
-                    && copiedLocal == DirectoryPane.this.directory.isLocal()));
+                    || FileUtils.pathEquals(FileUtils.getParentPath(copiedEntry.getFilePath(), (copiedLocal = copiedEntry.isLocal())), DirectoryPane.this.getCurrentWorkingDirectory(), copiedLocal)
+                    && copiedLocal == DirectoryPane.this.directory.isLocal());
         }
 
         /**

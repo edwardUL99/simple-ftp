@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * This class represents a RemoteFilePanel storing a DirectoryPane for remote files
  */
-final class RemoteFilePanel extends FilePanel {
+public final class RemoteFilePanel extends FilePanel {
     /**
      * Constructs a RemoteFilePanel with the provided directoryPane
      * @param directoryPane the directory pane for this Panel to display
@@ -138,7 +138,7 @@ final class RemoteFilePanel extends FilePanel {
                 if (!succeeded)
                     return false;
 
-                boolean parentPathMatchesPanelsPath = currentPath.equals(parentPath);
+                boolean parentPathMatchesPanelsPath = FileUtils.pathEquals(currentPath, parentPath, false);
 
                 if (parentPathMatchesPanelsPath) {
                     directoryPane.refreshCurrentDirectory(); // only need to refresh if the path the file is created in matches the cwd
@@ -161,7 +161,7 @@ final class RemoteFilePanel extends FilePanel {
      * The handler for creating a new directory
      */
     @Override
-    void createNewDirectory() {
+    public void createNewDirectory() {
         AtomicBoolean openCreatedDirectory = new AtomicBoolean(false);
         String path = UI.doCreateDialog(true, () -> openCreatedDirectory.set(true));
         try {
@@ -179,7 +179,7 @@ final class RemoteFilePanel extends FilePanel {
      * The handler to create a new empty file
      */
     @Override
-    void createNewFile() {
+    public void createNewFile() {
         AtomicBoolean openCreatedFile = new AtomicBoolean(false);
         String path = UI.doCreateDialog(false, () -> openCreatedFile.set(true));
         try {
@@ -202,7 +202,7 @@ final class RemoteFilePanel extends FilePanel {
      * Defines how a symbolic link should be created
      */
     @Override
-    void createSymbolicLink() {
+    public void createSymbolicLink() {
         UI.doInfo("Symbolic Link Creation", "To create a symbolic link, contact the Server Administrator to create the link in the FTP location on the server");
     }
 
@@ -252,7 +252,7 @@ final class RemoteFilePanel extends FilePanel {
      * The handler for the goto button
      */
     @Override
-    void gotoPath() {
+    public void gotoPath() {
         String path = UI.doPathDialog();
 
         if (path != null)

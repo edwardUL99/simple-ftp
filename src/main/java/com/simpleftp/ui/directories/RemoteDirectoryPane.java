@@ -84,7 +84,7 @@ public final class RemoteDirectoryPane extends DirectoryPane {
         double hPosition = entriesScrollPane.getHvalue();
         String parent = FileUtils.getParentPath(newPath, false);
         refreshCurrentDirectory();
-        if (!parent.equals(getCurrentWorkingDirectory()))
+        if (!FileUtils.pathEquals(parent, getCurrentWorkingDirectory(), false))
             refreshCache(parent); // refresh the cache of the directory the file was renamed to if it wasn't renamed to the same directory
         entriesScrollPane.setVvalue(vPosition);
         entriesScrollPane.setHvalue(hPosition); // resets the position of the scrollbars to where they were before the refresh
@@ -274,12 +274,13 @@ public final class RemoteDirectoryPane extends DirectoryPane {
         FileService.newInstance(source, destination, copy ? FileService.Operation.COPY:FileService.Operation.MOVE, destination.isLocal())
                 .setOnOperationSucceeded(() -> {
                     String destinationPath = destination.getFilePath();
+                    String currentPath = directory.getFilePath();
                     UI.doInfo(operationHeader + " Completed", "The " + operationMessage + " of " + source.getFilePath()
                     + " to " + destinationPath + " has completed");
 
                     if (!copy) {
                         String parentPath = FileUtils.getParentPath(source.getFilePath(), source.isLocal());
-                        if (parentPath.equals(directory.getFilePath()))
+                        if (FileUtils.pathEquals(parentPath, currentPath, false))
                             refreshCurrentDirectory();
                         else
                             refreshCache(parentPath); // if it was a move, we refresh so that the file no longer exists
@@ -288,7 +289,7 @@ public final class RemoteDirectoryPane extends DirectoryPane {
                             copiedEntry = null; // After a move the copied entry will no longer be in the location it was
                     }
 
-                    if (!destinationPath.equals(directory.getFilePath()))
+                    if (!FileUtils.pathEquals(destinationPath, currentPath, false))
                         refreshCache(destinationPath);
 
                     if (targetPane != null && targetPane.isLocal()) {

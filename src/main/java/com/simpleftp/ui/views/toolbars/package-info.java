@@ -14,29 +14,7 @@
  * You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-package com.simpleftp;
-
-import com.simpleftp.ui.UI;
-import com.simpleftp.ui.exceptions.UIException;
-import javafx.application.Application;
-import javafx.stage.Stage;
-
 /**
- * This will be the main class. At the moment it is just used for testing
+ * This package provides toolbars for use in the views package
  */
-public class FTPClient extends Application {
-
-    public static void main(String[] args) {
-        launch(args);
-    }
-
-    /**
-     * @param primaryStage the initial stage to display the application on
-     * @throws UIException if the UI fails to be initialised
-     */
-    @Override
-    public void start(Stage primaryStage) throws UIException {
-        UI.startApplication(primaryStage);
-    }
-}
+package com.simpleftp.ui.views.toolbars;

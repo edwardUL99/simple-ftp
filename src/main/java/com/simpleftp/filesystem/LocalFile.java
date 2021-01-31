@@ -90,7 +90,7 @@ public class LocalFile extends File implements CommonFile {
         } else {
             LocalFile localFile = (LocalFile)obj;
 
-            return this.getFilePath().equals(localFile.getFilePath());
+            return super.equals(localFile);
         }
     }
 

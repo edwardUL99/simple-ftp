@@ -27,6 +27,8 @@ import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.files.LineEntry;
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -43,13 +45,23 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * This class represents a DirectoryPane storing a DirectoryPane for local files
  */
-final class LocalFilePanel extends FilePanel {
+public final class LocalFilePanel extends FilePanel {
+    /**
+     * This property determines if home is defined for this file panel
+     */
+    private final BooleanProperty homeDefinedProperty;
+    /**
+     * The file representing home
+     */
+    private LocalFile homeFile;
+
     /**
      * Constructs a LocalFilePanel with the provided directoryPane
      * @param directoryPane the directory pane for this file panel to hold
      */
     LocalFilePanel(DirectoryPane directoryPane) {
         super(directoryPane);
+        homeDefinedProperty = new SimpleBooleanProperty(false);
         initButtons();
     }
 
@@ -59,18 +71,20 @@ final class LocalFilePanel extends FilePanel {
     private void initButtons() {
         String homePath = System.getProperty("user.home");
         String errorHeader = "Home button initialisation error";
-        LocalFile homeFile = null;
         if (homePath != null && (homeFile = new LocalFile(homePath)).isADirectory()) {
             // only add the home button if there is a user.home property defined and it exists as a directory
+
             Button homeButton = new Button("Home");
             homeButton.setTooltip(new Tooltip("Go to user's home directory"));
             final LocalFile finalFile = homeFile;
             homeButton.setOnAction(e -> home(finalFile));
             ObservableList<Node> children = toolBar.getChildren();
             children.add(children.indexOf(propertiesButton), homeButton);
+
+            homeDefinedProperty.setValue(true);
         } else if (homePath == null) { // Platform runLater as this code may be executed before a stage is shown. A dialog can't be displayed without primary scene/stage being set up, so run later for when a scene is prepared
             Platform.runLater(() -> UI.doError(errorHeader, "The system does not have a Java user.home property defined outlining the location of the user's home directory. Not enabling Home button"));
-        } else if (!homeFile.isADirectory()) {
+        } else if (homeFile != null && !homeFile.isADirectory()) {
             Platform.runLater(() -> UI.doError(errorHeader, "The system Java property defined user home " + homePath + " is either not a directory or a file. Not enabling Home button"));
         }
     }
@@ -80,13 +94,30 @@ final class LocalFilePanel extends FilePanel {
      */
     private void home(LocalFile homeFile) {
         try {
-            if (!homeFile.getFilePath().equals(directoryPane.getCurrentWorkingDirectory())) {
+            if (!homeFile.equals(directoryPane.getDirectory())) {
                 directoryPane.setDirectory(homeFile);
                 directoryPane.refresh();
             }
         } catch (FileSystemException ex) {
             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
+    }
+
+    /**
+     * Goes to the user's home directory if it is defined
+     */
+    public void home() {
+        if (homeDefinedProperty.get())
+            home(homeFile);
+    }
+
+    /**
+     * This property determines if the home functionality of the local panel has been initialised correctly. If this has a value
+     * of false, home() will not work
+     * @return the property for if home is enabled
+     */
+    public BooleanProperty getHomeDefinedProperty() {
+        return homeDefinedProperty;
     }
 
     /**
@@ -152,7 +183,7 @@ final class LocalFilePanel extends FilePanel {
             if (!succeeds)
                 return false;
 
-            boolean parentPathMatchesPanelsPath = currentDirectory.equals(parentPath);
+            boolean parentPathMatchesPanelsPath = FileUtils.pathEquals(currentDirectory, parentPath, true);
             if (parentPathMatchesPanelsPath) {
                 directoryPane.refreshCurrentDirectory(); // only need to refresh if the path the file is created in matches the cwd
             }
@@ -162,10 +193,10 @@ final class LocalFilePanel extends FilePanel {
     }
 
     /**
-     * The handler for creating a new directory
+     * {@inheritDoc}
      */
     @Override
-    void createNewDirectory() {
+    public void createNewDirectory() {
         AtomicBoolean openCreatedDirectory = new AtomicBoolean(false);
         String path = UI.doCreateDialog(true, () -> openCreatedDirectory.set(true));
 
@@ -181,10 +212,10 @@ final class LocalFilePanel extends FilePanel {
     }
 
     /**
-     * The handler to create a new empty file
+     * {@inheritDoc}
      */
     @Override
-    void createNewFile() {
+    public void createNewFile() {
         AtomicBoolean openCreatedFile = new AtomicBoolean(false);
         String path = UI.doCreateDialog(true, () -> openCreatedFile.set(true));
         try {
@@ -239,7 +270,7 @@ final class LocalFilePanel extends FilePanel {
      * Defines how a symbolic link should be created
      */
     @Override
-    void createSymbolicLink() {
+    public void createSymbolicLink() {
         Pair<String, String> paths = UI.doCreateSymLinkDialog();
 
         if (paths != null) {
@@ -269,7 +300,7 @@ final class LocalFilePanel extends FilePanel {
                     if (Files.exists(result)) {
                         UI.doInfo("Symbolic Link Created", "The Symbolic link " + namePath + " has been successfully created to point to " + targetPath);
 
-                        if (FileUtils.getParentPath(resolvedNamePath, true).equals(directoryPane.getCurrentWorkingDirectory()))
+                        if (FileUtils.pathEquals(FileUtils.getParentPath(resolvedNamePath, true), directoryPane.getCurrentWorkingDirectory(), true))
                             directoryPane.refreshCurrentDirectory();
                     } else {
                         UI.doError("Symbolic Link Not Created", "The Symbolic link was not created successfully");
@@ -337,10 +368,10 @@ final class LocalFilePanel extends FilePanel {
     }
 
     /**
-     * The handler for the goto button
+     * {@inheritDoc}
      */
     @Override
-    void gotoPath() {
+    public void gotoPath() {
         String path = UI.doPathDialog();
 
         if (path != null) {

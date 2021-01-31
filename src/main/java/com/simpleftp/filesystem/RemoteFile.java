@@ -274,7 +274,7 @@ public class RemoteFile implements CommonFile {
             FTPConnection connection = getConnection();
             FTPFile file = connection.getFTPFile(linkPath);
 
-            while (file != null && file.isSymbolicLink() && !absolutePath.equals(linkPath)) {
+            while (file != null && file.isSymbolicLink() && !FileUtils.pathEquals(absolutePath, linkPath, false)) {
                 String linkPath1 = FileUtils.getParentPath(linkPath, false);
                 String nextLink = file.getLink();
                 linkPath = !nextLink.startsWith("/") ? FileUtils.appendPath(linkPath1, nextLink, false):nextLink;

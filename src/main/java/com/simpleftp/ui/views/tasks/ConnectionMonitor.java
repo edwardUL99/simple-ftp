@@ -20,9 +20,9 @@ package com.simpleftp.ui.views.tasks;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
+import com.simpleftp.properties.Properties;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.views.PanelView;
-import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 
@@ -37,22 +37,28 @@ public class ConnectionMonitor extends Service<Void> {
      */
     private final PanelView panelView;
     /**
-     * The interval in milliseconds to perform the check
+     * This flag determines if the monitor has been cancelled
      */
-    private final int checkInterval;
+    private boolean cancelled;
 
     /**
      * Constructs a connection monitor with the provided parameters.
      * @param panelView the panel view to monitor the connection for
-     * @param checkInterval the time in milliseconds to perform the check
      */
-    public ConnectionMonitor(PanelView panelView, int checkInterval) {
+    public ConnectionMonitor(PanelView panelView) {
         this.panelView = panelView;
-        this.checkInterval = checkInterval;
-        setOnSucceeded(e -> {
-            Platform.runLater(() -> UI.doError("Connection Lost", "The connection to the Server has been lost"));
-            Platform.runLater(panelView::emptyRemotePanel);
-        });
+        setOnSucceeded(e -> doSucceed());
+    }
+
+    /**
+     * Performs the onSucceeded handler
+     */
+    private void doSucceed() {
+        if (!cancelled) {
+            UI.doError("Connection Lost", "The connection to the Server has been lost");
+            panelView.disconnectRemotePanel();
+            panelView.getMainView().disconnect();
+        }
     }
 
     /**
@@ -66,11 +72,11 @@ public class ConnectionMonitor extends Service<Void> {
             protected Void call() throws Exception {
                 boolean monitor = true;
 
-                while (monitor) {
+                while (monitor && !cancelled) {
                     FTPConnection connection = FTPSystem.getConnection();
                     try {
                         monitor = connection.isConnected() && connection.isLoggedIn(); // when we break out of this loop, we lost connection and will call the succeeded code
-                        Thread.sleep(checkInterval);
+                        Thread.sleep(Properties.CONNECTION_MONITOR_INTERVAL.getValue());
                         connection.sendNoop();
                     } catch (FTPException ex) {
                         monitor = false;
@@ -87,12 +93,19 @@ public class ConnectionMonitor extends Service<Void> {
      */
     @Override
     public void start() {
+        cancelled = false;
         State state = getState();
 
-        if (state == State.SUCCEEDED) {
+        if (state == State.SUCCEEDED || state == State.CANCELLED || state == State.FAILED) {
             restart();
         } else if (state == State.READY) {
             super.start();
         }
+    }
+
+    @Override
+    public boolean cancel() {
+        cancelled = true;
+        return super.cancel();
     }
 }

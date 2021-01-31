@@ -297,9 +297,7 @@ public abstract class FilePanel extends VBox {
                 // if alt is down, a mnemonic is needed
                 KeyCode keyCode = e.getCode();
 
-                if (keyCode == KeyCode.Q) {
-                    UI.doQuit();
-                } else if (keyCode == KeyCode.UP || keyCode == KeyCode.DOWN) {
+                if (keyCode == KeyCode.UP || keyCode == KeyCode.DOWN) {
                     comboBox.requestFocus();
                 } else if (keyCode == KeyCode.DELETE) {
                     delete();
@@ -311,9 +309,9 @@ public abstract class FilePanel extends VBox {
     }
 
     /**
-     * The method handler for the root button
+     * Goes to the root directory
      */
-    private void goToRootDirectory() {
+    public void goToRootDirectory() {
         try {
             directoryPane.goToRoot();
         } catch (FileSystemException ex) {
@@ -367,24 +365,25 @@ public abstract class FilePanel extends VBox {
     }
 
     /**
-     * The handler for creating a new directory
+     * Displays a dialog for the creation of a new directory
      */
-    abstract void createNewDirectory();
+    public abstract void createNewDirectory();
 
     /**
-     * The handler to create a new empty file
+     * Displays a dialog for the creation of an empty file
      */
-    abstract void createNewFile();
+    public abstract void createNewFile();
 
     /**
-     * The handler for the goto button
+     * This method displays a dialog to specify a path the user can go to for a directory
+     * or open for a file
      */
-    abstract void gotoPath();
+    public abstract void gotoPath();
 
     /**
-     * Defines how a symbolic link should be created
+     * Defines how a symbolic link should be created displaying the appropriate dialog
      */
-    abstract void createSymbolicLink();
+    public abstract void createSymbolicLink();
 
     /**
      * Refreshes the file names displayed in the ComboBox
@@ -516,7 +515,8 @@ public abstract class FilePanel extends VBox {
     }
 
     /**
-     * Refresh this DirectoryPane
+     * Refresh this FilePanel only, not the underlying DirectoryPane. To refresh this and the directory pane at the same time,
+     * call getDirectoryPane().refresh()
      */
     public void refresh() {
         refreshComboBox();

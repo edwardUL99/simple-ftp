@@ -22,8 +22,10 @@ import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.*;
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.net.ftp.FTPFile;
 
+import java.io.File;
 import java.util.Arrays;
 
 /**
@@ -31,6 +33,7 @@ import java.util.Arrays;
  *
  * For a RemoteFileSystem, it must be connected and logged in before use
  */
+@Log4j2
 public class RemoteFileSystem extends AbstractFileSystem {
     /**
      * Creates a "system-wide" file system for use with the system's connection.
@@ -278,6 +281,23 @@ public class RemoteFileSystem extends AbstractFileSystem {
     }
 
     /**
+     * Sets up the files of the directory to be deleted
+     * @param directory the directory to delete
+     */
+    private void deleteTempCopyDirectory(LocalFile directory) {
+        File[] contents = directory.listFiles();
+
+        if (contents != null) {
+            for (File file : contents) {
+                deleteTempCopyDirectory(new LocalFile(file.getAbsolutePath()));
+            }
+        }
+
+        if (!directory.delete())
+            log.warn("Failed to delete a temp copy file from the local file system with path {}", directory.getFilePath());
+    }
+
+    /**
      * This method is used to copy files remote to remote. It needs to do a download to local temp folder
      * and then upload to the destination
      * @param source the file representing the source
@@ -300,11 +320,14 @@ public class RemoteFileSystem extends AbstractFileSystem {
                 throw new FileSystemException("Failed to local temp copy file");
 
             recursivelyUploadDirectory(localPath, destinationDir, null, connection, true);
+            deleteTempCopyDirectory(localFile);
         } else {
             LocalFile downloaded = connection.downloadFile(source.getFilePath(), FileUtils.TEMP_DIRECTORY);
 
             if (downloaded == null || !downloaded.exists())
                 throw new FileSystemException("Failed to local temp copy file");
+
+            downloaded.deleteOnExit();
 
             if (connection.uploadFile(downloaded, destinationDir) == null)
                 throw new FileSystemException("Failed to upload the local temp copy to the destination");

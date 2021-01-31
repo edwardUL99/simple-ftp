@@ -63,7 +63,7 @@ public class FTPConnection {
     @Getter
     private final FTPLookup ftpLookup;
     /**
-     * The Server object providing all the login details and server parameters
+     * The Server object providing all the onLogin details and server parameters
      */
     @Getter
     @Setter
@@ -206,20 +206,20 @@ public class FTPConnection {
     }
 
     /**
-     * Attempts to login to the Server using the details found in the passed in Server object
+     * Attempts to onLogin to the Server using the details found in the passed in Server object
      *
-     * @return login success
-     * @throws FTPNotConnectedException     if login is called when isConnected() returns false
-     * @throws FTPConnectionFailedException if a connection failure occurs during the login process
-     * @throws FTPCommandFailedException    if an error occurs sending the login command or retrieving a reply
+     * @return onLogin success
+     * @throws FTPNotConnectedException     if onLogin is called when isConnected() returns false
+     * @throws FTPConnectionFailedException if a connection failure occurs during the onLogin process
+     * @throws FTPCommandFailedException    if an error occurs sending the onLogin command or retrieving a reply
      */
     public synchronized boolean login() throws FTPNotConnectedException, FTPConnectionFailedException, FTPCommandFailedException {
         String user = server.getUser();
 
         if (!connected) {
-            log.error("FTPConnection is not connected to the server, cannot continue login process with user {}", user);
+            log.error("FTPConnection is not connected to the server, cannot continue onLogin process with user {}", user);
             loggedIn = false;
-            throw new FTPNotConnectedException("Cannot login as the FTPConnection is not connected to the server", FTPNotConnectedException.ActionType.LOGIN);
+            throw new FTPNotConnectedException("Cannot onLogin as the FTPConnection is not connected to the server", FTPNotConnectedException.ActionType.LOGIN);
         }
 
         try {
@@ -234,12 +234,12 @@ public class FTPConnection {
 
             return false;
         } catch (FTPConnectionClosedException cl) {
-            log.error("The FTPConnection unexpectedly closed, cannot login");
+            log.error("The FTPConnection unexpectedly closed, cannot onLogin");
             resetConnectionValues();
             throw new FTPConnectionFailedException("The FTPConnection unexpectedly closed while logging in", ftpClient.getReplyString(), cl, server);
         } catch (IOException ex) {
-            log.error("Error occurred during login with user {}", user);
-            throw new FTPCommandFailedException("A connection error occurred during login", ftpClient.getReplyString(), ex);
+            log.error("Error occurred during onLogin with user {}", user);
+            throw new FTPCommandFailedException("A connection error occurred during onLogin", ftpClient.getReplyString(), ex);
         }
     }
 
@@ -247,11 +247,11 @@ public class FTPConnection {
      * Attempts to log the user out of the FTP server
      * This method, unlike most of the others is guaranteed not to throw a FTPNotConnectedException for the following reasons:
      * <ul>
-     *     <li>To login, in the first place, you must be connected to the server. If not, you will never be logged in and this will be a no-op</li>
+     *     <li>To onLogin, in the first place, you must be connected to the server. If not, you will never be logged in and this will be a no-op</li>
      *     <li>If disconnect() is called and a user is logged in, the user is logged out. Thus, this method won't do anything, as it will again be a no-op</li>
      * </ul>
      * <p>
-     * However, the method is still configured to throw the exception JUST IN CASE, it ever happens that somehow, a login was processed without being connected, then you have to catch that
+     * However, the method is still configured to throw the exception JUST IN CASE, it ever happens that somehow, a onLogin was processed without being connected, then you have to catch that
      * This is a bug if that exception is thrown though, so if it's ever come across, you need to raise a bug report. Included to support defensive programming however
      *
      * @return true if logout was a success, false otherwise. If the user is not logged in, this is a no-op
@@ -269,7 +269,7 @@ public class FTPConnection {
 
             try {
                 loggedIn = !ftpClient.logout();
-                logDebug("Status of login to the server is {}", loggedIn);
+                logDebug("Status of onLogin to the server is {}", loggedIn);
                 return !loggedIn;
             } catch (FTPConnectionClosedException cl) {
                 log.error("The FTPConnection unexpectedly closed while logging out");
@@ -287,7 +287,7 @@ public class FTPConnection {
 
     /**
      * Attempts to change the current directory to the directory specified by the path
-     * login() must be called before running this method or else it will (intuitively as you cannot change a directory if not logged in) always return false
+     * onLogin() must be called before running this method or else it will (intuitively as you cannot change a directory if not logged in) always return false
      *
      * @param path the path of the working directory to switch to
      * @return true if the operation was successful, false if no
@@ -1216,54 +1216,16 @@ public class FTPConnection {
     }
 
     /**
-     * Attempts to match the state of the connection after setting the server to that of the connection before re-connecting it
-     * @param server the state t
-     * @throws FTPException if an error occurs matching the state
-     */
-    private static void matchState(Server server) throws FTPException {
-        FTPConnection systemConnection = FTPSystem.getConnection();
-        boolean connected = systemConnection.isConnected(), loggedIn = systemConnection.isLoggedIn();
-        if (connected)
-            systemConnection.disconnect();
-        systemConnection.setServer(server);
-
-        if (connected) {
-            systemConnection.connect();
-
-            if (!systemConnection.isConnected()) {
-                throw new FTPConnectionFailedException("The connection of the new FTPConnection to the server has failed", systemConnection.getReplyString(), systemConnection.server);
-            }
-
-            if (loggedIn) {
-                systemConnection.login();
-                if (!systemConnection.isLoggedIn()) {
-                    throw new FTPError("The login of the new FTPConnection has failed", systemConnection.getReplyString());
-                }
-            }
-        }
-    }
-
-    /**
      * Creates a shared FTPConnection which is the connection used by the entire system, e.g in filesystems .
-     * If FTPSystem.getConnection() returns null, a new connection is created and assigned to it. Else, the setServer method is called
-     * on the system's connection, attempting to match the state to what it was before this call
      *
      * @param serverDetails     the server details to check/create a connection with
      * @return the created connection. This connection should equal FTPSystem.getConnection
-     * @throws FTPException if an error occurs resetting the connection to the new server details
      */
-    public static FTPConnection createSharedConnection(Server serverDetails) throws FTPException {
-        FTPConnection systemConnection = FTPSystem.getConnection();
-        if (systemConnection == null) {
-            FTPConnection connection = new FTPConnection(serverDetails);
-            ConnectionFTPSystem.setConnection(connection);
+    public static FTPConnection createSharedConnection(Server serverDetails) {
+        FTPConnection connection = new FTPConnection(serverDetails);
+        ConnectionFTPSystem.setConnection(connection);
 
-            return connection;
-        } else {
-            matchState(serverDetails);
-
-            return systemConnection;
-        }
+        return connection;
     }
 
     /**
@@ -1286,7 +1248,7 @@ public class FTPConnection {
      * This method leaves it up to the programmer to clone the Server and FTPConnectionDetails classes before passing them into this
      * method.
      *
-     * @param server               the Server object containing the login details
+     * @param server               the Server object containing the onLogin details
      * @return the temporary connection
      */
     public static FTPConnection createTemporaryConnection(Server server) {

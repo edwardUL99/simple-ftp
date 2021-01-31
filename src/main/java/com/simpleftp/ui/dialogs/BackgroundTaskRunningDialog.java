@@ -35,7 +35,7 @@ public class BackgroundTaskRunningDialog extends Alert {
         super(AlertType.WARNING);
         setTitle("Background Task Dialog");
         setHeaderText("Background Tasks Running");
-        setContentText("There are still background tasks running. Quitting now will cancel them. Are you sure?");
+        setContentText("There are still background tasks running. Continuing will cancel them. Are you sure?");
         getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
         getButtonTypes().clear();
         getButtonTypes().addAll(new ButtonType("No", ButtonBar.ButtonData.CANCEL_CLOSE), new ButtonType("Yes", ButtonBar.ButtonData.FINISH));

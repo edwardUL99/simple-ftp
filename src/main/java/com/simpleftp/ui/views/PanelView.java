@@ -20,13 +20,15 @@ package com.simpleftp.ui.views;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
-import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.properties.Properties;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.exceptions.UIException;
 import com.simpleftp.ui.panels.FilePanel;
 import com.simpleftp.ui.views.tasks.ConnectionMonitor;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.concurrent.Worker;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
@@ -51,6 +53,11 @@ public final class PanelView extends VBox {
     @Getter
     private FilePanel remotePanel;
     /**
+     * A property for determining if the remote panel is connected and initialised
+     */
+    @Getter
+    private final BooleanProperty remoteConnectedProperty;
+    /**
      * The boc containing the 2 panels
      */
     private final HBox panelsBox;
@@ -58,27 +65,31 @@ public final class PanelView extends VBox {
      * The monitor that will check the status of our connection
      */
     private final ConnectionMonitor connectionMonitor;
-
     /**
-     * Keeps track of if this panel view is fully initialised
+     * The MainView this PanelView belongs to
      */
-    private boolean initialised;
+    @Getter
+    private final MainView mainView;
 
     /**
      * Constructs the view, initialising the LocalPanel.
      * The remote panel should be initialised with initialiseRemotePanel(RemoteFile file). This is because a RemotePanel can only be initialised after a connection is established
      * @param localDirectory the local directory to initialise the local panel with
+     * @param mainView the MainView this PanelView belongs to
      * @throws UIException if an error occurs initialising the PanelView
      * @throws IllegalArgumentException if localDirectory is not a directory
      */
-    public PanelView(LocalFile localDirectory) throws UIException {
+    public PanelView(LocalFile localDirectory, MainView mainView) throws UIException {
+        this.mainView = mainView;
         panelsBox = new HBox();
-        panelsBox.setPrefHeight(Properties.FILE_EDITOR_HEIGHT.getValue() + 10);
+        panelsBox.setPrefHeight(UI.FILE_PANEL_HEIGHT);
         panelsBox.setPrefWidth(UI.FILE_PANEL_WIDTH);
         setMaxHeight(UI.PANEL_VIEW_HEIGHT);
         setMaxWidth(UI.PANEL_VIEW_WIDTH);
 
-        connectionMonitor = new ConnectionMonitor(this, Properties.CONNECTION_MONITOR_INTERVAL.getValue());
+        connectionMonitor = new ConnectionMonitor(this);
+
+        remoteConnectedProperty = new SimpleBooleanProperty(false);
 
         initialiseLocalPanel(localDirectory);
         createEmptyRemotePanel();
@@ -158,26 +169,35 @@ public final class PanelView extends VBox {
             panelsBox.getChildren().remove(1);
 
         panelsBox.getChildren().add(emptyPane);
+        remotePanel = null;
+        remoteConnectedProperty.setValue(false);
     }
 
     /**
-     * Creates the empty remote panel for until a connection is established.
-     * This can also be used in the event a connection is lost and to clear the remote panel.
+     * Disconnects the remote panel from the FTP Server and replaces it with the empty panel and the local panel.
+     * This can also be used in the event a connection is lost and to clear the remote panel. If called due to a logout,
+     * stopConnectionMonitor should be called first and this should be called before disconnecting.
      *
      * This closes all open remote FileEditorWindows
      *
      * You can still access the remote panel with getRemotePanel to get access to the directory it was at etc. Note that the connection may no longer be created so calls to other methods
      * of the panel may fail. getDirectoryPane().getDirectory() should always succeed however
      */
-    public void emptyRemotePanel() {
-        DirectoryPane directoryPane = remotePanel.getDirectoryPane();
-        FTPConnection connection = directoryPane
-                .getFileSystem()
-                .getFTPConnection();
-        if (!connection.isConnected() && !connection.isLoggedIn()) {
+    public void disconnectRemotePanel() {
+        if (isRemoteConnected()) {
+            DirectoryPane directoryPane = remotePanel.getDirectoryPane();
             directoryPane.removeInstance(); // we are no longer using this directory pane instance. Remove it so mouse events etc. are not propagated to it
             createEmptyRemotePanel();
+            UI.closeAllFiles(false);
         }
+    }
+
+    /**
+     * Stops the monitor monitoring the connection if it is scheduled or running
+     */
+    public void stopConnectionMonitor() {
+        if (connectionMonitor.getState() == Worker.State.SCHEDULED || connectionMonitor.isRunning())
+            connectionMonitor.cancel();
     }
 
     /**
@@ -194,7 +214,7 @@ public final class PanelView extends VBox {
 
     /**
      * Used to initialise the remote panel after object creation or to reset the existing one. This is required as a connection may not be established on constructing this PanelView.
-     * Upon login and successful initialisation of a connection, you will want to call this method.
+     * Upon onLogin and successful initialisation of a connection, you will want to call this method.
      * This resets the remote file panel used on each call, so if you want to get the file the panel is on before resetting it with this method, call getRemotePanel().getDirectoryPane().getDirectory().
      *
      * Even if the connection is lost and clearRemotePanel is called, you can still access the directory the panel was in before another call to createRemotePanel. This could be used to re-initialise with the same directory it was on before
@@ -221,8 +241,19 @@ public final class PanelView extends VBox {
             panelsBox.getChildren().add(remotePanelBox);
 
             connectionMonitor.start();
+            remoteConnectedProperty.setValue(true);
         } catch (FileSystemException ex) {
+            remotePanel = null;
+            remoteConnectedProperty.setValue(false);
             throw new UIException("A FileSystemException was thrown initialising the Remote Panel of the PanelView", ex);
         }
+    }
+
+    /**
+     * Determines if the remote panel is initialised (i.e. a connection was established) or not
+     * @return true if initialised, false if not
+     */
+    public boolean isRemoteConnected() {
+        return remoteConnectedProperty.get();
     }
 }

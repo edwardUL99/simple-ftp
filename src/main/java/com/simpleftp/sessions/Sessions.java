@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 
 /**
  * This class provides the integration between the session classes so we can use sessions with 1 class.
- * This class also abstracts the constraint that we can only have 1 active session per login instance. It hides
+ * This class also abstracts the constraint that we can only have 1 active session per onLogin instance. It hides
  * all the details ensuring this constraint is maintained.
  *
  * It also abstracts the management/location of the session file on the disk.
@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
  * This is the main "driver" for interacting with sessions in client classes outside the sessions package.
  * To start the sessions service, a call to Sessions#initialise and a check after with Sessions#isInitialised enables the sessions service.
  *
- * This restricts the use of the sessions package outside the package to the use of a single session at a time as only one instance of a login can save and read a session at that same time.
+ * This restricts the use of the sessions package outside the package to the use of a single session at a time as only one instance of a onLogin can save and read a session at that same time.
  * This single session instance can be accessed with getCurrentSession. The current session must be initialised with the specified setCurrentSession methods, which will do a check to see if details matches an existing session and use that,
  * or else create a new one and return that.
  *
@@ -84,6 +84,11 @@ public final class Sessions {
      */
     @Getter
     private static boolean initialised = false;
+    /**
+     * True if Sessions functionality has been disabled
+     */
+    @Getter
+    private static boolean disabled = false;
 
     /**
      * A boolean to keep track of an existing file found. This returns false, if a new file has to be created
@@ -125,7 +130,7 @@ public final class Sessions {
     }
 
     /**
-     * Intiialises the session file path
+     * Initialises the session file path
      */
     private static void initialiseSessionFilePath() {
         String sessionFileDirectory = System.getProperty("user.home") + PATH_SEPARATOR + ".simple-ftp";
@@ -192,18 +197,37 @@ public final class Sessions {
      * @param deleteExisting set this to true to delete any existing session file and start with a new session file. This could be useful if you are getting an exception trying to initialise when a file already exists
      */
     public static void initialise(boolean deleteExisting) {
+        if (!disabled) {
+            initialiseVariables();
+            initialiseSessionFilePath();
+            initialiseSessionFile(deleteExisting);
+        }
+    }
+
+    /**
+     * This method disables the Sessions functionality
+     */
+    public static void disable() {
         initialiseVariables();
-        initialiseSessionFilePath();
-        initialiseSessionFile(deleteExisting);
+        disabled = true;
+    }
+
+    /**
+     * This method re-enables Sessions functionality
+     */
+    public static void enable() {
+        disabled = false;
     }
 
     /**
      * Checks if the Sessions framework is initialised, and throws a SessionInitialisationException if not
      */
-    private static  void checkInitialisation() {
-        if (!initialised) {
+    private static void checkInitialisation() {
+        if (disabled)
+            throw new SessionInitialisationException("Cannot use Sessions class as it is disabled");
+
+        if (!initialised)
             throw new SessionInitialisationException("The Session saving functionality is not initialised");
-        }
     }
 
     /**
@@ -269,22 +293,24 @@ public final class Sessions {
     public static void setCurrentSession(Session currentSession) {
         checkInitialisation();
 
-        AtomicBoolean refsNonMatch = new AtomicBoolean(false); // equal sessions found but the references don't match
-        boolean contains = sessionFile.getSessions()
-                .stream()
-                .filter(session -> session.equals(currentSession))
-                .findFirst()
-                .map(session -> {
-                    refsNonMatch.set(session != currentSession);
-                    return true;
-                })
-                .orElse(false);
+        if (currentSession != null) {
+            AtomicBoolean refsNonMatch = new AtomicBoolean(false); // equal sessions found but the references don't match
+            boolean contains = sessionFile.getSessions()
+                    .stream()
+                    .filter(session -> session.equals(currentSession))
+                    .findFirst()
+                    .map(session -> {
+                        refsNonMatch.set(session != currentSession);
+                        return true;
+                    })
+                    .orElse(false);
 
-        if (refsNonMatch.get())
-            throw new IllegalArgumentException("The provided session is equal to one in the Session file, but it does not refer to the same object. This session should be retrieved from the getAllSessions returned set");
+            if (refsNonMatch.get())
+                throw new IllegalArgumentException("The provided session is equal to one in the Session file, but it does not refer to the same object. This session should be retrieved from the getAllSessions returned set");
 
-        if (!contains) {
-            throw new IllegalArgumentException("The provided session does not exist in the Session File");
+            if (!contains) {
+                throw new IllegalArgumentException("The provided session does not exist in the Session File");
+            }
         }
 
         Sessions.currentSession = currentSession;
@@ -431,6 +457,9 @@ public final class Sessions {
             if (removed) {
                 sessionSaver.initialiseSaver(sessionFile);
                 sessionSaver.writeSessionFile();
+
+                if (session.equals(currentSession))
+                    currentSession = null;
             }
 
             return removed;

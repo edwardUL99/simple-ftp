@@ -250,6 +250,36 @@ public final class FileUtils {
     }
 
     /**
+     * Returns whether this path is absolute or not (on Windows, we only support SystemDrive, so has to start with system drive
+     * @param path the path to check if absolute
+     * @param local true if a local path, false if remote
+     * @return true if absolute, false if not
+     */
+    public static boolean isPathAbsolute(String path, boolean local) {
+        return path.startsWith(getRootPath(local));
+    }
+
+    /**
+     * Returns true if path1 equals path2. Paths are equal if they are equal without file separators if remote, or if LocalFile instances are equal.
+     * This should be called instead of calling .equals on the paths as if one path has an extra separator on the end, .equals will return false.
+     * E.g. /path/to/file is the same path as /path/to/file/ but String .equals will return false due to the last / in the second path
+     * @param path1 the first path to compare
+     * @param path2 the second path to compare
+     * @param local true if local paths, false if not
+     * @return true if equals, false if not
+     */
+    public static boolean pathEquals(String path1, String path2, boolean local) {
+        if (local) {
+            return new LocalFile(path1).equals(new LocalFile(path2));
+        } else {
+            path1 = path1.replaceAll("/", "");
+            path2 = path2.replaceAll("/", "");
+
+            return path1.equals(path2);
+        }
+    }
+
+    /**
      * Appends append onto path using the appropriate file separator
      * @param path the path to be appended to
      * @param append the new path to append onto path
