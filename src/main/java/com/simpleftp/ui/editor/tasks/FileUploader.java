@@ -121,7 +121,7 @@ public abstract class FileUploader implements BackgroundTask {
             DirectoryPane directoryPane = editorWindow.getCreatingPane();
             String parentPath = FileUtils.getParentPath(filePath, directoryPane.isLocal());
 
-            editorWindow.setResetFileContents(savedFileContents); // we have now successfully saved the file contents. Our reset string should now match what is actually saved
+            editorWindow.setResetFileContents(savedFileContents); // we have now successfully saved the file contents. Our resetConnection string should now match what is actually saved
 
             UI.doInfo("File Saved", "File " + filePath + " saved successfully");
 

@@ -213,8 +213,8 @@ public final class PanelView extends VBox {
     }
 
     /**
-     * Used to initialise the remote panel after object creation or to reset the existing one. This is required as a connection may not be established on constructing this PanelView.
-     * Upon onLogin and successful initialisation of a connection, you will want to call this method.
+     * Used to initialise the remote panel after object creation or to resetConnection the existing one. This is required as a connection may not be established on constructing this PanelView.
+     * Upon login and successful initialisation of a connection, you will want to call this method.
      * This resets the remote file panel used on each call, so if you want to get the file the panel is on before resetting it with this method, call getRemotePanel().getDirectoryPane().getDirectory().
      *
      * Even if the connection is lost and clearRemotePanel is called, you can still access the directory the panel was in before another call to createRemotePanel. This could be used to re-initialise with the same directory it was on before

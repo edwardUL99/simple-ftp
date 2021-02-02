@@ -59,7 +59,7 @@ public class FileEditor extends StyleClassedTextArea {
     }
 
     /**
-     * Undoes all edits since the last save using Ctrl + Z. This is the equivalent to reset
+     * Undoes all edits since the last save using Ctrl + Z. This is the equivalent to resetConnection
      */
     @Override
     public void undo() {

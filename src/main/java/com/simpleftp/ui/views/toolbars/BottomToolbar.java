@@ -128,7 +128,7 @@ public class BottomToolbar extends HBox {
 
     /**
      * This method should be called on the disconnection of the remote panel so that connection info in BottomToolbar can be
-     * cleared/reset
+     * cleared/resetConnection
      */
     public void onDisconnected() {
         stopConnectionTimer();

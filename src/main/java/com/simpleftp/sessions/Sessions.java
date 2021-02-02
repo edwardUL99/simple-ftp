@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 
 /**
  * This class provides the integration between the session classes so we can use sessions with 1 class.
- * This class also abstracts the constraint that we can only have 1 active session per onLogin instance. It hides
+ * This class also abstracts the constraint that we can only have 1 active session per login instance. It hides
  * all the details ensuring this constraint is maintained.
  *
  * It also abstracts the management/location of the session file on the disk.
@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
  * This is the main "driver" for interacting with sessions in client classes outside the sessions package.
  * To start the sessions service, a call to Sessions#initialise and a check after with Sessions#isInitialised enables the sessions service.
  *
- * This restricts the use of the sessions package outside the package to the use of a single session at a time as only one instance of a onLogin can save and read a session at that same time.
+ * This restricts the use of the sessions package outside the package to the use of a single session at a time as only one instance of a login can save and read a session at that same time.
  * This single session instance can be accessed with getCurrentSession. The current session must be initialised with the specified setCurrentSession methods, which will do a check to see if details matches an existing session and use that,
  * or else create a new one and return that.
  *
@@ -322,7 +322,18 @@ public final class Sessions {
      * @param serverDetails the server details to match
      * @return the found session, or null if not found
      */
-    private static Session matchSession(Server serverDetails) {
+    public static Session matchSession(Server serverDetails) {
+        checkInitialisation();
+        return doMatch(serverDetails);
+    }
+
+    /**
+     * Matches a session but does not call checkInitialisation().
+     * Call this if you don't want to call matchSession and do the check twice
+     * @param serverDetails the server details to match
+     * @return the found session, or null if not found
+     */
+    private static Session doMatch(Server serverDetails) {
         return sessionFile.getSessions()
                 .stream()
                 .filter(session -> session.getServerDetails().equals(serverDetails))
@@ -375,13 +386,15 @@ public final class Sessions {
      */
     public static Session getSession(Server serverDetails) {
         checkInitialisation();
-        Session session = matchSession(serverDetails);
+        Session session = doMatch(serverDetails); // we want to match but don't want to call checkInitialisation() again
 
         if (session == null) {
             session = createNewSession(serverDetails);
-            sessionFile.addSession(session);
+            session.dirtyFile = sessionFile;
         } else {
-            session.getServerDetails().setPassword(serverDetails.getPassword()); // set the password in case they are different
+            Server server = session.getServerDetails();
+            server.setPassword(serverDetails.getPassword()); // set the password in case they are different
+            server.setTimeout(serverDetails.getTimeout());
         }
 
         return session;

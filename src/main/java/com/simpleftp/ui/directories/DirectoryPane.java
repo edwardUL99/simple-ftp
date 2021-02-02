@@ -679,7 +679,7 @@ public abstract class DirectoryPane extends VBox {
         if (filePanel != null)
             filePanel.refresh();
 
-        entriesScrollPane.setHvalue(0); // reset scroll position
+        entriesScrollPane.setHvalue(0); // resetConnection scroll position
         entriesScrollPane.setVvalue(0);
     }
 

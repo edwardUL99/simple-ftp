@@ -1689,7 +1689,7 @@ class FTPConnectionUnitTest {
     void ifNotConnectedUserShouldNotBeLoggedIn() {
         /*
          *  SCENARIO 1:
-         * 1- Attempt to onLogin while not connected and ignore any exceptions
+         * 1- Attempt to login while not connected and ignore any exceptions
          * 2- Try and logout
          * 3- Logout should be a no-op
          */
@@ -1801,7 +1801,7 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldCreateSharedConnectionSuccessfully() {
-        FTPSystem.reset();
+        FTPSystem.resetConnection();
         assertNull(FTPSystem.getConnection());
 
         FTPConnection connection = FTPConnection.createSharedConnection(getTestFTPServer());
@@ -1811,7 +1811,7 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldCreateTempConnectionFromExisting() {
-        FTPSystem.reset();
+        FTPSystem.resetConnection();
 
         Server server = getTestFTPServer();
 
@@ -1833,7 +1833,7 @@ class FTPConnectionUnitTest {
 
     @Test
     void shouldCreateTempConnectionFromDetails() {
-        FTPSystem.reset();
+        FTPSystem.resetConnection();
 
         Server server = getTestFTPServer();
 

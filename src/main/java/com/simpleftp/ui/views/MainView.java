@@ -23,6 +23,7 @@ import com.simpleftp.filesystem.RemoteFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
+import com.simpleftp.ftp.exceptions.FTPConnectionFailedException;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.sessions.Session;
 import com.simpleftp.sessions.Sessions;
@@ -32,20 +33,24 @@ import com.simpleftp.ui.background.BackgroundTask;
 import com.simpleftp.ui.dialogs.BackgroundTaskRunningDialog;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.exceptions.UIException;
+import com.simpleftp.ui.login.LoginWindow;
 import com.simpleftp.ui.views.toolbars.BottomToolbar;
 import com.simpleftp.ui.views.toolbars.MiddleToolbar;
 import com.simpleftp.ui.views.toolbars.TopToolbar;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.geometry.Orientation;
 import javafx.scene.control.Separator;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
 import lombok.Getter;
+import lombok.extern.log4j.Log4j2;
 
 /**
  * This class provides the main application view
  */
+@Log4j2
 public class MainView extends VBox {
     /**
      * The top toolbar for this MainView
@@ -61,6 +66,11 @@ public class MainView extends VBox {
     @Getter
     private final PanelView panelView;
     /**
+     * The LoginWindow linked to this MainVie
+     */
+    @Getter
+    private LoginWindow loginWindow;
+    /**
      * The bottom toolbar for this MainView
      */
     private final BottomToolbar bottomToolbar;
@@ -73,19 +83,24 @@ public class MainView extends VBox {
      * A property to track the initialisation of sessions. In the context of Sessions initialised means that it has loaded in the
      * SessionFile correctly, but in UI context, it is initialised if Sessions.isInitialised() and Sessions.getCurrentSession() != null
      */
-    @Getter
     private final BooleanProperty sessionsInitialisedProperty;
     /**
      * A property to track if sessions are disabled or not
+     * The value of this should only be explicitly set by the enableSessions() or disableSessions() methods.
+     * Note that the value may change through bi-directional bindings but other than that the explicit setValue should only be in those methods
      */
     @Getter
     private final BooleanProperty sessionsDisabledProperty;
+    /**
+     * This is the singleton instance for MainView
+     */
+    private static MainView SINGLETON_INSTANCE;
 
     /**
-     * Constructs a MainView object, initialising the PanelView with user.home if found or root until onLogin changes it if sessions are enabled
+     * Constructs a MainView object, initialising the PanelView with user.home if found or root until login changes it if sessions are enabled
      * @throws UIException if initialisation of the UI fails
      */
-    public MainView() throws UIException {
+    private MainView() throws UIException {
         panelView = new PanelView(getHomeDirectory(), this);
 
         loggedInProperty = new SimpleBooleanProperty(false);
@@ -142,6 +157,20 @@ public class MainView extends VBox {
                 }
             }
         });
+    }
+
+    /**
+     * Retrieve the singleton instance with a LoginWindow initialised and tied to it
+     * @return the singleton MainView instance
+     * @throws UIException if an exception occurs initialising the instance
+     */
+    public static MainView getInstance() throws UIException {
+        if (SINGLETON_INSTANCE == null) {
+            SINGLETON_INSTANCE = new MainView();
+            SINGLETON_INSTANCE.loginWindow = new LoginWindow(SINGLETON_INSTANCE);
+        }
+
+        return SINGLETON_INSTANCE;
     }
 
     /**
@@ -293,7 +322,7 @@ public class MainView extends VBox {
         FTPConnection connection = FTPSystem.getConnection();
 
         if (connection == null)
-            throw new IllegalStateException("Cannot onLogin to a MainView when the FTPSystem connection is null");
+            throw new IllegalStateException("Cannot login to a MainView when the FTPSystem connection is null");
 
         if (!connection.isLoggedIn())
             throw new IllegalStateException("onLogin should only be called when the FTPSystem connection has been connected and logged in");
@@ -396,23 +425,47 @@ public class MainView extends VBox {
 
             return loggedIn;
         } catch (FTPException ex) {
-            UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+            if (ex instanceof FTPConnectionFailedException)
+                log.error("Connection to server has failed");
+            else
+                UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
         }
 
         return false;
     }
 
     /**
+     * Logs in the connection with login window if system connection is null
+     * @return connection that has been logged in
+     */
+    private FTPConnection loginConnection() {
+        FTPConnection connection = FTPSystem.getConnection();
+        if (connection == null) {
+            if (loginWindow.isShowing())
+                loginWindow.close();
+            disableSessions();
+            UI.doLogin();
+            connection = FTPSystem.getConnection();
+        }
+
+        return connection;
+    }
+
+    /**
      * This method provides connection functionality for the TopToolbar Connect option in Connection menu
      */
     public void connect() {
-        if (connectToServer()) {
-            loginRemotePanel();
+        FTPConnection connection = loginConnection();
 
-            if (!Sessions.isInitialised())
-                loggedInProperty.setValue(FTPSystem.getConnection().isLoggedIn()); // if sessions aren't enabled, connect is the same as onLogin, so set the onLogin property
-        } else {
-            UI.doConnectionError();
+        if (connection != null) {
+            if (connectToServer()) {
+                loginRemotePanel();
+
+                if (!Sessions.isInitialised())
+                    loggedInProperty.setValue(connection.isLoggedIn()); // if sessions aren't enabled, connect is the same as login, so set the onLogin property
+            } else {
+                UI.doConnectionError();
+            }
         }
     }
 
@@ -422,8 +475,10 @@ public class MainView extends VBox {
     public void disconnect() {
         if (checkBackgroundTasks()) {
             disconnectConnection();
-            if (!isSessionsInitialised()) // if sessions aren't initialised logging out is the same as disconnecting, so logout also
+            if (!isSessionsInitialised()) { // if sessions aren't initialised logging out is the same as disconnecting, so logout also
                 loggedInProperty.setValue(false);
+                FTPSystem.resetConnection(); // reset connection so that we force a login window to be displayed on subsequent press of connect
+            }
         }
     }
 
@@ -480,6 +535,7 @@ public class MainView extends VBox {
             finishSession();
             logoutSession();
             loggedInProperty.setValue(false);
+            FTPSystem.resetConnection(); // reset connection so that we force a login window to be displayed on subsequent press of connect
         }
     }
 
@@ -489,7 +545,7 @@ public class MainView extends VBox {
      */
     public void logoutSession() {
         if (isSessionsInitialised())
-            Sessions.setCurrentSession(null); // we are no longer using the session when we logout. The onLogin screen should set the session if sessions are being used
+            Sessions.setCurrentSession(null); // we are no longer using the session when we logout. The login window should set the session if sessions are being used
         sessionsInitialisedProperty.setValue(false);
         loggedInProperty.setValue(panelView.isRemoteConnected());
     }
@@ -549,5 +605,14 @@ public class MainView extends VBox {
      */
     public boolean isSessionsInitialised() {
         return sessionsInitialisedProperty.get();
+    }
+
+    /**
+     * The sessionsInitialisedProperty in the MainView context is if the Sessions.isInitialised() method returns true and
+     * Sessions.getCurrentSession() is not null
+     * @return the property representing UI initialised sessions
+     */
+    public ReadOnlyBooleanProperty getSessionsInitialisedProperty() {
+        return sessionsInitialisedProperty;
     }
 }

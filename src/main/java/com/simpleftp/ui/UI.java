@@ -44,6 +44,7 @@ import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.editor.FileEditorWindow;
 import com.simpleftp.ui.interfaces.WindowActionHandler;
 import com.simpleftp.ui.interfaces.Window;
+import com.simpleftp.ui.login.LoginWindow;
 import com.simpleftp.ui.views.MainView;
 import javafx.application.Platform;
 import javafx.event.EventTarget;
@@ -55,6 +56,7 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Pair;
 import lombok.Getter;
@@ -176,6 +178,16 @@ public final class UI {
     public static final int EMPTY_FOLDER_PANEL_PADDING = 70;
 
     /**
+     * The height for the login window scene
+     */
+    public  static final int LOGIN_WINDOW_HEIGHT = 370;
+
+    /**
+     * The width for the login window scene
+     */
+    public static final int LOGIN_WINDOW_WIDTH = 400;
+
+    /**
      * Exit code for if Abort is pressed on an exception dialog
      */
     public static final int EXCEPTION_DIALOG_ABORTED_EXIT_CODE = 1;
@@ -223,7 +235,12 @@ public final class UI {
      * Should be set in the start() method of the main class
      */
     @Getter
-    public static Scene applicationScene;
+    private static Scene applicationScene;
+
+    /**
+     * The primary stage used to display the application
+     */
+    private static Stage primaryStage;
 
     /**
      * The MainView that is the basis of the UI for this application.
@@ -232,7 +249,11 @@ public final class UI {
      * The value of this shouldn't be changed outside of the startApplication method
      */
     @Getter
-    public static MainView mainView;
+    private static MainView mainView;
+    /**
+     * A boolean flag to keep track of if application has been started
+     */
+    private static boolean applicationStarted;
 
     /**
      * Prevent instantiation
@@ -778,41 +799,30 @@ public final class UI {
         FTPConnection connection = FTPSystem.getConnection();
         if (connection != null) {
             Server server = connection.getServer();
+            String error = connection.getReplyString();
+            error = error == null || error.isEmpty() ? "Unknown Error. The server may not exist or is not responding":error;
             UI.doError("Connection Error", "Failed to connect to server " + server.getServer() + " with user " + server.getUser() + " and port " + server.getPort()
-                    + ". FTP Error: " + connection.getReplyString());
+                    + ". FTP Error: " + error);
         }
-    }
-
-    /**
-     * Connects to the server
-     * TODO temporary method until SFTP-14
-     */
-    private static void connectToServer() {
-        if (!mainView.connectToServer())
-            doConnectionError();
     }
 
     /**
      * Initialises the Sessions functionality. This wraps the steps and error-handling initialisation may require.
      * This should be called to initialise the Sessions package so that sessions can be retrieved using Sessions.getSession etc.
      * This method, thus, does not set the current session
-     * @return true if initialised successfully, false if not
      */
-    public static boolean initialiseSessions() {
+    public static void initialiseSessions() {
         boolean disabled = Sessions.isDisabled();
 
         if (!disabled) {
-            return doSessionInitialisation();
+            doSessionInitialisation();
         }
-
-        return false;
     }
 
     /**
      * A private method to carry out the initialisation logic. This does not check if sessions are disabled or not
-     * @return true if initialised, false if not
      */
-    private static boolean doSessionInitialisation() {
+    private static void doSessionInitialisation() {
         boolean initialised = Sessions.isInitialised();
         if (!initialised) {
             Sessions.initialise(false);
@@ -834,73 +844,40 @@ public final class UI {
                 }
             }
         }
-
-        return initialised;
     }
 
     /**
-     * Initialises the session if using sessions. TODO this is a temporary method to be removed in SFTP-14
-     * @param server the server to base the session on
-     */
-    private static void initialiseSession(Server server) {
-        boolean disabled = Sessions.isDisabled();
-
-        if (!disabled) {
-            if (doSessionInitialisation())
-                Sessions.setCurrentSession(Sessions.getSession(server));
-        }
-    }
-
-    /**
-     * This method is used to loosely simulate the LoginWindow functionality.
-     * @param useSessions true to use sessions, false not to
-     * TODO this should be removed as part of SFTP-14. The LoginWindow should follow this logic closely. The useSessions parameter will be the checkbox to use sessions for this login
-     */
-    public static void simulateLogin(boolean useSessions) {
-        String server = System.getenv("SIMPLEFTP_TEST_SERVER");
-        String user = System.getenv("SIMPLEFTP_TEST_USER");
-        String password = System.getenv("SIMPLEFTP_TEST_PASSWORD");
-        String portString = System.getenv("SIMPLEFTP_TEST_PORT");
-        int port = portString == null ? Server.DEFAULT_FTP_PORT:Integer.parseInt(portString);
-
-        FTPConnection systemConnection = FTPSystem.getConnection();
-        Server serverDetails = new Server(server, user, password, port, 200);
-        if (systemConnection == null)
-            FTPConnection.createSharedConnection(serverDetails);
-        else
-            systemConnection.setServer(serverDetails);
-
-        if (useSessions) {
-            mainView.enableSessions();
-            initialiseSession(serverDetails);
-        } else {
-            mainView.disableSessions();
-        }
-
-        connectToServer();
-        mainView.onLogin();
-    }
-
-    /**
-     * This method starts the login workflow by displaying the LoginWindow and interacting with the UI MainView instance.
-     * TODO this will display the LoginWindow in SFTP-14
+     * This method starts the login workflow by displaying this class' MainView instance's LoginWindow.
+     * If you want sessions enabled before displaying the loginWindow, call enableSessions on the main view instance before displaying the login window
      */
     public static void doLogin() {
-        simulateLogin(UI.doConfirmation("Login Session Initialisation", "Press OK to use Sessions functionality in this session"));
+        if (!applicationStarted)
+            throw new IllegalStateException("The Application has not been started yet, so cannot display a login window. Call UI.startApplication(Stage primaryStage) first");
+
+        LoginWindow loginWindow = mainView.getLoginWindow();
+        if (loginWindow == null)
+            throw new IllegalStateException("A LoginWindow has not been set on the UI's MainView instance");
+
+        loginWindow.show();
     }
 
     /**
      * Starts the application with the primary stage passed into the Application.start() method.
+     * This should only be called once.
      * It initialises the Application Scene also which can be retrieved using UI.getApplicationScene()
      * @param primaryStage the primary stage passed into the start() method.
      * @throws UIException if the UI fails to be initialised
      */
     public static void startApplication(Stage primaryStage) throws UIException {
-        mainView = new MainView();
+        if (applicationStarted)
+            throw new IllegalStateException("The application has already been started, you cannot start the application twice in one JVM instance");
+        applicationStarted = true;
+
+        mainView = MainView.getInstance();
 
         Scene scene = new Scene(mainView, UI.MAIN_VIEW_WIDTH, UI.MAIN_VIEW_HEIGHT);
         primaryStage.setScene(scene);
-        primaryStage.setTitle("Test");
+        primaryStage.setTitle("SimpleFTP FTP Client");
         primaryStage.setResizable(false);
         primaryStage.show();
         primaryStage.setOnCloseRequest(e -> {
@@ -909,6 +886,7 @@ public final class UI {
         });
 
         applicationScene = scene;
+        UI.primaryStage = primaryStage;
         doLogin();
     }
 
@@ -1068,7 +1046,7 @@ public final class UI {
         }
 
         /**
-         * If Application scene is not null, the mouse cursor is reset to default
+         * If Application scene is not null, the mouse cursor is resetConnection to default
          */
         public static void resetMouseCursor() {
             if (applicationScene != null && dragInProgress)

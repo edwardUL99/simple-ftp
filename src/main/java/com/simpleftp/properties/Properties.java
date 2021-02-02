@@ -107,7 +107,7 @@ public final class Properties {
     /**
      * Defines the operation for drag drop onto different panels. Ctrl will do the opposite of this property
      */
-    public static final StringProperty DRAG_DROP_DIFFERENT_PANEL_OPERATION = new StringProperty("DRAG_DROP_DIFFERENT_PANEL_OPERATION", "Copy", "COPY", "MOVE");
+    public static final StringProperty DRAG_DROP_DIFFERENT_PANEL_OPERATION = new StringProperty("DRAG_DROP_DIFFERENT_PANEL_OPERATION", "COPY", "COPY", "MOVE");
 
     /**
      * The property representing if the LineEntry icon should replace the cursor on a drag/drop or the Cursor.MOVE
@@ -120,13 +120,17 @@ public final class Properties {
     public static final BooleanProperty CLEAR_CLIPBOARD_PATH_PASTE = new BooleanProperty("CLEAR_CLIPBOARD_PATH_PASTE", true);
 
     /**
+     * The property determining ig match session button is enabled on the login window
+     */
+    public static final StringProperty MATCH_SESSION_LOGIN_BUTTON = new StringProperty("MATCH_SESSION_LOGIN_BUTTON", "ENABLED", "ENABLED", "DISABLED");
+
+    /**
      * Initialises the properties object
      */
     static void initialiseProperties() {
         try {
             String propertiesLocation = System.getProperty("simpleftp.properties");
             propertiesLocation = propertiesLocation == null ? "simpleftp.properties" : propertiesLocation;
-
             File file = new File(propertiesLocation);
 
             if (file.isFile()) {

@@ -35,11 +35,11 @@ public class Server implements Cloneable {
     private String server;
     @NonNull
     private String user;
-    @NonNull
     @EqualsAndHashCode.Exclude
     private String password;
     private int port;
-    private int timeout;
+    @EqualsAndHashCode.Exclude
+    private Integer timeout;
     /**
      * The default port for FTP
      */

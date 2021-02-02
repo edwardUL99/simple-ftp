@@ -573,7 +573,7 @@ public class FilePropertyWindow extends VBox implements Window {
          * Displays an error message stating why the octal is not valid and resets the text field
          * @param octal the octal that is invalid
          * @param errorMessage the error message to display
-         * @param resetPermissionsField true to reset permissions field to the current octal
+         * @param resetPermissionsField true to resetConnection permissions field to the current octal
          */
         private void doInvalidOctalMessage(String octal, String errorMessage, boolean resetPermissionsField) {
             UI.doError("Invalid Octal Notation", "The octal notation " + octal + " is not valid because: " + errorMessage

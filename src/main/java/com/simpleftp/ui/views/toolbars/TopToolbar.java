@@ -175,7 +175,9 @@ public class TopToolbar extends MenuBar {
         Label connectLabel = new Label();
         connectLabel.setMnemonicParsing(true);
         connectLabel.setText("C_onnect");
-        connectLabel.setTooltip(new Tooltip("Connect to the server without logging in with Sessions (Ctrl+Shift+C)"));
+        connectLabel.tooltipProperty().bind(Bindings.when(mainView.getSessionsInitialisedProperty())
+                                                    .then(new Tooltip("Re-connect to the server with current session (Ctrl+Shift+C)"))
+                                                    .otherwise(new Tooltip("Connect to the server without sessions (Ctrl+Shift+C)")));
         MenuItem connect = new CustomMenuItem(connectLabel);
         connect.setOnAction(e -> mainView.connect());
         connect.disableProperty().bind(remoteConnectedProperty);
@@ -183,7 +185,9 @@ public class TopToolbar extends MenuBar {
         Label disconnectLabel = new Label();
         disconnectLabel.setMnemonicParsing(true);
         disconnectLabel.setText("_Disconnect");
-        disconnectLabel.setTooltip(new Tooltip("Disconnect from the server without logging out of the current session (Ctrl+D)"));
+        disconnectLabel.tooltipProperty().bind(Bindings.when(mainView.getSessionsInitialisedProperty())
+                                                        .then(new Tooltip("Disconnect from the server without logging out from the session (Ctrl+D)"))
+                                                        .otherwise(new Tooltip("Disconnect from the server (Ctrl+D)")));
         MenuItem disconnect = new CustomMenuItem(disconnectLabel);
         disconnect.setOnAction(e -> mainView.disconnect());
         disconnect.disableProperty().bind(remoteConnectedProperty.not());

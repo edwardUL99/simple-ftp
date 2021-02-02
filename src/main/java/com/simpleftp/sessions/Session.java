@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -38,9 +38,23 @@ public class Session {
      * A unique ID for this session
      */
     private int sessionId;
+    /**
+     * Server details for this Session
+     */
     private Server serverDetails;
+    /**
+     * Details relating to the last session
+     */
     private LastSession lastSession;
+    /**
+     * The time this was last saved
+     */
     private LocalDateTime savedTime;
+    /**
+     * This Session has just bene created and needs to be saved to a SessionFile.
+     * This SessionFile represents the SessionFile it should be added to. This should be set after creating the session
+     */
+    SessionFile dirtyFile;
 
     /**
      * Constructs a Session with the provided parameters
@@ -96,10 +110,13 @@ public class Session {
 
         try {
             SessionFile sessionFile = Sessions.getSessionFile();
-            if (!sessionFile.getSessions().contains(this)) {
-                throw new UnsupportedOperationException("Cannot save a Session that is not in the SessionFile");
+            if (dirtyFile != null && sessionFile != dirtyFile) {
+                throw new UnsupportedOperationException("This Session is set to be saved to a SessionFile that is not the Session's SessionFile instance");
             }
 
+            if (dirtyFile != null)
+                sessionFile.addSession(this);
+            dirtyFile = null;
             setSavedTime(LocalDateTime.now());
             sessionSaver.initialiseSaver(sessionFile);
             sessionSaver.writeSessionFile();

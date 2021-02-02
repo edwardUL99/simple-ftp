@@ -30,7 +30,7 @@
  * On disk, it is stored in XML representation, the structure of which as defined by sessions.xsd.
  *
  * This package aims to provide the interface to this Sessions file on disk by providing abstract access to each component of the file.
- * This main access is done through the Sessions class which resolves around the fact that a single onLogin instance can represent only one session at a time.
+ * This main access is done through the Sessions class which resolves around the fact that a single login instance can represent only one session at a time.
  * This Sessions class abstracts all the steps required to setup this current session and the saving of the session.
  *
  * Sessions cannot be constructed outside this package so this interface, with the Sessions class, is the only way for client classes not in this package, to both create

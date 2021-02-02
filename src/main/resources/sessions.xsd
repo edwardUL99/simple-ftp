@@ -26,7 +26,7 @@
     </xs:simpleType>
     <xs:simpleType name="HostNameText">
         <xs:restriction base="xs:string">
-            <xs:pattern value="[A-Za-z0-9][A-Za-z0-9.\-]{1,255}"/>
+            <xs:pattern value="[A-Za-z0-9][A-Za-z0-9.\-]{0,254}"/> <!-- 254 characters as the starting character adds 1 to make the 255 allowed characters -->
         </xs:restriction>
     </xs:simpleType>
     <xs:complexType name="ServerV01">

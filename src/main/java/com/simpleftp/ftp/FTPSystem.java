@@ -56,13 +56,11 @@ public class FTPSystem {
 
     /**
      * Resets the connection, i.e. sets it to null.
-     * This should only be called when testing
+     * This should only be called when there is no active connection (i.e any remote panel not connected), or else
+     * the behaviour could be undefined
      */
-    public static void reset() {
-        if (systemTesting)
-            connection = null;
-        else
-            throw new UnsupportedOperationException("Reset can only be called from a testing context");
+    public static void resetConnection() {
+        connection = null;
     }
 
     /**

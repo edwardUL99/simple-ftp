@@ -80,7 +80,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
      */
     private final Button save;
     /**
-     * The button to reset the file back to original state
+     * The button to resetConnection the file back to original state
      */
     private final Button reset;
     /**
@@ -92,7 +92,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
      */
     private final Label savingLabel;
     /**
-     * The file contents that the reset button brings us back to
+     * The file contents that the resetConnection button brings us back to
      */
     @Getter
     String resetFileContents;
@@ -116,7 +116,7 @@ public abstract class FileEditorWindow extends VBox implements Window {
         save.setOnAction(e -> save());
         save.setTooltip(new Tooltip("Save all unsaved changes"));
 
-        reset = new Button("Reset"); // don't have mnemonic for reset as it is destructive
+        reset = new Button("Reset"); // don't have mnemonic for resetConnection as it is destructive
         reset.setTooltip(new Tooltip("Reset any changes made since the last successful save"));
         reset.setOnAction(e -> reset());
         setOnKeyPressed(e -> {
@@ -187,8 +187,8 @@ public abstract class FileEditorWindow extends VBox implements Window {
     abstract String getSaveFilePath() throws Exception;
 
     /**
-     * Sets the text to set the file contents that the reset button will bring us back to
-     * @param resetFileContents the file contents reset should use
+     * Sets the text to set the file contents that the resetConnection button will bring us back to
+     * @param resetFileContents the file contents resetConnection should use
      */
     public void setResetFileContents(String resetFileContents) {
         this.resetFileContents = resetFileContents;

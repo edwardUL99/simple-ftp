@@ -21,6 +21,7 @@ import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
+import com.simpleftp.ui.login.LoginWindow;
 import com.simpleftp.ui.views.MainView;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -38,7 +39,7 @@ public class MiddleToolbar extends HBox {
      */
     private final Button synchronize;
     /**
-     * The button to onLogin/logout if logged in
+     * The button to login/logout if logged in
      */
     private final Button login;
     /**
@@ -58,11 +59,11 @@ public class MiddleToolbar extends HBox {
      */
     private static final String BINARY_TRANSFER_MODE = "Binary";
     /**
-     * Text for onLogin button when we want to Login
+     * Text for login button when we want to Login
      */
     private static final String LOGIN_TEXT = "Login";
     /**
-     * Text for onLogin button when we want to logout
+     * Text for login button when we want to logout
      */
     private static final String LOGOUT_TEXT = "Logout";
 
@@ -92,7 +93,7 @@ public class MiddleToolbar extends HBox {
     }
 
     /**
-     * This method initialises the onLogin button
+     * This method initialises the login button
      */
     private void initLogin() {
         login.textProperty().bindBidirectional(mainView.getLoggedInProperty(), new StringConverter<>() {
@@ -108,7 +109,7 @@ public class MiddleToolbar extends HBox {
                 else if (s.equals(LOGIN_TEXT)) // if the text of the button is Login, the panel is logged out, so return false
                     return false;
                 else
-                    throw new IllegalArgumentException("Invalid value set for MiddleToolbar.onLogin text. Value provided: " + s + ", one of {Logout, Login} expected");
+                    throw new IllegalArgumentException("Invalid value set for MiddleToolbar.login text. Value provided: " + s + ", one of {Logout, Login} expected");
             }
         });
         login.setOnAction(e -> handleLoginPress());
@@ -120,10 +121,15 @@ public class MiddleToolbar extends HBox {
      * if logged out, it calls UI.doLogin
      */
     public void handleLoginPress() {
-        if (mainView.isLoggedIn())
+        if (mainView.isLoggedIn()) {
             mainView.logout();
-        else
-            UI.doLogin();
+        } else {
+            LoginWindow loginWindow = mainView.getLoginWindow();
+            if (loginWindow.isShowing())
+                loginWindow.toFront();
+            else
+                loginWindow.show(); // this should be the same as UI.doLogin since we only have one MainView instance but call this window's show in case
+        }
     }
 
     /**
