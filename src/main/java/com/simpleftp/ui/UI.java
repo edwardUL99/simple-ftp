@@ -909,7 +909,7 @@ public final class UI {
 
         Scene scene = new Scene(mainView, UI.MAIN_VIEW_WIDTH, UI.MAIN_VIEW_HEIGHT);
         primaryStage.setScene(scene);
-        primaryStage.setTitle("SimpleFTP FTP Client");
+        primaryStage.setTitle("SimpleFTP Client");
         primaryStage.setResizable(false);
         primaryStage.show();
         primaryStage.setOnCloseRequest(e -> {
