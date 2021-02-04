@@ -156,6 +156,10 @@ public class TopToolbar extends MenuBar {
      * Initialises the File menu
      */
     private void initFileMenu() {
+        MenuItem about = new MenuItem();
+        about.setMnemonicParsing(true);
+        about.setText("_About");
+        about.setOnAction(e -> doAbout());
         Label quitLabel = new Label();
         quitLabel.setMnemonicParsing(true);
         quitLabel.setText("_Quit");
@@ -163,7 +167,17 @@ public class TopToolbar extends MenuBar {
         MenuItem quit = new CustomMenuItem(quitLabel);
         quit.setOnAction(e -> mainView.quit());
 
-        fileMenu.getItems().addAll(quit);
+        fileMenu.getItems().addAll(about, quit);
+    }
+
+    /**
+     * Displays about dialog
+     */
+    private void doAbout() {
+        UI.doInfo("SimpleFTP Client", "Copyright (C) 2020-2021 Edward Lynch-Milner. Licensed under GPL-3.0.\n\n" +
+                "A simple FTP Client application for upload/download of files" +
+                " and creation of files. Provides browsing of local and remote panels.\n\n" +
+                "Icons obtained from https://icons8.com");
     }
 
     /**
