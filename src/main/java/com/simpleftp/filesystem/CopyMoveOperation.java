@@ -20,7 +20,7 @@ package com.simpleftp.filesystem;
 /**
  * This enum is used by the FileSystems to determine if the copy/move operation is within same file system or local to remote etc.
  */
-enum CopyMoveOperation {
+public enum CopyMoveOperation {
     /**
      * This option represents a copy/move that is staying within the local file system
      */

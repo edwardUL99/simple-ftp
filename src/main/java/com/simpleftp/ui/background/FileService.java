@@ -245,10 +245,11 @@ public abstract class FileService implements BackgroundTask {
         cancelErrorMonitor();
 
         try {
+            FileSystem fileSystem = getFileSystem();
             FTPConnection connection = fileSystem.getFTPConnection();
             if (connection != null && connection.isConnected())
                 connection.disconnect();
-        } catch (FTPException ex) {
+        } catch (FTPException | FileSystemException ex) {
             if (FTPSystem.isDebugEnabled())
                 ex.printStackTrace();
             UI.doError("Service Completion Error", "An error occurred disconnecting the service's connection because: " + ex.getMessage());
@@ -294,13 +295,15 @@ public abstract class FileService implements BackgroundTask {
                     UI.doError("Task Failure", "A file service task has failed due to an unknown error");
                 }
             }
+
+            FileSystem fileSystem = getFileSystem();
             FTPConnection connection = fileSystem.getFTPConnection();
             if (connection.isConnected())
                 connection.disconnect();
 
             scheduledServices.remove(this);
             cancelErrorMonitor();
-        } catch (FTPException ex) {
+        } catch (FTPException | FileSystemException ex) {
             if (FTPSystem.isDebugEnabled())
                 ex.printStackTrace();
             UI.doError("Service Cancellation Error", "An error occurred disconnecting the service's connection because: " + ex.getMessage());

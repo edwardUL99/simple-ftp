@@ -17,6 +17,7 @@
 
 package com.simpleftp.ui.background;
 
+import com.simpleftp.filesystem.CopyMoveOperation;
 import com.simpleftp.filesystem.LocalFileSystem;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
 import com.simpleftp.filesystem.interfaces.CommonFile;
@@ -36,11 +37,18 @@ class LocalFileService extends FileService {
      * A remote file service clearly always needs an active one, but not local
      */
     private static final HashMap<Operation, Boolean> connectionRequired = new HashMap<>();
+    /**
+     * A HashMap to determine if a connection is required for the COPY/MOVE operation.
+     * This map is only checked if the Operation is a COPY or MOVE. It may be "required" for a COPY/MOVE but only used in certain scenarios
+     */
+    private static final HashMap<CopyMoveOperation, Boolean> connectionUsed = new HashMap<>();
 
     static {
         connectionRequired.put(Operation.COPY, true);
         connectionRequired.put(Operation.MOVE, true);
         connectionRequired.put(Operation.REMOVE, false);
+        connectionUsed.put(CopyMoveOperation.LOCAL_TO_LOCAL, false);
+        connectionUsed.put(CopyMoveOperation.REMOTE_TO_LOCAL, true); // we don't need to be concerned about REMOTE_TO_REMOTE or LOCAL_TO_REMOTE on a local FileService
     }
 
     /**
@@ -54,7 +62,34 @@ class LocalFileService extends FileService {
     }
 
     /**
-     * Retrieves the FileSystem to use for this FileService. Lazily initiliases this FileService's FileSystem instance
+     * Determines if a connection is required for this LocalFileService
+     * @return true if a connection is required, false if not
+     */
+    private boolean connectionRequired() {
+        boolean opConnectionReq = connectionRequired.get(operation);
+
+        if (operation == Operation.COPY || operation == Operation.MOVE) {
+            boolean sourceLocal = getSource().isLocal();
+            boolean destLocal = getDestination().isLocal();
+
+            CopyMoveOperation copyMoveOperation;
+
+            if (sourceLocal && destLocal) {
+                copyMoveOperation = CopyMoveOperation.LOCAL_TO_LOCAL;
+            } else if (!sourceLocal && destLocal) {
+                copyMoveOperation = CopyMoveOperation.REMOTE_TO_LOCAL;
+            } else {
+                throw new IllegalArgumentException("Invalid combination of source and destination file localities given to LocalFileService");
+            }
+
+            opConnectionReq = opConnectionReq && connectionUsed.get(copyMoveOperation);
+        }
+
+        return opConnectionReq;
+    }
+
+    /**
+     * Retrieves the FileSystem to use for this FileService. Lazily initialises this FileService's FileSystem instance
      *
      * @return the file system to use for this FileService
      * @throws FileSystemException if an exception occurs creating the file system
@@ -64,13 +99,13 @@ class LocalFileService extends FileService {
         if (fileSystem == null) {
             FTPConnection connection = null;
             try {
-                if (connectionRequired.get(operation)) {
+                if (connectionRequired()) {
                     connection = FTPConnection.createTemporaryConnection(FTPSystem.getConnection());
                     connection.connect();
                     connection.login();
                 }
             } catch (FTPException ex) {
-                throw new FileSystemException("Couldn't intialise the FileSystem for this FileService", ex);
+                throw new FileSystemException("Couldn't initialise the FileSystem for this FileService", ex);
             }
 
             fileSystem = new LocalFileSystem(connection);

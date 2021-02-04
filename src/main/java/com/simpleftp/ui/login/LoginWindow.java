@@ -27,7 +27,6 @@ import com.simpleftp.sessions.exceptions.SessionSaveException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.interfaces.Window;
 import com.simpleftp.ui.views.MainView;
-import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.BooleanProperty;

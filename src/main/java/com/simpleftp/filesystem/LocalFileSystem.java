@@ -214,7 +214,7 @@ public class LocalFileSystem extends AbstractFileSystem {
 
         Path sourcePath = source.toPath();
         Path destinationNioPath = destination.toPath();
-        AtomicReference<Boolean> fatalException = new AtomicReference<>(true);
+        AtomicReference<Boolean> fatalException = new AtomicReference<>(false);
 
         try {
             if (copy && source.isADirectory()) {
