@@ -1,0 +1,81 @@
+#
+#  Copyright (C) 2020-2021 Edward Lynch-Milner
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+# This file provides configuration properties for the SimpleFTP System.
+# It is defined as KEY=PROPERTY
+# Ensure the value given is correct as per documentation as the application may not work correctly if not
+
+# This determines the amount of time that should elapse before the next check of the connection status, if BACKGROUND_MONITOR_CONNECTION is true.
+# Defined in milliseconds. The higher this number, the better the performance will be, but won't be as quick to identify that the connection has been lost
+CONNECTION_MONITOR_INTERVAL=2000
+
+# The height for the file editor
+FILE_EDITOR_HEIGHT=700
+
+# The width for the file editor
+FILE_EDITOR_WIDTH=700
+
+# This property, in Megabytes, defines the threshold for when the application should warn the user on the size when opening the file in an editor as a file this size could cause you to run out of memory.
+# The default is 100, but if files of lower sizes than 100MB causes you to run out of memory, you should lower this threshold, so that after opening the file, you are warned and can cancel opening it.
+# The minimum value is 1MB.
+FILE_EDITOR_SIZE_WARN_LIMIT=100
+
+# This property defines the file size displayed for a symbolic link. If true, the size displayed for a link is the size of the target file, not the link itself.
+# This may have different behaviour on remote panel than local panel (local seems to follow link for file size anyway while remote does not)
+FILE_SIZE_FOLLOW_LINK=true
+
+# This property defines the permissions displayed for a symbolic link. If false, the permissions displayed are for the link, if true, the target file
+FILE_PERMS_FOLLOW_LINK=false
+
+# This property, when true, states that if possible, the modification time for remote files should be retrieved from the FTP Server using the MDTM command. MDTM provides the most accurate timestamp
+# If this can't be retrieved or this property is false, the time returned is not a time retrieved by MDTM.
+# However, performance is improved if this is false, therefore the default is false
+SERVER_REMOTE_MODIFICATION_TIME=false
+
+# This property toggles the caching of the listing of any remote directory listing visited. This improves performance, but may mean that an operation, for example,
+# renaming a file to a different directory that has been visited, even if the rename was successful, that file won't appear until that directory is refreshed.
+# A refresh will remove any cached listings.
+CACHE_REMOTE_DIRECTORY_LISTING=true
+
+# This property, when true (and CACHE_REMOTE_DIRECTORY_LISTING is true, if the remote panel is refreshed, all cached line entries should be cleared.
+# This basically "refreshes" all directory listings with a single refresh click (rather than refreshing every single visited directory)
+# When false, just the cached listing for the current directory is cleared (better performance, but not intuitive).
+# If this is false, the cache may become invalidated for a directory and won't refresh with a single click to refresh (the affected directory would have to be visited and be refreshed)
+REMOVE_ALL_LISTING_CACHE_REFRESH=true
+
+# This property defines the operation for when drag and drop is done on the same file panel
+# Possible values are { MOVE, COPY }.
+# Pressing Ctrl while doing the drop makes the operation temporarily be the opposite, e.g. copy if move is specified
+DRAG_DROP_SAME_PANEL_OPERATION=MOVE
+
+# This property defines the operation for when drag and drop is done onto a different file panel
+# Possible values are { MOVE, COPY }.
+# Pressing Ctrl while doing the drop makes the operation temporarily be the opposite, e.g. copy if move is specified
+DRAG_DROP_DIFFERENT_PANEL_OPERATION=COPY
+
+# This property, if true, says that on drag and drop, the mouse cursor should be replaced with the icon of the source file as seen on the file panel
+# Default is false, which replaces the cursor with a grabbed hand image
+DRAG_DROP_CURSOR_FILE_ICON=false
+
+# This property defines if the clipboard should be cleared after a path has been pasted using the Local or Remote Paste Path options in the top toolbar
+# True means it should be cleared after, false means the clipboard content should be kept
+CLEAR_CLIPBOARD_PATH_PASTE=true
+
+# This property determines if the Match Session button is enabled on the login window
+# Possible values are { ENABLED, DISABLED }
+# It may be more secure to have it DISABLED so that passwords aren't auto-filled
+MATCH_SESSION_LOGIN_BUTTON=ENABLED

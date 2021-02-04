@@ -30,6 +30,7 @@ import com.simpleftp.ftp.connection.Server;
 import com.simpleftp.ftp.exceptions.*;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
 import com.simpleftp.properties.Properties;
+import com.simpleftp.security.exceptions.PasswordEncryptionException;
 import com.simpleftp.sessions.Sessions;
 import com.simpleftp.sessions.exceptions.SessionLoadException;
 import com.simpleftp.ui.background.BackgroundTask;
@@ -811,39 +812,70 @@ public final class UI {
      * This should be called to initialise the Sessions package so that sessions can be retrieved using Sessions.getSession etc.
      * This method, thus, does not set the current session
      */
-    public static void initialiseSessions() {
+    public static boolean initialiseSessions() {
         boolean disabled = Sessions.isDisabled();
 
         if (!disabled) {
-            doSessionInitialisation();
+            return doSessionInitialisation();
         }
+
+        return false;
+    }
+
+    /**
+     * Displays error messages related to initialisation
+     * @param errorMessage an error message to display, leave null to generate a message based on a Sessions.getExistingLoadException()
+     * @return true if initialised false if not
+     */
+    private static boolean doInitialisationError(String errorMessage) {
+        boolean initialised = false;
+        SessionLoadException exception = Sessions.getExistingLoadException();
+
+        if (errorMessage == null)
+            errorMessage = exception != null ? "Failed because of: " + exception.getMessage() + ". " : "";
+        else
+            errorMessage = "Failed because of: " + errorMessage;
+
+        if (UI.doConfirmation("Sessions Initialisation Failure", "Failed to initialise Sessions functionality correctly."
+                + " It may be due to a corrupted sessions file on the disk. " + errorMessage + "Removing the existing sessions file and re-initialising "
+                + "can fix the issue. Do you wish to do this? It cannot be undone", true)) {
+            Sessions.initialise(true);
+            initialised = Sessions.isInitialised();
+
+            if (!initialised)
+                UI.doError("Sessions Initialisation Failure", "Failed to initialise Sessions again. Proceeding without Session functionality");
+        } else {
+            UI.doInfo("Sessions Initialisation Cancelled", "Cancelling Sessions initialisation as user rejected starting Sessions with a new sessions file");
+        }
+
+        return initialised;
     }
 
     /**
      * A private method to carry out the initialisation logic. This does not check if sessions are disabled or not
+     * @return true if initialised successfully, false if not
      */
-    private static void doSessionInitialisation() {
+    private static boolean doSessionInitialisation() {
         boolean initialised = Sessions.isInitialised();
         if (!initialised) {
-            Sessions.initialise(false);
+            try {
+                Sessions.initialise(false);
 
-            initialised = Sessions.isInitialised();
+                initialised = Sessions.isInitialised();
 
-            if (!initialised) {
-                SessionLoadException exception = Sessions.getExistingLoadException();
-
-                String errorMessage = exception != null ? "Failed because of: " + exception.getMessage() + ". " : "";
-                if (UI.doConfirmation("Sessions Initialisation Failure", "Failed to initialise Sessions functionality correctly."
-                        + " It may be due to a corrupted sessions file on the disk. " + errorMessage + "Removing the existing sessions file and re-initialising "
-                        + "can fix the issue. Do you wish to do this? It cannot be undone")) {
-                    Sessions.initialise(true);
-                    initialised = Sessions.isInitialised();
-
-                    if (!initialised)
-                        UI.doError("Session Initialisation Failure", "Failed to initialise Sessions again. Proceeding without Session functionality");
+                if (!initialised) {
+                    initialised = doInitialisationError(null);
                 }
+            } catch (PasswordEncryptionException ex) {
+                if (FTPSystem.isDebugEnabled())
+                    ex.printStackTrace();
+
+                return doInitialisationError("Password decryption failure. Invalid key may have been used (i.e. existing sessions file was generated " +
+                        "from a different installation). ");
             }
         }
+
+        return initialised;
     }
 
     /**
@@ -873,6 +905,7 @@ public final class UI {
             throw new IllegalStateException("The application has already been started, you cannot start the application twice in one JVM instance");
         applicationStarted = true;
 
+        MainView.deferSessionInitialisation(); // in case there's issues initialising sessions, defer MainView's enableSessions() method as construction of LoginWindow may call this
         mainView = MainView.getInstance();
 
         Scene scene = new Scene(mainView, UI.MAIN_VIEW_WIDTH, UI.MAIN_VIEW_HEIGHT);

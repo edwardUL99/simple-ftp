@@ -37,6 +37,7 @@ import com.simpleftp.ui.login.LoginWindow;
 import com.simpleftp.ui.views.toolbars.BottomToolbar;
 import com.simpleftp.ui.views.toolbars.MiddleToolbar;
 import com.simpleftp.ui.views.toolbars.TopToolbar;
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -95,6 +96,10 @@ public class MainView extends VBox {
      * This is the singleton instance for MainView
      */
     private static MainView SINGLETON_INSTANCE;
+    /**
+     * The boolean flag for deferring session initialisation
+     */
+    private static boolean deferredSessionInitialisation = false;
 
     /**
      * Constructs a MainView object, initialising the PanelView with user.home if found or root until login changes it if sessions are enabled
@@ -171,6 +176,21 @@ public class MainView extends VBox {
         }
 
         return SINGLETON_INSTANCE;
+    }
+
+    /**
+     * Call this method to defer session initialisation until after a primaryStage is shown.
+     * This defers session initialisation in this class' enableSessions() method. Calling that method disables
+     * deferral so any other calls after will enable sessions instantly.
+     *
+     * This is useful as if the primaryStage has not been shown yet and there are any errors related to session initialisation,
+     * these errors will show but no other windows and this looks strange.
+     *
+     * If deferred, the call to initialisation is done with Platform.runLater so that it is run when the JavaFX platform is
+     * fully set up.
+     */
+    public static void deferSessionInitialisation() {
+        deferredSessionInitialisation = true;
     }
 
     /**
@@ -571,17 +591,32 @@ public class MainView extends VBox {
     }
 
     /**
+     * Initialises sessions for the entire application
+     */
+    private void initialiseSessions() {
+        if (UI.initialiseSessions()) {
+            sessionsDisabledProperty.setValue(false);
+            if (Sessions.isInitialised())
+                loggedInProperty.setValue(Sessions.getCurrentSession() != null);
+            else
+                loggedInProperty.setValue(panelView.isRemoteConnected());
+            synchronize(); // synchronize after enabling sessions in the case that the enabling may affect files displayed
+        } else {
+            disableSessions();
+        }
+    }
+
+    /**
      * Enables sessions functionality
      */
     public void enableSessions() {
         Sessions.enable();
-        UI.initialiseSessions();
-        sessionsDisabledProperty.setValue(false);
-        if (Sessions.isInitialised())
-            loggedInProperty.setValue(Sessions.getCurrentSession() != null);
-        else
-            loggedInProperty.setValue(panelView.isRemoteConnected());
-        synchronize(); // synchronize after enabling sessions in the case that the enabling may affect files displayed
+        if (deferredSessionInitialisation) {
+            Platform.runLater(this::initialiseSessions);
+            deferredSessionInitialisation = false;
+        } else {
+            initialiseSessions();
+        }
     }
 
     /**

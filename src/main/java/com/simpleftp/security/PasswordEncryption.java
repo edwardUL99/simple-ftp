@@ -82,6 +82,11 @@ public class PasswordEncryption {
         return encryptionKey;
     }
 
+    /**
+     * This method gets the key spec used for encryption/decryption
+     * @return the key-spec for encryption/decryption
+     * @throws Exception if any exception occurs trying to create the key
+     */
     private static SecretKeySpec getSecretKey() throws Exception {
         if (key == null) {
             String encryptionKey = getEncryptionKey();

@@ -27,6 +27,7 @@ import com.simpleftp.sessions.exceptions.SessionSaveException;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.interfaces.Window;
 import com.simpleftp.ui.views.MainView;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.BooleanProperty;
@@ -373,16 +374,23 @@ public class LoginWindow extends VBox implements Window {
     }
 
     /**
+     * This method enables/disables sessions based on the initial value of the sessionsDisabled checkbox
+     */
+    private void enableDisableSessions() {
+        if (!sessionsDisabled.isSelected())
+            mainView.enableSessions();
+        else
+            mainView.disableSessions();
+    }
+
+    /**
      * Initialises sessions enabled checkbox
      */
     private void initSessionsEnabled() {
         sessionsDisabled.setText("Disable Sessions");
         sessionsDisabled.setTooltip(new Tooltip("Check this to login with just server connection and no Sessions functionality"));
         sessionsDisabled.selectedProperty().bindBidirectional(mainView.getSessionsDisabledProperty());
-        if (!sessionsDisabled.isSelected())
-            mainView.enableSessions();
-        else
-            mainView.disableSessions();
+        enableDisableSessions();
 
         sessionsDisabled.setOnAction(e -> {
             if (sessionsDisabled.isSelected()) {

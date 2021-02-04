@@ -312,7 +312,7 @@ if [ -n "$jar_file" ]; then
   echo -e "\n\t[password.encrypt Generation]\n"
 
   echo "Generating the password.encrypt file used for password encryption"
-  echo "It is not recommended to change this file after installation as otherwise saved passwords will no longer be able to be de-crypted"
+  echo "It is not recommended to change this file after installation as otherwise saved passwords will no longer be able to be decrypted and application files will become unusable"
 
   key=$(LC_ALL=C tr -dc 'A-Za-z0-9!"#$%&'\''()*+,-./:;<=>?@[\]^_`{|}~' < /dev/urandom | head -c 20)
 
