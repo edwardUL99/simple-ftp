@@ -139,34 +139,11 @@ If it cannot find the file in any of these, it attempts to find it in the direct
 
 You can enable debugging information by running with the property -Dsimpleftp.debug
 
-## Feature Ideas for the future
-These are the "nice-to-haves" as described above.
-
-The current system uses a ftp package for dealing with connection to the FTP Server. The structure of this is, at the moment,
-too rigid to make the project extensible to include other file transfer protocols like SFTP.
-
-The idea for a future implementation is to make a connection package, which provides interfaces for connection to servers with different protocols.
-This would provide a Connection interface, which all different connection protocols having an implementing connection class.
-
-The current structure/architecture would have to be greatly refactored to move it away from being strictly FTP.
-This is especially in the filesystem.RemoteFile class as that only supports an FTP file. RemoteFile could, in the future,
-either be made an interface or an abstract class, with factory methods producing the appropriate RemoteFile for a given connection implementation.
-This would involve a lot of work but would make the system more flexible and extensible. If, even the refactoring could be done without adding other protocols, but have the correct interfaces,
-it would be a great help for extending the project. The goal for this refactoring is to not change the UI code too much. It should only change enough to accommodate different connection types, in certain scenarios.
-In most scenarios, the common Connection interface should keep the UI functionality the same.
-See the GitHub issue https://github.com/edwardUL99/simple-ftp/issues/83 for discussion about this issue, and the analysis that would need to be done.
-
-However, for version 1.0 and possibly a lot of different versions, the sole focus is FTP as that was the initial goal of this project and it should be completed as an FTP application.
-Maybe, keep this idea for version 2.0 or even version 3.0 if you ever get there! (But with university/work, it's unlikely, I'd prefer to have a working FTP application before this is even a remote possibility)
-
 ## Note on Symbolic Links
 Symbolic links are *experimental* as not every operating system supports them and depends on the FTP Server if they are supported or not.
 So, because of this support issue among different systems, it's hard to have a consistent experience with symbolic links.
 
-Any bugs/issues that are found however, should be reported so that they can be worked on and see if a solution can be worked on them.
-
-In the future, it may be a possibility to implement some form of abstract symbolic link for systems that don't support links. These links would only exist within the application and would have to be stored somewhere. Maybe in a different XML file than the Session xml file for saving sessions (or in the session file, as you may want different links on a different server).
-However, for now, we can only support symbolic links if they are supported on the relevant system/server.
+There may be bugs/unexpected behaviour with symbolic links that were not anticipated during development.
 
 #### Symbolic link supported features
 The following features for symbolic links supported are:
