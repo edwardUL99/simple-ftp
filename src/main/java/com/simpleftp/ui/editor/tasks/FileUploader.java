@@ -24,7 +24,7 @@ import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
-import com.simpleftp.ui.background.BackgroundTask;
+import com.simpleftp.ui.background.AbstractDisplayableBackgroundTask;
 import com.simpleftp.ui.background.scheduling.TaskScheduler;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.editor.FileEditorWindow;
@@ -43,7 +43,7 @@ import java.io.IOException;
  * Abstract as uploads differ between file types. E.g local files aren't really uploaded, so their definition of the upload method would be just clean up.
  * This can only be instantiated by calling newInstance which will return the appropriate implementation for that file
  */
-public abstract class FileUploader implements BackgroundTask {
+public abstract class FileUploader extends AbstractDisplayableBackgroundTask {
     /**
      * The editor window saving the file
      */
@@ -68,10 +68,6 @@ public abstract class FileUploader implements BackgroundTask {
      * The connection to use to create temporary filesystem from and to upload the file if remote
      */
     protected FTPConnection uploadingConnection;
-    /**
-     * A boolean to keep track of if this task is finished or not
-     */
-    private boolean finished;
     /**
      * Regex used to identify a backup file
      */
@@ -106,17 +102,13 @@ public abstract class FileUploader implements BackgroundTask {
         };
 
         uploadService.setOnSucceeded(e -> doSucceed());
-        uploadService.setOnFailed(e -> finished = true);
-        uploadService.setOnCancelled(e -> finished = true);
+        uploadService.setOnFailed(e -> updateState(State.FAILED));
     }
 
     /**
      * Defines what should happen when the upload succeeds
      */
     private void doSucceed() {
-        finished = true;
-        UI.removeBackgroundTask(this);
-
         if (!errorOccurred) {
             DirectoryPane directoryPane = editorWindow.getCreatingPane();
             String parentPath = FileUtils.getParentPath(filePath, directoryPane.isLocal());
@@ -124,6 +116,7 @@ public abstract class FileUploader implements BackgroundTask {
             editorWindow.setResetFileContents(savedFileContents); // we have now successfully saved the file contents. Our resetConnection string should now match what is actually saved
 
             UI.doInfo("File Saved", "File " + filePath + " saved successfully");
+            updateState(State.COMPLETED);
 
             if (FileUtils.pathEquals(parentPath, directoryPane.getCurrentWorkingDirectory(), directoryPane.isLocal())) {
                 try {
@@ -138,6 +131,8 @@ public abstract class FileUploader implements BackgroundTask {
                         ex.printStackTrace();
                 }
             }
+        } else {
+            updateState(State.FAILED);
         }
 
         editorWindow.displaySavingLabel(false);
@@ -149,10 +144,9 @@ public abstract class FileUploader implements BackgroundTask {
      */
     @Override
     public void start() {
-        editorWindow.displaySavingLabel(true);
+        updateState(State.STARTED);
+        Platform.runLater(() -> editorWindow.displaySavingLabel(true));
         uploadService.start();
-        finished = false;
-        UI.addBackgroundTask(this);
     }
 
     /**
@@ -228,6 +222,7 @@ public abstract class FileUploader implements BackgroundTask {
      */
     private void saveFile() {
         try {
+            updateState(State.RUNNING);
             String saveFilePath = getSaveFilePath(filePath);
             FTPConnection uploadingConnection = getUploadingConnection();
             FileSystem fileSystem = getFileSystem(uploadingConnection);
@@ -256,17 +251,6 @@ public abstract class FileUploader implements BackgroundTask {
     }
 
     /**
-     * Returns a boolean determining if the task is finished.
-     * This should be tracked by a variable in the implementing class and not by checking any underlying JavaFX Service state since that has to be done from the JavaFX thread
-     *
-     * @return true if finished, false if not
-     */
-    @Override
-    public boolean isFinished() {
-        return finished;
-    }
-
-    /**
      * Creates a FileUploader for the file provided
      * @param editorWindow the editor window
      * @param filePath the path to the file
@@ -286,17 +270,8 @@ public abstract class FileUploader implements BackgroundTask {
      */
     @Override
     public void cancel() {
+        updateState(State.CANCELLED);
         uploadService.cancel();
-    }
-
-    /**
-     * Returns true if this task is running
-     *
-     * @return true if running, false if not
-     */
-    @Override
-    public boolean isRunning() {
-        return uploadService.isRunning();
     }
 
     /**
@@ -310,19 +285,15 @@ public abstract class FileUploader implements BackgroundTask {
     }
 
     /**
-     * Returns the state of the upload service
-     * @return the state of the upload service thread
-     */
-    public Worker.State getState() {
-        return uploadService.getState();
-    }
-
-    /**
      * Schedule this uploader to be run by using its editor window as the key, i.e. if another file uploader is used with the same editor window,
-     * run them one after another
+     * run them one after another.
+     *
+     * This should be called from the FX thread
      */
     @Override
     public void schedule() {
+        updateState(State.SCHEDULED);
         scheduler.schedule(editorWindow, this);
+        displayTask();
     }
 }

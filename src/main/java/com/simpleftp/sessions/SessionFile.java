@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -89,13 +89,5 @@ public class SessionFile {
      */
     public Set<Session> getSessions() {
         return Collections.unmodifiableSet(sessions);
-    }
-
-    /**
-     * Returns the number of saved sessions in this file
-     * @return number of saved sessions
-     */
-    public int getNumberOfSavedSessions() {
-        return sessions.size();
     }
 }

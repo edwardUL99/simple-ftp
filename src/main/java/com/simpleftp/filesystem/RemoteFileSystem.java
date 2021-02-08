@@ -169,18 +169,6 @@ public class RemoteFileSystem extends AbstractFileSystem {
     }
 
     /**
-     * Removes the file specified by the path name
-     *
-     * @param fileName the name of the file (can be a path)
-     * @return true if it was a success, false if not
-     * @throws FileSystemException if an error occurs
-     */
-    @Override
-    public boolean removeFile(String fileName) throws FileSystemException {
-        return removeFile(getFile(fileName));
-    }
-
-    /**
      * Attempts to find the specified file and returns it
      *
      * @param fileName the name/path to the file

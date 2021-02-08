@@ -72,31 +72,4 @@ public class RemoteFileEditorWindow extends FileEditorWindow {
         return "ftp:/" + lineEntry.getFilePath();
     }
 
-    /**
-     * Shows this FileEditorWindow
-     */
-    @Override
-    public void show() {
-        super.show();
-        UI.openWindow(this);
-    }
-
-    /**
-     * Closes this FileEditorWindow
-     */
-    @Override
-    public void close() {
-        super.close();
-        UI.closeWindow(this);
-    }
-
-    /**
-     * Returns true if this editor window is remote, false if local
-     *
-     * @return true if remote, false if local
-     */
-    @Override
-    public boolean isRemote() {
-        return true;
-    }
 }

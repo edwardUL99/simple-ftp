@@ -611,6 +611,7 @@ public class LoginWindow extends VBox implements Window {
         timeoutField.setText(DEFAULT_TIMEOUT);
         userField.clear();
         passwordField.clear();
+        displayPassword.setSelected(false);
         matchedSession = null;
         setSessionFieldsEditable(true);
     }

@@ -28,7 +28,7 @@ import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPError;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ui.UI;
-import com.simpleftp.ui.background.BackgroundTask;
+import com.simpleftp.ui.background.AbstractDisplayableBackgroundTask;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.files.LineEntry;
 import javafx.application.Platform;
@@ -44,7 +44,7 @@ import java.io.IOException;
  * This class is a background task for downloading the contents of a file as a string to display in an editor opened by a DirectoryPane
  */
 @Log4j2
-public class FileStringDownloader implements BackgroundTask {
+public final class FileStringDownloader extends AbstractDisplayableBackgroundTask {
     /**
      * The line entry to download contents of
      */
@@ -65,10 +65,6 @@ public class FileStringDownloader implements BackgroundTask {
      * The download service for downloading the contents
      */
     private Service<String> downloadService;
-    /**
-     * A flag keeping track of if this task is finished or not
-     */
-    private boolean finished;
 
     /**
      * Creates a FileStringDownloader object
@@ -79,13 +75,15 @@ public class FileStringDownloader implements BackgroundTask {
     public FileStringDownloader(LineEntry lineEntry, FileSystem fileSystem, DirectoryPane creatingPanel) throws FTPException {
         this.lineEntry = lineEntry;
         this.creatingPanel = creatingPanel;
-        if (!lineEntry.isLocal()) {
+        boolean local = lineEntry.isLocal();
+        if (!local) {
             this.readingConnection = FTPConnection.createTemporaryConnection(fileSystem.getFTPConnection());
             this.readingConnection.connect();
             this.readingConnection.login();
             this.readingConnection.setTextTransferMode(true);
         } // only need connection for remote file
         initDownloadService();
+        setDescription("Download contents of " + lineEntry.getFilePath() + (local ? " (local)":" (remote)"));
     }
 
     /**
@@ -93,8 +91,8 @@ public class FileStringDownloader implements BackgroundTask {
      */
     @Override
     public void start() {
-        UI.addBackgroundTask(this);
-        finished = false;
+        displayTask();
+        updateState(State.STARTED);
         downloadService.start();
     }
 
@@ -115,16 +113,6 @@ public class FileStringDownloader implements BackgroundTask {
     }
 
     /**
-     * Returns true if this task is running
-     *
-     * @return true if running, false if not
-     */
-    @Override
-    public boolean isRunning() {
-        return downloadService.isRunning();
-    }
-
-    /**
      * Use this call to determine if a task is ready
      *
      * @return true if ready, false if not
@@ -132,17 +120,6 @@ public class FileStringDownloader implements BackgroundTask {
     @Override
     public boolean isReady() {
         return downloadService.isRunning();
-    }
-
-    /**
-     * Returns a boolean determining if the task is finished.
-     * This should be tracked by a variable in the implementing class and not by checking any underlying JavaFX Service state since that has to be done from the JavaFX thread
-     *
-     * @return true if finished, false if not
-     */
-    @Override
-    public boolean isFinished() {
-        return finished;
     }
 
     /**
@@ -157,22 +134,23 @@ public class FileStringDownloader implements BackgroundTask {
         };
 
         downloadService.setOnSucceeded(e -> {
-            finished = true;
             if (!errorOccurred) {
+                updateState(State.COMPLETED);
                 String contents = (String) e.getSource().getValue();
                 UI.showFileEditor(creatingPanel, lineEntry, contents);
+            } else {
+                updateState(State.FAILED);
             }
             disconnectConnection();
-            UI.removeBackgroundTask(this);
         });
 
         downloadService.setOnCancelled(e -> {
-            finished = true;
             disconnectConnection();
+            updateState(State.CANCELLED);
         });
         downloadService.setOnFailed(e -> {
-            finished = true;
             disconnectConnection();
+            updateState(State.FAILED);
         });
     }
 
@@ -203,12 +181,43 @@ public class FileStringDownloader implements BackgroundTask {
     }
 
     /**
+     * Downloads the remote file as a LocalFile and returns it
+     * @param remoteFile the file to download
+     * @return the created file
+     */
+    private LocalFile downloadRemoteFile(RemoteFile remoteFile) {
+        try {
+            LocalFile downloaded;
+            if (remoteFile.isSymbolicLink()) {
+                remoteFile = new RemoteFile(remoteFile.getSymbolicLinkTarget(), readingConnection, null);
+            }
+
+            downloaded = new LocalFile(FileUtils.appendPath(FileUtils.TEMP_DIRECTORY, remoteFile.getName(), true));
+
+            if (new LocalFileSystem(readingConnection).addFile(remoteFile, downloaded.getParentFile().getAbsolutePath())) { // download the file
+                downloaded.deleteOnExit();
+
+                return downloaded;
+            } else {
+                throw new FTPError("Failed to download remote file to temp directory", readingConnection.getReplyString());
+            }
+        } catch (Exception ex) {
+            Platform.runLater(() -> UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled()));
+            errorOccurred = true;
+            return null;
+        }
+    }
+
+    /**
      * Opens the file and returns it as a string
      * @param file the file to display
      * @return the file contents as a String
      * @throws IOException if the reader fails to read the file
      */
     private String fileToString(CommonFile file) throws IOException {
+        if (state != State.RUNNING)
+            updateState(State.RUNNING);
+
         StringBuilder str = new StringBuilder();
 
         if (file instanceof LocalFile) {
@@ -233,29 +242,10 @@ public class FileStringDownloader implements BackgroundTask {
                 return null;
             }
         } else {
-            try {
-                RemoteFile remoteFile = (RemoteFile) file;
+           LocalFile localFile = downloadRemoteFile((RemoteFile)file);
 
-                LocalFile downloaded;
-                if (remoteFile.isSymbolicLink()) {
-                    remoteFile = new RemoteFile(remoteFile.getSymbolicLinkTarget(), readingConnection, null);
-                }
-
-                downloaded = new LocalFile(FileUtils.appendPath(FileUtils.TEMP_DIRECTORY, remoteFile.getName(), true));
-
-                if (new LocalFileSystem(readingConnection).addFile(remoteFile, downloaded.getParentFile().getAbsolutePath())) { // download the file
-                    String ret = fileToString(downloaded);
-                    downloaded.deleteOnExit();
-
-                    return ret;
-                } else {
-                    throw new FTPError("Failed to download remote file to temp directory", readingConnection.getReplyString());
-                }
-            } catch (Exception ex) {
-                Platform.runLater(() -> UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled()));
-                errorOccurred = true;
-                return null;
-            }
+           if (localFile != null)
+               return fileToString(localFile);
         }
 
         return str.toString();

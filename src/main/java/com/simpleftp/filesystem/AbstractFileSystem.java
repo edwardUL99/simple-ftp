@@ -73,7 +73,6 @@ public abstract class AbstractFileSystem implements FileSystem {
      *
      * @return true if a temporary file system, false if not
      */
-    @Override
     public boolean isTemporaryFileSystem() {
         return temporaryFileSystem;
     }

@@ -124,12 +124,4 @@ public class Session {
             throw new SessionSaveException("Failed to save the Session", ex);
         }
     }
-
-    /**
-     * Deletes this session from the session file
-     * @throws Exception if an error occurs saving the file
-     */
-    public void delete() throws Exception {
-        Sessions.deleteSession(this);
-    }
 }

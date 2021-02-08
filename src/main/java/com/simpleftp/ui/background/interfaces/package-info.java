@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -14,17 +14,7 @@
  * You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-package com.simpleftp.ui.interfaces;
-
 /**
- * An ActionHandler which takes a Window as a parameter and does some action on it
+ * This package provides interfaces for the background package
  */
-@FunctionalInterface
-public interface WindowActionHandler {
-    /**
-     * Performs the action on the specified window
-     * @param window the window to do the action on
-     */
-    void doAction(Window window);
-}
+package com.simpleftp.ui.background.interfaces;

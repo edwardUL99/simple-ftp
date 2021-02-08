@@ -17,7 +17,7 @@
 
 package com.simpleftp.ui.background.scheduling;
 
-import com.simpleftp.ui.background.BackgroundTask;
+import com.simpleftp.ui.background.interfaces.BackgroundTask;
 import javafx.application.Platform;
 import javafx.concurrent.ScheduledService;
 import javafx.concurrent.Task;
@@ -47,6 +47,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * taskScheduler.schedule(a, fileService). This will add fileService to a's queues of FileServices to be started next. Now we have the issue of wanting to start another service that is not the
  * same file. Does that have to wait until a FileService belonging to a has completed? No, because that would have been added to the other file's queue, so would run regardless of the in progress
  * task of a.
+ *
+ * It is important to note that this process is a background process, it is not a process that we want users to know about. So, therefore it does not extend AbstractDisplayableBackgroundTask or implement
+ * the BackgroundTask interface.
  *
  * @param <T> the "key" to synchronize by, i.e. if you want to register a task to a key (could be if the task is for the same file for e.g. use a CommonFile as a key and then if 2 tasks with the same file object are registered, run one after another),
  *           basically this key is what determines if a task is a duplicate of another and they should be run one after another based on this key.
@@ -167,7 +170,7 @@ public class TaskScheduler<T, R extends BackgroundTask> {
                 } else {
                     if (!taskInProgress) { // if a task is currently in progress for the provided key, don't start a next task for that key
                         R task = tasks.poll();
-                        if (task != null && task.isReady()) {
+                        if (task != null && task.isReady() && !task.isFinished()) {
                             runningTask.put(key, task);
                             Platform.runLater(task::start); // tasks should only be started from the JavaFX thread
                         }

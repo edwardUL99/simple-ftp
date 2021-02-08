@@ -24,6 +24,7 @@ import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
+import com.simpleftp.properties.Properties;
 import com.simpleftp.ui.UI;
 import com.simpleftp.ui.background.scheduling.TaskScheduler;
 import com.simpleftp.ui.interfaces.ActionHandler;
@@ -41,7 +42,7 @@ import java.util.HashMap;
  * It is designed to have a local or remote file service for the type of operation required.
  * It uses a copy FTPSystem's connection to do all its operations.
  */
-public abstract class FileService implements BackgroundTask {
+public abstract class FileService extends AbstractDisplayableBackgroundTask {
     /**
      * The source file for the file operation this FileService is providing
      */
@@ -73,10 +74,6 @@ public abstract class FileService implements BackgroundTask {
      * The FileSystem backing the operations this FileService is doing
      */
     protected FileSystem fileSystem;
-    /**
-     * A boolean determining if the service is finished or not
-     */
-    private boolean finished;
     /**
      * The action handler to use for when operation succeeds
      */
@@ -170,7 +167,10 @@ public abstract class FileService implements BackgroundTask {
             }
         };
 
-        service.setOnFailed(e -> doCancel(false));
+        service.setOnFailed(e -> {
+            if (!errorMonitor.errorLimitReached) // if we reached our error limit we'd have already called this method
+                doCancel(false);
+        });
         service.setOnSucceeded(e -> doSuccess());
     }
 
@@ -197,7 +197,7 @@ public abstract class FileService implements BackgroundTask {
     }
 
     /**
-     * Retrieves the FileSystem to use for this FileService. Lazily initiliases this FileService's FileSystem instance
+     * Retrieves the FileSystem to use for this FileService. Lazily initialises this FileService's FileSystem instance
      * @return the file system to use for this FileService
      * @throws FileSystemException if an exception occurs creating the file system
      */
@@ -210,6 +210,7 @@ public abstract class FileService implements BackgroundTask {
         try {
             FileSystem fileSystem = getFileSystem();
             errorMonitor.start(); // start the error monitor after we initialise the file system to prevent different filesystems being created if a race condition was to occur
+            updateState(State.RUNNING);
             switch (operation) {
                 case COPY: operationSucceeded = fileSystem.copyFiles(source, destination);
                             break;
@@ -230,14 +231,14 @@ public abstract class FileService implements BackgroundTask {
      * This operation is called when the copyMoveOperation succeeds
      */
     private void doSuccess() {
-        UI.removeBackgroundTask(this);
         scheduledServices.remove(this);
-        finished = true;
 
         if (operationSucceeded) {
+            updateState(State.COMPLETED);
             if (onOperationSucceeded != null)
                 onOperationSucceeded.doAction();
         } else {
+            updateState(State.FAILED);
             if (onOperationFailed != null)
                 onOperationFailed.doAction();
         }
@@ -276,9 +277,8 @@ public abstract class FileService implements BackgroundTask {
      */
     @Override
     public void start() {
-        finished = false;
+        updateState(State.STARTED);
         service.start();
-        UI.addBackgroundTask(this);
     }
 
     /**
@@ -287,18 +287,20 @@ public abstract class FileService implements BackgroundTask {
      */
     private void doCancel(boolean wantedCancel) {
         try {
-            finished = true;
             if (!wantedCancel) {
+                updateState(State.FAILED);
                 if (onOperationFailed != null) {
                     onOperationFailed.doAction();
                 } else {
                     UI.doError("Task Failure", "A file service task has failed due to an unknown error");
                 }
+            } else {
+                updateState(State.CANCELLED);
             }
 
             FileSystem fileSystem = getFileSystem();
             FTPConnection connection = fileSystem.getFTPConnection();
-            if (connection.isConnected())
+            if (connection != null && connection.isConnected())
                 connection.disconnect();
 
             scheduledServices.remove(this);
@@ -307,6 +309,7 @@ public abstract class FileService implements BackgroundTask {
             if (FTPSystem.isDebugEnabled())
                 ex.printStackTrace();
             UI.doError("Service Cancellation Error", "An error occurred disconnecting the service's connection because: " + ex.getMessage());
+            updateState(State.FAILED);
         }
     }
 
@@ -320,24 +323,6 @@ public abstract class FileService implements BackgroundTask {
     }
 
     /**
-     * Returns true if this task is running
-     *
-     * @return true if running, false if not
-     */
-    @Override
-    public boolean isRunning() {
-        return service.isRunning();
-    }
-
-    /**
-     * Retrieves the state of the service backing this
-     * @return state of backing service
-     */
-    public Worker.State getState() {
-        return service.getState();
-    }
-
-    /**
      * Use this call to determine if a task is ready
      *
      * @return true if ready, false if not
@@ -345,17 +330,6 @@ public abstract class FileService implements BackgroundTask {
     @Override
     public boolean isReady() {
         return service.getState() == Worker.State.READY;
-    }
-
-    /**
-     * Returns a boolean determining if the task is finished.
-     * This should be tracked by a variable in the implementing class and not by checking any underlying JavaFX Service state since that has to be done from the JavaFX thread
-     *
-     * @return true if finished, false if not
-     */
-    @Override
-    public boolean isFinished() {
-        return finished;
     }
 
     /**
@@ -408,11 +382,15 @@ public abstract class FileService implements BackgroundTask {
      * A task with the same source file may have been started with start() and then another one with same file started with schedule(). The
      * task started with schedule() will not know about the one started by start() as it is not in the scheduling queue and thus cannot be checked if it is already in
      * progress</b>
+     *
+     * This should be called from FX thread
      */
     @Override
     public void schedule() {
         scheduler.schedule(getSchedulerKey(), this);
         scheduledServices.add(this);
+        updateState(State.SCHEDULED);
+        displayTask();
     }
 
     /**
@@ -443,6 +421,14 @@ public abstract class FileService implements BackgroundTask {
          * Returns true if cancelled
          */
         private boolean cancelled;
+        /**
+         * A variable that determines the error limit was reacheds
+         */
+        private boolean errorLimitReached;
+        /**
+         * The number of error dialogs before it is considered as fatal as if we are getting a lot of errors, something must have went wrong
+         */
+        private final int maxErrorDialogs = Properties.FILE_OPERATION_ERROR_LIMIT.getValue();
 
         /**
          * Constructs an ErrorMonitor instance
@@ -456,11 +442,23 @@ public abstract class FileService implements BackgroundTask {
                         protected Void call() throws Exception {
                             FileSystem fileSystem = getFileSystem();
 
+                            int errorsDisplayed = 0;
                             while (!cancelled) {
                                 FileOperationError error = fileSystem.getNextFileOperationError();
 
-                                if (error != null)
-                                    displayOperationError(error);
+                                if (error != null) {
+                                    if (errorsDisplayed < maxErrorDialogs) {
+                                        displayOperationError(error);
+                                        errorsDisplayed++;
+                                    } else if (errorsDisplayed == maxErrorDialogs) {
+                                        cancelled = errorLimitReached = true;
+                                        Platform.runLater(() -> {
+                                            if (FileService.this.service.isRunning())
+                                                FileService.this.service.cancel();
+                                            FileService.this.doCancel(false);
+                                        });
+                                    }
+                                }
                             }
 
                             return null;
@@ -500,12 +498,14 @@ public abstract class FileService implements BackgroundTask {
          * Cancels this error monitor displaying all file operations left if any
          */
         public void cancel() throws FileSystemException {
-            FileSystem fileSystem = getFileSystem();
-            while (fileSystem.hasNextFileOperationError())
-                displayOperationError(fileSystem.getNextFileOperationError());
+            if (!cancelled) {
+                FileSystem fileSystem = getFileSystem();
+                while (fileSystem.hasNextFileOperationError())
+                    displayOperationError(fileSystem.getNextFileOperationError());
 
-            cancelled = true;
-            service.cancel();
+                cancelled = true;
+                service.cancel();
+            }
         }
     }
 }

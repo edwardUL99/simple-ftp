@@ -120,9 +120,23 @@ public final class Properties {
     public static final BooleanProperty CLEAR_CLIPBOARD_PATH_PASTE = new BooleanProperty("CLEAR_CLIPBOARD_PATH_PASTE", true);
 
     /**
-     * The property determining ig match session button is enabled on the login window
+     * The property determining if match session button is enabled on the login window
      */
     public static final StringProperty MATCH_SESSION_LOGIN_BUTTON = new StringProperty("MATCH_SESSION_LOGIN_BUTTON", "ENABLED", "ENABLED", "DISABLED");
+
+    /**
+     * The property determining if tasks should be deleted after a period of time on completion
+     */
+    public static final BooleanProperty DELETE_TASK_ON_COMPLETION = new BooleanProperty("DELETE_TASK_ON_COMPLETION", true);
+
+    /**
+     * Property representing how long the task deletion takes after completion
+     */
+    public static final IntegerProperty TASK_DELETION_DELAY = new IntegerProperty("TASK_DELETION_DELAY", 10, 5, null);
+    /**
+     * Property representing the number of non-fatal FileService errors that can occur
+     */
+    public static final IntegerProperty FILE_OPERATION_ERROR_LIMIT = new IntegerProperty("FILE_OPERATION_ERROR_LIMIT", 5, 0, 20);
 
     /**
      * Initialises the properties object

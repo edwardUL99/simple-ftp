@@ -379,12 +379,6 @@ public abstract class FileEditorWindow extends VBox implements Window {
     }
 
     /**
-     * Returns true if this editor window is remote, false if local
-     * @return true if remote, false if local
-     */
-    public abstract boolean isRemote();
-
-    /**
      * Returns the hash code of the file in this editor window
      * @return the hash code of the file in this editor window
      */

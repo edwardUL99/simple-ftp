@@ -45,6 +45,7 @@ final class RemoteFileUploader extends FileUploader {
         super(editorWindow, filePath, savedFileContents);
         uploadService.setOnCancelled(e -> disconnectConnection());
         uploadService.setOnFailed(e -> disconnectConnection());
+        setDescription("Upload contents of " + filePath + " to server");
     }
 
     /**

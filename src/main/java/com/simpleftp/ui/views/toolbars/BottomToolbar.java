@@ -19,6 +19,7 @@ package com.simpleftp.ui.views.toolbars;
 
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.ftp.connection.Server;
+import com.simpleftp.ui.UI;
 import com.simpleftp.ui.views.ConnectionTimer;
 import com.simpleftp.ui.views.MainView;
 import javafx.beans.property.BooleanProperty;
@@ -99,6 +100,14 @@ public class BottomToolbar extends HBox {
         setPadding(new Insets(5));
         setAlignment(Pos.CENTER_RIGHT);
 
+        initBackgroundTasks();
+        initServerInfo();
+    }
+
+    /**
+     * Initialises server info on the bottom toolbar
+     */
+    private void initServerInfo() {
         Font font = Font.font("Monospaced");
         server.setFont(font);
         user.setFont(font);
@@ -115,6 +124,27 @@ public class BottomToolbar extends HBox {
         timerLabel.textProperty().bind(connectionTimer.getTimeProperty());
 
         getChildren().addAll(serverInfoSeparator, serverInfo, new Separator(Orientation.VERTICAL), timerLabel);
+    }
+
+    /**
+     * Initialises the background tasks button
+     */
+    private void initBackgroundTasks() {
+        Label backgroundTasks = new Label("View Background Tasks");
+        backgroundTasks.setFont(Font.font("Monospaced"));
+        backgroundTasks.setOnMouseEntered(e -> backgroundTasks.setUnderline(true));
+        backgroundTasks.setOnMouseExited(e -> backgroundTasks.setUnderline(false));
+        backgroundTasks.setOnMouseClicked(e -> mainView.getTaskWindow().show());
+
+        Separator tasksSeparator = new Separator(Orientation.VERTICAL);
+
+        BooleanProperty visibleProperty = backgroundTasks.visibleProperty();
+        visibleProperty.bind(UI.getBackgroundTasksProperty());
+        backgroundTasks.managedProperty().bind(visibleProperty);
+        tasksSeparator.visibleProperty().bind(visibleProperty);
+        tasksSeparator.managedProperty().bind(visibleProperty);
+
+        getChildren().addAll(tasksSeparator, backgroundTasks);
     }
 
     /**

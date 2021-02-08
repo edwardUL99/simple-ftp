@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,6 +30,8 @@ import javafx.concurrent.Task;
 /**
  * This class checks the status of the FTPSystem connection and if it is lost, it disconnects the remote panel on the provided panel view.
  * This should be cancelled on a normal disconnect/logout as that is an expected disconnection. To restart, resetConnection and then start should be called.
+ *
+ * It does not extend BackgroundTask as we don't need this to be tracked by the U.I
  */
 public class ConnectionMonitor extends Service<Void> {
     /**

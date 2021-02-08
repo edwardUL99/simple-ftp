@@ -71,13 +71,4 @@ public class LocalFileEditorWindow extends FileEditorWindow {
         return lineEntry.getFilePath();
     }
 
-    /**
-     * Returns true if this editor window is remote, false if local
-     *
-     * @return true if remote, false if local
-     */
-    @Override
-    public boolean isRemote() {
-        return false;
-    }
 }

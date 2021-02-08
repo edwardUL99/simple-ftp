@@ -111,15 +111,6 @@ public class LocalFileSystem extends AbstractFileSystem {
         }
     }
 
-    /* Removes the specified file from the local file system
-     * @param fileName name of the file to remove
-     * @return true if successful
-     */
-    @Override
-    public boolean removeFile(String fileName) throws FileSystemException {
-        return removeFile(new LocalFile(fileName));
-    }
-
     /**
      * Returns the file specified by the file name if it exists, null otherwise
      * @param fileName the name/path to the file

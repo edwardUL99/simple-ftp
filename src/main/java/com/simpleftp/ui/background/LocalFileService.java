@@ -31,7 +31,7 @@ import java.util.HashMap;
 /**
  * This class represents a FileService for use with local filesystems
  */
-class LocalFileService extends FileService {
+final class LocalFileService extends FileService {
     /**
      * A HashMap to determine if an active (connected and logged in) connection is required for the operation.
      * A remote file service clearly always needs an active one, but not local
@@ -59,6 +59,48 @@ class LocalFileService extends FileService {
      */
     LocalFileService(CommonFile source, CommonFile destination, Operation operation) {
         super(source, destination, operation);
+        setDescription();
+    }
+
+    /**
+     * Sets the description property for this task
+     */
+    private void setDescription() {
+        String operation = this.operation.toString();
+        operation = operation.charAt(0) + operation.substring(1).toLowerCase();
+
+        if (operation.equals("Remove")) {
+            setDescription("Delete " + getSource().getFilePath() + " (local)");
+        } else {
+            CopyMoveOperation copyMoveOperation = getCopyMoveOperation();
+
+            if (copyMoveOperation == CopyMoveOperation.LOCAL_TO_LOCAL)
+                setDescription(operation + " " + getSource().getFilePath() + " (local) to " + getDestination().getFilePath() + " (local)");
+            else
+                setDescription(operation + " " + getSource().getFilePath() + " (remote) to " + getDestination().getFilePath() + " (remote)");
+        }
+
+    }
+
+    /**
+     * Gets the copy move operation represented by this file service
+     * @return copy/move operation
+     */
+    private CopyMoveOperation getCopyMoveOperation() {
+        boolean sourceLocal = getSource().isLocal();
+        boolean destLocal = getDestination().isLocal();
+
+        CopyMoveOperation copyMoveOperation;
+
+        if (sourceLocal && destLocal) {
+            copyMoveOperation = CopyMoveOperation.LOCAL_TO_LOCAL;
+        } else if (!sourceLocal && destLocal) {
+            copyMoveOperation = CopyMoveOperation.REMOTE_TO_LOCAL;
+        } else {
+            throw new IllegalArgumentException("Invalid combination of source and destination file localities given to LocalFileService");
+        }
+
+        return copyMoveOperation;
     }
 
     /**
@@ -68,22 +110,8 @@ class LocalFileService extends FileService {
     private boolean connectionRequired() {
         boolean opConnectionReq = connectionRequired.get(operation);
 
-        if (operation == Operation.COPY || operation == Operation.MOVE) {
-            boolean sourceLocal = getSource().isLocal();
-            boolean destLocal = getDestination().isLocal();
-
-            CopyMoveOperation copyMoveOperation;
-
-            if (sourceLocal && destLocal) {
-                copyMoveOperation = CopyMoveOperation.LOCAL_TO_LOCAL;
-            } else if (!sourceLocal && destLocal) {
-                copyMoveOperation = CopyMoveOperation.REMOTE_TO_LOCAL;
-            } else {
-                throw new IllegalArgumentException("Invalid combination of source and destination file localities given to LocalFileService");
-            }
-
-            opConnectionReq = opConnectionReq && connectionUsed.get(copyMoveOperation);
-        }
+        if (operation == Operation.COPY || operation == Operation.MOVE)
+            opConnectionReq = opConnectionReq && connectionUsed.get(getCopyMoveOperation());
 
         return opConnectionReq;
     }

@@ -39,6 +39,7 @@ final class LocalFileUploader extends FileUploader {
      */
     protected LocalFileUploader(FileEditorWindow editorWindow, String filePath, String savedFileContents) {
         super(editorWindow, filePath, savedFileContents);
+        setDescription("Save contents of " + filePath + " to disk");
     }
 
     /**

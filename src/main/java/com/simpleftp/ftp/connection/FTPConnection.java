@@ -1203,19 +1203,6 @@ public class FTPConnection {
     }
 
     /**
-     * This method sets the connection, but doesn't connect or log in
-     *
-     * @param server            the details to create the connection with
-     * @return the created connection
-     */
-    private static FTPConnection createConnection(Server server) {
-        FTPConnection connection = new FTPConnection(server);
-        ConnectionFTPSystem.setConnection(connection);
-
-        return connection;
-    }
-
-    /**
      * Creates a shared FTPConnection which is the connection used by the entire system, e.g in filesystems .
      *
      * @param serverDetails     the server details to check/create a connection with

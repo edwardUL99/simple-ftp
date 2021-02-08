@@ -33,8 +33,10 @@ import com.simpleftp.properties.Properties;
 import com.simpleftp.security.exceptions.PasswordEncryptionException;
 import com.simpleftp.sessions.Sessions;
 import com.simpleftp.sessions.exceptions.SessionLoadException;
-import com.simpleftp.ui.background.BackgroundTask;
+import com.simpleftp.ui.background.elements.TaskElement;
+import com.simpleftp.ui.background.interfaces.BackgroundTask;
 import com.simpleftp.ui.background.FileService;
+import com.simpleftp.ui.background.interfaces.DisplayableBackgroundTask;
 import com.simpleftp.ui.dialogs.*;
 import com.simpleftp.ui.exceptions.UIException;
 import com.simpleftp.ui.files.DirectoryLineEntry;
@@ -43,11 +45,11 @@ import com.simpleftp.ui.files.LineEntry;
 import com.simpleftp.ui.interfaces.ActionHandler;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.editor.FileEditorWindow;
-import com.simpleftp.ui.interfaces.WindowActionHandler;
-import com.simpleftp.ui.interfaces.Window;
 import com.simpleftp.ui.login.LoginWindow;
 import com.simpleftp.ui.views.MainView;
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.EventTarget;
 import javafx.geometry.Insets;
 import javafx.scene.*;
@@ -188,6 +190,16 @@ public final class UI {
     public static final int LOGIN_WINDOW_WIDTH = 400;
 
     /**
+     * The width of the tasks window
+     */
+    public static final int TASKS_WINDOW_WIDTH = 640;
+
+    /**
+     * The height of the tasks window
+     */
+    public static final int TASKS_WINDOW_HEIGHT = 300;
+
+    /**
      * Exit code for if Abort is pressed on an exception dialog
      */
     public static final int EXCEPTION_DIALOG_ABORTED_EXIT_CODE = 1;
@@ -203,11 +215,6 @@ public final class UI {
     public static final String FILE_DATETIME_FORMAT = "MMM dd HH:mm";
 
     /**
-     * The list to keep track of Windows
-     */
-    private static final ArrayList<Window> openedWindows = new ArrayList<>();
-
-    /**
      * An enum to determine which type of dialog to show for a given exception
      */
     public enum ExceptionType {
@@ -219,6 +226,17 @@ public final class UI {
      * List of background UI tasks running
      */
     private static final ArrayList<BackgroundTask> backgroundTasks = new ArrayList<>();
+
+    /**
+     * This property represents that there are background tasks tracked by the UI
+     */
+    @Getter
+    private static final BooleanProperty backgroundTasksProperty = new SimpleBooleanProperty(false);
+
+    /**
+     * A hashmap to map a background task with its TaskElement representation for easy lookup
+     */
+    private static final HashMap<DisplayableBackgroundTask, TaskElement> displayedBackgroundTasks = new HashMap<>();
 
     /**
      * List of paths of opened remote files
@@ -236,11 +254,6 @@ public final class UI {
      */
     @Getter
     private static Scene applicationScene;
-
-    /**
-     * The primary stage used to display the application
-     */
-    private static Stage primaryStage;
 
     /**
      * The MainView that is the basis of the UI for this application.
@@ -481,13 +494,6 @@ public final class UI {
     }
 
     /**
-     * Opens the confirm quit dialog and if true, quits
-     */
-    public static void doQuit() {
-        doQuit(null);
-    }
-
-    /**
      * Call this method to perform the specified action if quit is specified
      * @param actionHandler the action to perform, null if no action requested
      */
@@ -498,6 +504,9 @@ public final class UI {
             boolean quit = true;
             if (UI.backgroundTaskInProgress()) {
                 quit = new BackgroundTaskRunningDialog().showAndGetConfirmation();
+
+                if (!quit)
+                    mainView.getTaskWindow().show();
             }
 
             if (quit) {
@@ -529,19 +538,55 @@ public final class UI {
     }
 
     /**
-     * The service to add to the system
+     * Adds a task to the UI to be tracked.
+     * If this is called inside BackgroundTask#start(), it should be called on the FX thread. Else, if called in BackgroundTask#schedule,
+     * it is ok to call without a Platform.runLater.
+     *
+     * If the background task is an instance of DisplayableBackgroundTask, an U.I element is created for it and displayed in the
+     * MainView's instance of TaskWindow
      * @param backgroundTask background task to keep track of
      */
-    public static void addBackgroundTask(BackgroundTask backgroundTask) {
+    public synchronized static void addBackgroundTask(BackgroundTask backgroundTask) {
+        if (!applicationStarted)
+            throw new IllegalStateException("The Application has not been started yet, so cannot add a BackgroundTask to the system. " +
+                    "Call UI.startApplication(Stage primaryStage) first");
+
         backgroundTasks.add(backgroundTask);
+
+        if (backgroundTask instanceof DisplayableBackgroundTask) {
+            DisplayableBackgroundTask displayableTask = (DisplayableBackgroundTask)backgroundTask;
+            TaskElement taskElement = new TaskElement(displayableTask);
+            displayedBackgroundTasks.put(displayableTask, taskElement);
+            mainView.getTaskWindow().getTaskPane().addTask(taskElement);
+            backgroundTasksProperty.setValue(true);
+        }
     }
 
     /**
-     * Removes the specified task from the system
+     * Removes the specified task from the system.
+     *
+     * If backgroundTask is an instance of DisplayableBackgroundTask, it will be removed from MainView's
+     * TaskWindow instance
      * @param backgroundTask the background task to remove
      */
-    public static void removeBackgroundTask(BackgroundTask backgroundTask) {
+    public synchronized static void removeBackgroundTask(BackgroundTask backgroundTask) {
+        if (!applicationStarted)
+            throw new IllegalStateException("The Application has not been started yet, so cannot remove a BackgroundTask from the system. " +
+                    "Call UI.startApplication(Stage primaryStage) first");
+
         backgroundTasks.remove(backgroundTask);
+
+        if (backgroundTask instanceof DisplayableBackgroundTask) {
+            DisplayableBackgroundTask displayableTask = (DisplayableBackgroundTask)backgroundTask;
+            TaskElement taskElement = displayedBackgroundTasks.get(displayableTask);
+
+            if (taskElement != null) {
+                mainView.getTaskWindow().getTaskPane().removeTask(taskElement);
+                displayedBackgroundTasks.remove(displayableTask);
+            }
+        }
+
+        backgroundTasksProperty.setValue(!displayedBackgroundTasks.isEmpty());
     }
 
     /**
@@ -549,13 +594,8 @@ public final class UI {
      * @return true if a background task is running
      */
     public static boolean backgroundTaskInProgress() {
-        for (BackgroundTask backgroundTask : backgroundTasks) {
-            if (backgroundTask.isRunning()) {
-                return true;
-            }
-        }
-
-        return false;
+        return backgroundTasks.stream()
+                .anyMatch(BackgroundTask::isRunning);
     }
 
     /**
@@ -758,41 +798,6 @@ public final class UI {
     }
 
     /**
-     * Adds the window to the opened windows list. Doesn't call the window.show() method
-     * @param window to add
-     */
-    public static void openWindow(Window window) {
-        if (!openedWindows.contains(window)) {
-            openedWindows.add(window);
-        }
-    }
-
-    /**
-     * Returns an unmodifiable list of the opened windows
-     * @return unmodifiable list of opened windows
-     */
-    public static List<Window> getOpenedWindows() {
-        return List.copyOf(openedWindows);
-    }
-
-    /**
-     * Removes the window from the list of opened windows. Doesn't call the window.close() method
-     * @param window the window to close
-     */
-    public static void closeWindow(Window window) {
-        openedWindows.remove(window);
-    }
-
-    /**
-     * Does the given action on each opened window.
-     * This works on a copy of the original list.
-     * @param actionHandler the handler defining the action
-     */
-    public static void forEachOpenedWindow(WindowActionHandler actionHandler) {
-        getOpenedWindows().forEach(actionHandler::doAction);
-    }
-
-    /**
      * Display an error message if connection of the system connection fails
      */
     public static void doConnectionError() {
@@ -918,7 +923,6 @@ public final class UI {
         });
 
         applicationScene = scene;
-        UI.primaryStage = primaryStage;
         doLogin();
     }
 

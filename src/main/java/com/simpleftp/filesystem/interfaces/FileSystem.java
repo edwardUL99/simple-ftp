@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020  Edward Lynch-Milner
+ *  Copyright (C) 2020-2021 Edward Lynch-Milner
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -60,14 +60,6 @@ public interface FileSystem {
     boolean removeFile(CommonFile file) throws FileSystemException;
 
     /**
-     * Removes the file specified by the path name
-     * @param fileName the name of the file (can be a path)
-     * @return true if it was a success, false if not
-     * @throws FileSystemException if an error occurs
-     */
-    boolean removeFile(String fileName) throws FileSystemException;
-
-    /**
      * Attempts to find the specified file and returns it
      * @param fileName the name/path to the file
      * @return the file if found, null if not
@@ -96,15 +88,6 @@ public interface FileSystem {
      * @return the connection being used, may be null
      */
     FTPConnection getFTPConnection();
-
-    /**
-     * This method returns true if this file system is a temporary one. i.e. it is not (and should not) using the system connection.
-     * It is to be only used for single tasks like background tasks. Implementing classes should have a default constructor which sets a temporaryFileSystem
-     * instance variable to false and the constructor taking a specified connection should set it to true. That constructor should ensure the given connecction is not reference equal
-     * to the system's connection
-     * @return true if a temporary file system, false if not
-     */
-    boolean isTemporaryFileSystem();
 
     /**
      * This is the method which will implement the copy operation. It permits copying between different filesystems and also within the same filesystem.

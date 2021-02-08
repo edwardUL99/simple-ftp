@@ -212,7 +212,6 @@ public final class RemoteFilePanel extends FilePanel {
      */
     private void goToRemotePath(String path) {
         FileSystem fileSystem = directoryPane.getFileSystem();
-        FTPConnection connection = fileSystem.getFTPConnection();
 
         try {
             String currWorkingDir = directoryPane.getCurrentWorkingDirectory();

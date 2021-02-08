@@ -29,7 +29,8 @@ import com.simpleftp.sessions.Session;
 import com.simpleftp.sessions.Sessions;
 import com.simpleftp.sessions.exceptions.SessionSaveException;
 import com.simpleftp.ui.UI;
-import com.simpleftp.ui.background.BackgroundTask;
+import com.simpleftp.ui.background.elements.TaskWindow;
+import com.simpleftp.ui.background.interfaces.BackgroundTask;
 import com.simpleftp.ui.dialogs.BackgroundTaskRunningDialog;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.exceptions.UIException;
@@ -93,6 +94,11 @@ public class MainView extends VBox {
     @Getter
     private final BooleanProperty sessionsDisabledProperty;
     /**
+     * The task window that the UI can display
+     */
+    @Getter
+    private final TaskWindow taskWindow;
+    /**
      * This is the singleton instance for MainView
      */
     private static MainView SINGLETON_INSTANCE;
@@ -107,6 +113,7 @@ public class MainView extends VBox {
      */
     private MainView() throws UIException {
         panelView = new PanelView(getHomeDirectory(), this);
+        taskWindow = new TaskWindow();
 
         loggedInProperty = new SimpleBooleanProperty(false);
         sessionsInitialisedProperty = new SimpleBooleanProperty(false);
