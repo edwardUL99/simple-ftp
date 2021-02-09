@@ -280,17 +280,19 @@ fi
 
 echo -e "\n\t[Installation]\n"
 
-echo "Checking if there are any existing simple-ftp JARS in $output_dir"
+if [ "$files_downloaded" == "false" ]; then
+  echo "Checking if there are any existing simple-ftp JARS in $output_dir"
 
-mapfile -t files < <(find . -name "simple-ftp*.jar")
+  mapfile -t files < <(find . -name "simple-ftp*.jar")
 
-for f in "${files[@]}";
-do
-  confirmExistingJarRemoval "$f"
-done
+  for f in "${files[@]}";
+  do
+      confirmExistingJarRemoval "$f"
+  done
 
-if [ "${#files[@]}" -eq "0" ]; then
-  echo "No pre-existing simple-ftp JARs passencrypt_found"
+  if [ "${#files[@]}" -eq "0" ]; then
+    echo "No pre-existing simple-ftp JARs found"
+  fi
 fi
 
 if [ -n "$jar_file" ]; then
