@@ -5,6 +5,8 @@ A side project to practise my Java skills and to help improve my GUI skills. It 
 currently only supported on Linux. It can be installed on Windows with workaround steps, but no testing has been carried
 out on that OS.
 
+***Note that this has only been testing on Unix based FTP servers due to limited resources***
+
 ## Features
 These features are as of release 1.0
 
