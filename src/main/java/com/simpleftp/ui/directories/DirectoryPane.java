@@ -939,7 +939,35 @@ public abstract class DirectoryPane extends VBox {
      */
     public void handleDragAndDropOnSamePane(MouseDragEvent dragEvent, LineEntry target) {
         validateTarget(target);
+        handleDragAndDrop(dragEvent, this, target,!Properties.DRAG_DROP_SAME_PANEL_OPERATION.getValue().equals("MOVE"));
+        /* only 2 possible values for this property, so just check value of one,
+            if getValue() returns false it means copy was chosen, so negate it
+             to make copy have the value of true to copy.
+             If getValue() returns true, the property is MOVE but we need to make it false so we schedule a move
+         */
+    }
 
+    /**
+     * This method handles a DragEvent where the source comes from a different pane than this one.
+     * This check is expected to be already done. This method consumes the events and completes the drop
+     * @param dragEvent the drag event
+     * @param sourcePane the directory pane that's the source of the drag and drop
+     * @param target the target line entry. Should be a directory. If it's null the current directory is taken as the directory
+     */
+    public void handleDragAndDropFromDifferentPane(MouseDragEvent dragEvent, DirectoryPane sourcePane, LineEntry target) {
+        validateTarget(target);
+        handleDragAndDrop(dragEvent, sourcePane, target, Properties.DRAG_DROP_DIFFERENT_PANEL_OPERATION.getValue().equals("COPY"));
+        // only 2 possible values for this property, so just check value of one, if false it means move was chosen
+    }
+
+    /**
+     * The internal method to handle drag and drop.
+     * @param dragEvent the drag event representing the drag and drop
+     * @param sourcePane the pane that is the source of the event. Pass in 'this' if this pane is the source
+     * @param target the target LineEntry. Assumed to already represents a directory
+     * @param copy true to copy or false to move. If Ctrl is pressed this value will be negated
+     */
+    private void handleDragAndDrop(MouseDragEvent dragEvent, DirectoryPane sourcePane, LineEntry target, boolean copy) {
         CommonFile destination = target != null ? target.getFile():directory;
         CommonFile source;
 
@@ -947,7 +975,6 @@ public abstract class DirectoryPane extends VBox {
 
         if (sourceEntry != null) {
             source = sourceEntry.getFile();
-            boolean copy = !Properties.DRAG_DROP_SAME_PANEL_OPERATION.getValue().equals("MOVE"); // only 2 possible values for this property, so just check value of one, if true it means copy was chosen
             if (dragEvent.isControlDown()) {
                 copy = !copy;
             }
@@ -955,30 +982,7 @@ public abstract class DirectoryPane extends VBox {
             if (!copy && UI.isFileLockedByFileService(source))
                 UI.doError("File Locked", "File " + source.getName() + " is currently locked by a background task, file can't be moved");
             else
-                scheduleCopyMoveService(source, destination, copy, null); // same panel is a move operation
-        }
-    }
-
-    /**
-     * This method handles a DragEvent that target is on a different DirectoryPane.
-     * This check is expected to be already done. This method consumes the events and completes the drop
-     * @param dragEvent the drag event
-     * @param sourcePane the directory pane that's the source of the drag and drop
-     * @param target the target line entry. Should be a directory. If it's null the current directory is taken as the directory
-     */
-    public void handleDragAndDropToDifferentPane(MouseDragEvent dragEvent, DirectoryPane sourcePane, LineEntry target) {
-        CommonFile destination = target != null ? target.getFile():directory;
-        CommonFile source;
-
-        LineEntry sourceEntry = UI.Events.selectLineEntry(dragEvent.getGestureSource());
-
-        if (sourceEntry != null) {
-            source = sourceEntry.getFile();
-            boolean copy = Properties.DRAG_DROP_DIFFERENT_PANEL_OPERATION.getValue().equals("COPY"); // only 2 possible values for this property, so just check value of one, if false it means move was chosen
-            if (dragEvent.isControlDown()) {
-                copy = !copy;
-            }
-            sourcePane.scheduleCopyMoveService(source, destination, copy, this); // different panel is a copy operation
+                sourcePane.scheduleCopyMoveService(source, destination, copy, this); // same panel is a copy operation
         }
 
         dragEvent.consume();
@@ -1189,7 +1193,7 @@ public abstract class DirectoryPane extends VBox {
                 LineEntry targetEntry = UI.Events.selectLineEntry(dragEvent.getTarget());
 
                 if (targetEntry == null || (targetEntry.isFile() && targetEntry.getOwningPane() == DirectoryPane.this))
-                    DirectoryPane.this.handleDragAndDropToDifferentPane(dragEvent, sourcePane,
+                    DirectoryPane.this.handleDragAndDropFromDifferentPane(dragEvent, sourcePane,
                             LineEntry.newInstance(directory, DirectoryPane.this));
             }
 
@@ -1308,7 +1312,7 @@ public abstract class DirectoryPane extends VBox {
                             if (sourcePane == DirectoryPane.this)
                                 handleDragAndDropOnSamePane(mouseDragEvent, LineEntry.newInstance(destination, DirectoryPane.this));
                             else
-                                handleDragAndDropToDifferentPane(mouseDragEvent, sourcePane, LineEntry.newInstance(destination, sourcePane));
+                                handleDragAndDropFromDifferentPane(mouseDragEvent, sourcePane, LineEntry.newInstance(destination, sourcePane));
                         } catch (FileSystemException ex) {
                             UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
                         }

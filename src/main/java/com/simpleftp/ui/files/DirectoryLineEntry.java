@@ -108,7 +108,7 @@ public final class DirectoryLineEntry extends LineEntry {
                 if (directoryPane == owningPane) {
                     directoryPane.handleDragAndDropOnSamePane(dragEvent, this);
                 } else {
-                    owningPane.handleDragAndDropToDifferentPane(dragEvent, directoryPane, this);
+                    owningPane.handleDragAndDropFromDifferentPane(dragEvent, directoryPane, this);
                 }
             }
         }
