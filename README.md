@@ -120,10 +120,6 @@ All other steps still stand (e.g. password.encrypt must be in the same directory
 In the installation directory, double-click simple_ftp or in a terminal launch the script. That should be enough to open
 the application.
 
-## How to run
-The project doesn't have a main class to run at the moment committed to the repository.
-At present, it is just a local testing main program which cannot be committed as it would expose passwords.
-
 The basic command for running on JDK 11 and up: java --module-path $PATH_TO_FX --add-modules=javafx.controls <system-properties> -jar <jar_name>
 If you get errors like unrecognised option with --module-path etc, you may have the wrong java version.
 Run java -version and verify it is 11 or greater.
@@ -159,6 +155,10 @@ Symbolic links are *experimental* as not every operating system supports them an
 So, because of this support issue among different systems, it's hard to have a consistent experience with symbolic links.
 
 There may be bugs/unexpected behaviour with symbolic links that were not anticipated during development.
+Any bugs/issues that are found however, should be reported so that they can be worked on and see if a solution can be worked on them.
+
+In the future, it may be a possibility to implement some form of abstract symbolic link for systems that don't support links. These links would only exist within the application and would have to be stored somewhere. Maybe in a different XML file than the Session xml file for saving sessions (or in the session file, as you may want different links on a different server).
+However, for now, we can only support symbolic links if they are supported on the relevant system/server.
 
 #### Symbolic link supported features
 The following features for symbolic links supported are:
@@ -172,4 +172,4 @@ The following features for symbolic links supported are:
 ## Branch structure
 This project has just been migrated to GitFlow (https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow).
 Initially all commits were on master, but all of them have been moved to develop.
-As of 8th December 2020, all development will be done off the development branch with feature branches etc.
+As of 8th December 2020, all development will be done off the development branch with feature branches etc
