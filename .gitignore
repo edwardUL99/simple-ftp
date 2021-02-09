@@ -28,5 +28,3 @@ docs
 test*.xml
 dependency-reduced-pom.xml
 *.txt
-
-src/main/java/TestSessions.java
