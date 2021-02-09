@@ -118,6 +118,10 @@ All other steps still stand (e.g. password.encrypt must be in the same directory
 In the installation directory, double-click simple_ftp or in a terminal launch the script. That should be enough to open
 the application.
 
+## How to run
+The project doesn't have a main class to run at the moment committed to the repository.
+At present, it is just a local testing main program which cannot be committed as it would expose passwords.
+
 The basic command for running on JDK 11 and up: java --module-path $PATH_TO_FX --add-modules=javafx.controls <system-properties> -jar <jar_name>
 If you get errors like unrecognised option with --module-path etc, you may have the wrong java version.
 Run java -version and verify it is 11 or greater.
@@ -127,6 +131,7 @@ If you get errors saying failed to find javafx.controls, either the JavaFX runti
 
 ## Configuration properties
 If the file is not added to the jar, you need to add the file's location to the CLASSPATH.
+
 For example, if a folder called resources contains the password.encrypt file, you want to add the absolute path to the resources folder to the classpath.
 Don't add the file in the path on the classpath. If the path it /path/to/resources/password.encrypt, you will want to add /path/to/resources to the CLASSPATH.
 
