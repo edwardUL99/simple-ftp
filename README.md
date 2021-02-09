@@ -91,7 +91,6 @@ JAR, then the password.encrypt file and clear it. Paste the old key value in aga
 Do not re-install in a different location as this will not work with your session file and you may inadvertently remove it
 for the other installation.
 
-
 ### Manual Installation Steps (Windows installation)
 1. You need the password.encrypt file on the classpath containing a 20 character key for encrypting passwords.
 2. It is best to have this file inside in the Jar, or else run export (set on windows) CLASSPATH=<folder containing password.encrypt (not the file name)>:$CLASSPATH(%CLASSPATH% on windows)
@@ -128,7 +127,7 @@ If you get errors saying module path requires module path specification, see the
 If you get errors saying failed to find javafx.controls, either the JavaFX runtime components are not installed correctly, or the path provided by the PATH_TO_FX or by -javafx flag is incorrect.
 
 ## Configuration properties
-If the file is not added to the jar, you need to add the file's location to the CLASSPATH.
+If the file is not added to the jar, you need to add the file's location to the CLASSPATH
 
 For example, if a folder called resources contains the password.encrypt file, you want to add the absolute path to the resources folder to the classpath.
 Don't add the file in the path on the classpath. If the path it /path/to/resources/password.encrypt, you will want to add /path/to/resources to the CLASSPATH.
