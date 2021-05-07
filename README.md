@@ -120,9 +120,6 @@ In the installation directory, double-click simple_ftp or in a terminal launch t
 the application.
 
 ## How to run
-The project doesn't have a main class to run at the moment committed to the repository.
-At present, it is just a local testing main program which cannot be committed as it would expose passwords.
-
 The basic command for running on JDK 11 and up: java --module-path $PATH_TO_FX --add-modules=javafx.controls <system-properties> -jar <jar_name>
 If you get errors like unrecognised option with --module-path etc, you may have the wrong java version.
 Run java -version and verify it is 11 or greater.
