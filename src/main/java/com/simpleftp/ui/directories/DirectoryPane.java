@@ -122,7 +122,7 @@ public abstract class DirectoryPane extends VBox {
     /**
      * A pane to display an empty folder if there are no files
      */
-    private BorderPane emptyFolderPane;
+    private EmptyDirectoryPane emptyFolderPane;
     /**
      * A mask used to match files against. If null, it has no effect
      */
@@ -219,15 +219,7 @@ public abstract class DirectoryPane extends VBox {
      * Initialises the pane used to display an empty folder
      */
     private void initEmptyFolderPane() {
-        emptyFolderPane = new BorderPane();
-        ImageView openDirImage = new ImageView(new Image("opened_folder.png"));
-        Label emptyFolder = new Label("Directory is empty");
-        VBox dirBox = new VBox();
-        dirBox.setSpacing(5);
-        dirBox.getChildren().addAll(openDirImage, emptyFolder);
-        dirBox.setAlignment(Pos.CENTER);
-        emptyFolderPane.setCenter(dirBox);
-        emptyFolderPane.setPadding(new Insets(UI.EMPTY_FOLDER_PANEL_PADDING));
+        emptyFolderPane = new EmptyDirectoryPane();
     }
 
     /**
@@ -1330,6 +1322,94 @@ public abstract class DirectoryPane extends VBox {
             setOnMouseDragEntered(this::dragEntered);
             setOnMouseDragExited(this::dragExited);
             setOnMouseDragReleased(this::dragDropped);
+        }
+    }
+
+    /**
+     * This class provides an abstraction that displays an empty Directory to be displayed
+     * but also allows drop events to be handled on it
+     */
+    public class EmptyDirectoryPane extends BorderPane {
+        /**
+         * This constant outlines the offset between the bottom of the empty directory pane and the bottom toolbar in the MainView class.
+         * It is intended to be set as the minimum height for this pane
+         */
+        public static final int FILE_PANEL_BOTTOM_TOOLBAR_OFFSET = UI.FILE_PANEL_HEIGHT - 100;
+
+        /**
+         * Constructs an instance of the empty directory pane
+         */
+        public EmptyDirectoryPane() {
+            init();
+        }
+
+        /**
+         * Initialises the empty directory pane
+         */
+        private void init() {
+            ImageView openDirImage = new ImageView(new Image("opened_folder.png"));
+            Label emptyFolder = new Label("Directory is empty");
+            VBox dirBox = new VBox();
+            dirBox.setSpacing(5);
+            dirBox.getChildren().addAll(openDirImage, emptyFolder);
+            dirBox.setAlignment(Pos.CENTER);
+            setCenter(dirBox);
+            setPadding(new Insets(UI.EMPTY_FOLDER_PANEL_PADDING));
+            setMinHeight(FILE_PANEL_BOTTOM_TOOLBAR_OFFSET);
+
+            initDragAndDrop();
+        }
+
+        /**
+         * This method initialises the drag and drop onto the Up button
+         */
+        private void initDragAndDrop() {
+            setOnMouseDragEntered(this::dragEntered);
+            setOnMouseDragExited(this::dragExited);
+            setOnMouseDragReleased(this::dragDropped);
+        }
+
+        /**
+         * This method handles the logic for handling a drag event that has been entered on a target on this DirectoryPane
+         * @param dragEvent the drag event representing the entry
+         */
+        private void dragEntered(MouseDragEvent dragEvent) {
+            LineEntry sourceEntry = UI.Events.selectLineEntry(dragEvent.getGestureSource());
+            LineEntry targetEntry = UI.Events.selectLineEntry(dragEvent.getTarget());
+
+            if (sourceEntry != null && sourceEntry.getOwningPane() != DirectoryPane.this
+                    && (targetEntry == null || targetEntry.isFile())) {
+                setStyle(UI.Events.DRAG_ENTERED_BACKGROUND);
+                UI.Events.setDragCursorEnteredImage();
+            }
+        }
+
+        /**
+         * This method handles the logic for handling a drag event that has exited a target on this DirectoryPane
+         * @param dragEvent the drag event representing the exit
+         */
+        private void dragExited(MouseDragEvent dragEvent) {
+            setStyle(UI.WHITE_BACKGROUND);
+            if (!Properties.DRAG_DROP_CURSOR_FILE_ICON.getValue())
+                UI.Events.setDragCursorImage(null); // leave null as we don't need it her
+        }
+
+        /**
+         * This method handles the logic for handling a drag event that has been dropped on this DirectoryPane
+         * @param dragEvent the drag event representing the drop
+         */
+        private void dragDropped(MouseDragEvent dragEvent) {
+            LineEntry sourceEntry = UI.Events.selectLineEntry(dragEvent.getGestureSource());
+            DirectoryPane sourcePane = sourceEntry != null ? sourceEntry.getOwningPane():null;
+            if (sourcePane != null && sourcePane != DirectoryPane.this) {
+                LineEntry targetEntry = UI.Events.selectLineEntry(dragEvent.getTarget());
+
+                if (targetEntry == null || (targetEntry.isFile() && targetEntry.getOwningPane() == DirectoryPane.this))
+                    DirectoryPane.this.handleDragAndDropFromDifferentPane(dragEvent, sourcePane,
+                            LineEntry.newInstance(directory, DirectoryPane.this));
+            }
+
+            dragEvent.consume();
         }
     }
 }
