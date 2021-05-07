@@ -441,8 +441,18 @@ if [ -n "$jar_file" ]; then
 
     run_script="$(pwd)/simple_ftp"
 
-    echo "Creating simple_ftp run script"
-    echo -e "#! /usr/bin/bash\n\n# This run-script is generated automatically by the simpleftp_install.sh script\n\njava --module-path $PATH_TO_FX --add-modules=javafx.controls $debug_param -Dsimpleftp.properties=$properties_path -jar $jar_file" > "$run_script"
+    echo -e "Creating simple_ftp run script\n"
+    java_location=$(which java)
+
+    if [ -z "$java_location" ]; then
+      echo -e "Cannot find a Java installation. It is either not installed or not on the system PATH. The run script produced will not work\n"
+      echo -e "Once Java is installed, modify the \"export PATH=<path>:\$PATH\" line to replace the path with the location of the bin folder in your Java installation\n"
+      echo -e 'Example: export PATH=/etc/Java/jdk-11/bin:$PATH\n'
+    fi
+
+    java_location=$(dirname "$java_location")
+
+    echo -e "#! /usr/bin/bash\n\n# This run-script is generated automatically by the simpleftp_install.sh script\n\n export PATH=$java_location:\$PATH \n\n java --module-path $PATH_TO_FX --add-modules=javafx.controls $debug_param -Dsimpleftp.properties=$properties_path -jar $jar_file" > "$run_script"
     succeeded="$?"
 
     if [ "$succeeded" -ne "0" ]; then
