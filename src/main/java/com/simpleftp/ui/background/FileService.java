@@ -88,6 +88,10 @@ public abstract class FileService extends AbstractDisplayableBackgroundTask {
     @Getter
     private final ErrorMonitor errorMonitor;
     /**
+     * The bundle this service is a part of if any
+     */
+    BundledServices bundle;
+    /**
      * The scheduler that will schedule this service
      */
     private static final TaskScheduler<CommonFile, FileService> scheduler = new TaskScheduler<>();
@@ -237,10 +241,16 @@ public abstract class FileService extends AbstractDisplayableBackgroundTask {
             updateState(State.COMPLETED);
             if (onOperationSucceeded != null)
                 onOperationSucceeded.doAction();
+
+            if (bundle != null)
+                bundle.notify(BundledServices.NotificationType.COMPLETED, this);
         } else {
             updateState(State.FAILED);
             if (onOperationFailed != null)
                 onOperationFailed.doAction();
+
+            if (bundle != null)
+                bundle.notify(BundledServices.NotificationType.FAILED, this);
         }
 
         cancelErrorMonitor();
@@ -294,8 +304,13 @@ public abstract class FileService extends AbstractDisplayableBackgroundTask {
                 } else {
                     UI.doError("Task Failure", "A file service task has failed due to an unknown error");
                 }
+
+                if (bundle != null)
+                    bundle.notify(BundledServices.NotificationType.FAILED, this);
             } else {
                 updateState(State.CANCELLED);
+                if (bundle != null)
+                    bundle.notify(BundledServices.NotificationType.CANCELLED, this);
             }
 
             FileSystem fileSystem = getFileSystem();
@@ -440,23 +455,25 @@ public abstract class FileService extends AbstractDisplayableBackgroundTask {
                     return new Task<>() {
                         @Override
                         protected Void call() throws Exception {
-                            FileSystem fileSystem = getFileSystem();
+                            if (!isCancelled()) {
+                                FileSystem fileSystem = getFileSystem();
 
-                            int errorsDisplayed = 0;
-                            while (!cancelled) {
-                                FileOperationError error = fileSystem.getNextFileOperationError();
+                                int errorsDisplayed = 0;
+                                while (!cancelled && !isCancelled()) {
+                                    FileOperationError error = fileSystem.getNextFileOperationError();
 
-                                if (error != null) {
-                                    if (errorsDisplayed < maxErrorDialogs) {
-                                        displayOperationError(error);
-                                        errorsDisplayed++;
-                                    } else if (errorsDisplayed == maxErrorDialogs) {
-                                        cancelled = errorLimitReached = true;
-                                        Platform.runLater(() -> {
-                                            if (FileService.this.service.isRunning())
-                                                FileService.this.service.cancel();
-                                            FileService.this.doCancel(false);
-                                        });
+                                    if (error != null) {
+                                        if (errorsDisplayed < maxErrorDialogs) {
+                                            displayOperationError(error);
+                                            errorsDisplayed++;
+                                        } else if (errorsDisplayed == maxErrorDialogs) {
+                                            cancelled = errorLimitReached = true;
+                                            Platform.runLater(() -> {
+                                                if (FileService.this.service.isRunning())
+                                                    FileService.this.service.cancel();
+                                                FileService.this.doCancel(false);
+                                            });
+                                        }
                                     }
                                 }
                             }

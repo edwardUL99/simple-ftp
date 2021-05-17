@@ -27,6 +27,8 @@ import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.properties.Properties;
 import com.simpleftp.ui.UI;
+import com.simpleftp.ui.background.BundledServices;
+import com.simpleftp.ui.background.FileService;
 import com.simpleftp.ui.directories.tasks.FileStringDownloader;
 import com.simpleftp.ui.files.FilePropertyWindow;
 import com.simpleftp.ui.files.LineEntries;
@@ -50,8 +52,12 @@ import javafx.scene.text.FontWeight;
 import lombok.Getter;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * Represents a panel of Files. These files may be in different locations, hence why the class is abstract.
@@ -83,9 +89,13 @@ public abstract class DirectoryPane extends VBox {
      */
     private LineEntries lineEntries;
     /**
-     * The LineEntry that has been copied
+     * The bundle for copying and pasting
      */
-    protected static LineEntry copiedEntry;
+    protected static BundledServices copyPasteBundle;
+    /**
+     * The LineEntry (or entries) that has been copied
+     */
+    protected static final ArrayList<LineEntry> copiedEntries = new ArrayList<>();
     /**
      * The directory that this DirectoryPane is currently listing
      */
@@ -137,9 +147,19 @@ public abstract class DirectoryPane extends VBox {
      */
     protected CommonFile rootDirectory;
     /**
+     * An selection of all the selected line entries on this pane;
+     */
+    @Getter
+    private final LineEntries selectedEntries;
+    /**
+     * If we are doing multiple operations, we bundle them
+     */
+    protected BundledServices bundle;
+    /**
      * This list keeps track of DirectoryPane instances for use with drag and drop etc
      */
     private static final ArrayList<DirectoryPane> instances = new ArrayList<>();
+
 
     /**
      * Constructs a DirectoryPane object.
@@ -148,6 +168,7 @@ public abstract class DirectoryPane extends VBox {
     DirectoryPane() {
         setStyle(UI.WHITE_BACKGROUND);
         lineEntries = new LineEntries();
+        selectedEntries = new LineEntries();
 
         initButtons();
         initStatusPanel();
@@ -159,29 +180,68 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
+     * Get the list of files that will be copied
+     * @return list of files to copy
+     */
+    private List<LineEntry> getCopySelectedFiles() {
+        if (selectedEntries.size() > 0) {
+            return new ArrayList<>(selectedEntries.getLineEntries());
+        } else if (filePanel != null) {
+            LineEntry selectedEntry = filePanel.getSelectedEntry();
+
+            if (selectedEntry != null)
+                return new ArrayList<>(Collections.singleton(selectedEntry));
+        }
+
+        return null;
+    }
+
+    /**
+     * Handles a copy operation
+     */
+    private void handleCopy() {
+        copiedEntries.clear();
+        List<LineEntry> files = getCopySelectedFiles();
+
+        if (files != null) {
+            copiedEntries.addAll(files);
+        }
+    }
+
+    /**
+     * Handles the paste operation
+     */
+    private void handlePaste() {
+        LineEntry selected;
+        if (filePanel != null && (selected = filePanel.getSelectedEntry()) != null) {
+            paste(selected.getFile());
+        } else {
+            boolean emptyPaneVisible = emptyFolderPane.shown;
+            if ((!emptyPaneVisible && entriesBox.canPaste()) || (emptyPaneVisible && emptyFolderPane.canPaste()))
+                paste(directory);
+        }
+    }
+
+    /**
+     * Select all line entries
+     */
+    private void selectAll() {
+        lineEntries.getLineEntries().forEach(LineEntry::multiSelect);
+    }
+
+    /**
      * Initialises any key binding for this directory pane
      */
     private void initKeyBinding() {
         setOnKeyPressed(e -> {
             KeyCode code = e.getCode();
-            if (e.isControlDown()) {
-                if (filePanel != null) { // these operations require a FilePanel
-                    LineEntry selected = filePanel.getSelectedEntry();
-
-                    if (!e.isShiftDown()) { // shift is pressed as well as ctrl for special operations, i.e. Ctrl+Shift+C is connect remote panel on MainView, but Ctrl+C without shift is C
-                        if (code == KeyCode.C) {
-                            if (selected != null)
-                                copiedEntry = selected;
-                        } else if (code == KeyCode.V) { // Ctrl+V is just Ctrl+V without Shift
-                            if (selected != null) {
-                                if (canPaste(selected))
-                                    paste(selected.getFile());
-                            } else {
-                                if (entriesBox.canPaste())
-                                    paste(directory);
-                            }
-                        }
-                    }
+            if (e.isControlDown() && !e.isShiftDown()) {
+                if (code == KeyCode.C) {
+                    handleCopy();
+                } else if (code == KeyCode.V) {
+                    handlePaste();
+                } else if (code == KeyCode.A) {
+                    selectAll();
                 }
             }
         });
@@ -211,8 +271,11 @@ public abstract class DirectoryPane extends VBox {
      */
     private void unselectFile(MouseEvent mouseEvent) {
         LineEntry lineEntry = UI.Events.selectLineEntry(mouseEvent); // attempt to "pick" the LineEntry out from the mouse selection. If null, we didn't select a line entry
-        if (lineEntry == null)
+        if (lineEntry == null) {
+            if (selectedEntries.size() > 0)
+                clearMultiSelection();
             filePanel.setComboBoxSelection(null);
+        }
     }
 
     /**
@@ -504,11 +567,41 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
+     * Gets the context menu for when multiple files are selected
+     * @return the context menu for multiple selected files
+     */
+    private ContextMenu createMultiContextMenu() {
+        if (copiedEntries.size() == 0) {
+            List<LineEntry> lineEntries = getCopySelectedFiles();
+
+            boolean copyDisabled = lineEntries == null || lineEntries.size() == 0;
+
+            MenuItem copy = new MenuItem("Copy");
+            copy.setOnAction(e -> handleCopy());
+            copy.setDisable(copyDisabled);
+
+            ContextMenu contextMenu = new ContextMenu();
+            contextMenu.getItems().add(copy);
+
+            return contextMenu;
+        }
+
+        return null;
+    }
+
+    /**
      * Creates a context menu for the provided LineEntry
      * @param lineEntry the line entry to create a context menu for
      * @return the constructed context menu
      */
     private ContextMenu createContextMenu(final LineEntry lineEntry) {
+        List<LineEntry> selected = getCopySelectedFiles();
+
+        if (selected != null) {
+            if (getCopySelectedFiles().size() > 1)
+                return createMultiContextMenu();
+        }
+
         CommonFile file = lineEntry.getFile();
 
         MenuItem open = new MenuItem("Open");
@@ -518,16 +611,35 @@ public abstract class DirectoryPane extends VBox {
         rename.setOnAction(e -> renameLineEntry(lineEntry));
 
         MenuItem copy = new MenuItem("Copy");
-        copy.setOnAction(e -> copiedEntry = lineEntry);
-        Label pasteLabel = new Label("Paste");
+        copy.setOnAction(e -> handleCopy());
 
-        CustomMenuItem paste = new CustomMenuItem(pasteLabel); // custom menu item so we can use tooltips
-        String copiedEntryFilePath = copiedEntry == null ? null:copiedEntry.getFilePath();
-        boolean disabled = !canPaste(lineEntry);
-        paste.setDisable(disabled);
-        paste.setOnAction(e -> paste(file));
-        if (!disabled)
-            pasteLabel.setTooltip(new Tooltip("Copied File: " + copiedEntryFilePath + " (" + (copiedEntry.isLocal() ? "Local":"Remote") + ")"));
+        int copiedEntriesSize = copiedEntries.size();
+        MenuItem paste;
+        if (copiedEntriesSize == 1) {
+            List<LineEntry> entries = retrieveCopiedEntriesPasteable(lineEntry);
+
+            Label pasteLabel = new Label("Paste");
+            paste = new CustomMenuItem(pasteLabel); // custom menu item so we can use tooltips
+            boolean disabled = entries.size() == 0;
+            paste.setDisable(disabled);
+            paste.setOnAction(e -> paste(file));
+            if (!disabled) {
+                LineEntry copiedEntry = entries.get(0);
+                String copiedEntryFilePath = copiedEntry.getFilePath();
+                pasteLabel.setTooltip(new Tooltip("Copied File: " + copiedEntryFilePath + " (" + (copiedEntry.isLocal() ? "Local" : "Remote") + ")"));
+            }
+        } else {
+            paste = new MenuItem("Paste");
+
+            if (copiedEntriesSize == 0) {
+                paste.setDisable(true);
+            } else {
+                List<LineEntry> entries = retrieveCopiedEntriesPasteable(lineEntry);
+                paste.setDisable(entries.size() == 0);
+            }
+
+            paste.setOnAction(e -> paste(file));
+        }
 
         MenuItem delete = new MenuItem("Delete");
         delete.setOnAction(e -> filePanel.delete()); // right clicking this would have selected it in the container's combo box. So use containers delete method to display confirmation dialog
@@ -550,11 +662,23 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
-     * Return true if the copied entry can be pasted into the provided line entry
+     * Return list of selected entries to copy that can be pasted into the provided line entry
      * @param lineEntry the line entry to paste into
-     * @return true if can paste, false if not
+     * @return list of entries that can be pasted
      */
-    private boolean canPaste(final LineEntry lineEntry) {
+    private List<LineEntry> retrieveCopiedEntriesPasteable(final LineEntry lineEntry) {
+        return copiedEntries.stream()
+                .filter(lineEntry1 -> isFilePasteable(lineEntry1, lineEntry))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Returns true if the copiedEntry can be pasted into the targetEntry
+     * @param copiedEntry the entry to copy
+     * @param lineEntry the entry to paste into
+     * @return true if it can be copied, false if not
+     */
+    private boolean isFilePasteable(final LineEntry copiedEntry, final LineEntry lineEntry) {
         String copiedEntryFilePath = copiedEntry == null ? null:copiedEntry.getFilePath();
         String lineEntryPath = lineEntry.getFilePath();
         boolean copiedLocal;
@@ -568,18 +692,30 @@ public abstract class DirectoryPane extends VBox {
      * @param target the target file to paste (copy) into
      */
     private void paste(final CommonFile target) {
-        if (copiedEntry != null) {
-            CommonFile source = copiedEntry.getFile();
+        if (copiedEntries.size() > 1)
+            copyPasteBundle = new BundledServices(FileService.Operation.COPY);
 
-            DirectoryPane sourcePane = copiedEntry.getOwningPane();
-            if (sourcePane == this) {
-                scheduleCopyMoveService(source, target, true, this);
-            } else {
-                sourcePane.scheduleCopyMoveService(source, target, true, this);
+        for (LineEntry copiedEntry : copiedEntries) {
+            if (copiedEntry != null) {
+                CommonFile source = copiedEntry.getFile();
+
+                DirectoryPane sourcePane = copiedEntry.getOwningPane();
+                if (sourcePane == this) {
+                    scheduleCopyMoveService(source, target, true, this);
+                } else {
+                    sourcePane.scheduleCopyMoveService(source, target, true, this);
+                }
+
+                copiedEntry.multiSelect();
             }
-
-            copiedEntry = null;
         }
+
+        if (copyPasteBundle != null) {
+            copyPasteBundle.activate();
+            copyPasteBundle = null;
+        }
+
+        copiedEntries.clear();
     }
 
     /**
@@ -621,6 +757,7 @@ public abstract class DirectoryPane extends VBox {
     private void displayDirectoryListing(boolean entries) {
         getChildren().clear();
         getChildren().addAll(statusPanel, entries ? entriesScrollPane:emptyFolderPane);
+        emptyFolderPane.show(!entries);
     }
 
     /**
@@ -668,8 +805,11 @@ public abstract class DirectoryPane extends VBox {
 
         this.lineEntries = lineEntries;
 
-        if (filePanel != null)
+        clearMultiSelection();
+        if (filePanel != null) {
             filePanel.refresh();
+            filePanel.onMultipleSelected(false);
+        }
 
         entriesScrollPane.setHvalue(0); // resetConnection scroll position
         entriesScrollPane.setVvalue(0);
@@ -818,8 +958,7 @@ public abstract class DirectoryPane extends VBox {
         try {
             if (!removeFile || doRemove(file)) {
                 removeLineEntry(lineEntry);
-                if (lineEntry.equals(copiedEntry))
-                    copiedEntry = null;
+                copiedEntries.remove(lineEntry);
 
                 return true;
             }
@@ -893,6 +1032,31 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
+     * Displays the message that the operation completed successfully
+     * @param copy true to copy, false for move
+     * @param source the source file
+     * @param destination the destination file
+     */
+    void operationCompletedMessage(boolean copy, CommonFile source, CommonFile destination) {
+        String operationHeader = copy ? "Copy":"Move", operationMessage = copy ? "copy":"move";
+        String destinationPath = destination.getFilePath();
+        UI.doInfo(operationHeader + " Completed", "The " + operationMessage + " of " + source.getFilePath()
+                + " to " + destinationPath + " has completed");
+    }
+
+    /**
+     * Displays the message that the operation failed
+     * @param copy true to copy, false for move
+     * @param source the source file
+     * @param destination the destination file
+     */
+    void operationFailedMessage(boolean copy, CommonFile source, CommonFile destination) {
+        String operationHeader = copy ? "Copy":"Move", operationMessage = copy ? "copy":"move";
+        UI.doError(operationHeader + " Failed", "The " + operationMessage + " of " + source.getFilePath()
+                + " to " + destination.getFilePath() + " has failed");
+    }
+
+    /**
      * This method creates and schedules the file service used for copying/moving the source to destination
      * @param source the source file to be copied/moved
      * @param destination the destination directory to be copied/moved to
@@ -900,6 +1064,21 @@ public abstract class DirectoryPane extends VBox {
      * @param targetPane  the target pane if a different pane. Leave null if not different
      */
     abstract void scheduleCopyMoveService(CommonFile source, CommonFile destination, boolean copy, DirectoryPane targetPane);
+
+    /**
+     * Clears all currently selected files if a multiple file selection has been made
+     */
+    public void clearMultiSelection() {
+        selectedEntries.getLineEntries()
+                .stream()
+                .filter(Objects::nonNull)
+                .forEach(lineEntry -> lineEntry.setSelected(false));
+        selectedEntries.clear();
+
+        if (filePanel != null)
+            filePanel.onMultipleSelected(false);
+    }
+
 
     /**
      * Validates that the target entry is a directory if not null and that the target isLocal matches this isLocal.
@@ -931,7 +1110,7 @@ public abstract class DirectoryPane extends VBox {
      */
     public void handleDragAndDropOnSamePane(MouseDragEvent dragEvent, LineEntry target) {
         validateTarget(target);
-        handleDragAndDrop(dragEvent, this, target,!Properties.DRAG_DROP_SAME_PANEL_OPERATION.getValue().equals("MOVE"));
+        handleDragAndDrop(dragEvent, this, target, !Properties.DRAG_DROP_SAME_PANEL_OPERATION.getValue().equals("MOVE"));
         /* only 2 possible values for this property, so just check value of one,
             if getValue() returns false it means copy was chosen, so negate it
              to make copy have the value of true to copy.
@@ -953,6 +1132,56 @@ public abstract class DirectoryPane extends VBox {
     }
 
     /**
+     * Carry out the drag and drop event after necessary validation and setup is completed
+     * @param dragEvent the drag event that started it
+     * @param sourcePane the source pane of the drag event
+     * @param sourceEntry the source line entry
+     * @param destination the destination line entry
+     * @param copy true to copy, false to move
+     */
+    private void doDragAndDrop(MouseDragEvent dragEvent, DirectoryPane sourcePane, LineEntry sourceEntry, CommonFile destination, boolean copy) {
+        CommonFile source = sourceEntry.getFile();
+        if (dragEvent.isControlDown()) {
+            copy = !copy;
+        }
+
+        if (!copy && UI.isFileLockedByFileService(source))
+            UI.doError("File Locked", "File " + source.getName() + " is currently locked by a background task, file can't be moved");
+        else
+            sourcePane.scheduleCopyMoveService(source, destination, copy, this); // same panel is a copy operation
+    }
+
+    /**
+     * If multiple line entries are selected, this method handles the drag and drop of all the selected files
+     * @param dragEvent the event that started the drag and drop action
+     * @param sourcePane the pane that is the source of the drag and drop event
+     * @param destination the destination file
+     * @param copy true to copy, false to move
+     */
+    private void handleMultipleDragAndDrop(MouseDragEvent dragEvent, DirectoryPane sourcePane, CommonFile destination, boolean copy) {
+        if (sourcePane.selectedEntries.size() > 1)
+            sourcePane.bundle = new BundledServices(copy ? FileService.Operation.COPY: FileService.Operation.MOVE);
+
+        /*sourcePane.selectedEntries.getLineEntries()
+                .stream()
+                .filter(Objects::nonNull)
+                .forEach(lineEntry -> doDragAndDrop(dragEvent, sourcePane, lineEntry, destination, copy));*/
+
+        for (LineEntry selected : sourcePane.selectedEntries.getLineEntries()) {
+            if (selected != null) {
+                doDragAndDrop(dragEvent, sourcePane, selected, destination, copy);
+            }
+        }
+
+        if (sourcePane.bundle != null) {
+            sourcePane.bundle.activate();
+            sourcePane.bundle = null;
+        }
+
+        sourcePane.clearMultiSelection();
+    }
+
+    /**
      * The internal method to handle drag and drop.
      * @param dragEvent the drag event representing the drag and drop
      * @param sourcePane the pane that is the source of the event. Pass in 'this' if this pane is the source
@@ -961,20 +1190,14 @@ public abstract class DirectoryPane extends VBox {
      */
     private void handleDragAndDrop(MouseDragEvent dragEvent, DirectoryPane sourcePane, LineEntry target, boolean copy) {
         CommonFile destination = target != null ? target.getFile():directory;
-        CommonFile source;
-
         LineEntry sourceEntry = UI.Events.selectLineEntry(dragEvent.getGestureSource());
 
         if (sourceEntry != null) {
-            source = sourceEntry.getFile();
-            if (dragEvent.isControlDown()) {
-                copy = !copy;
+            if (sourcePane.selectedEntries.size() > 0 && sourcePane.selectedEntries.contains(sourceEntry)) {
+                handleMultipleDragAndDrop(dragEvent, sourcePane, destination, copy);
+            } else {
+                doDragAndDrop(dragEvent, sourcePane, sourceEntry, destination, copy);
             }
-
-            if (!copy && UI.isFileLockedByFileService(source))
-                UI.doError("File Locked", "File " + source.getName() + " is currently locked by a background task, file can't be moved");
-            else
-                sourcePane.scheduleCopyMoveService(source, destination, copy, this); // same panel is a copy operation
         }
 
         dragEvent.consume();
@@ -1128,10 +1351,17 @@ public abstract class DirectoryPane extends VBox {
          * @return true if can paste, false if not
          */
         private boolean canPaste() {
-            boolean copiedLocal;
-            return !(copiedEntry == null
-                    || FileUtils.pathEquals(FileUtils.getParentPath(copiedEntry.getFilePath(), (copiedLocal = copiedEntry.isLocal())), DirectoryPane.this.getCurrentWorkingDirectory(), copiedLocal)
-                    && copiedLocal == DirectoryPane.this.directory.isLocal());
+            boolean pasteableEntries = false;
+            LineEntry target = LineEntry.newInstance(DirectoryPane.this.directory, DirectoryPane.this);
+            if (target != null) {
+                for (LineEntry copiedEntry : copiedEntries) {
+                    pasteableEntries = pasteableEntries || isFilePasteable(copiedEntry, target);
+                }
+
+                return pasteableEntries;
+            }
+
+            return false;
         }
 
         /**
@@ -1335,6 +1565,10 @@ public abstract class DirectoryPane extends VBox {
          * It is intended to be set as the minimum height for this pane
          */
         public static final int FILE_PANEL_BOTTOM_TOOLBAR_OFFSET = UI.FILE_PANEL_HEIGHT - 100;
+        /**
+         * A variable to keep track of if this is shown or not
+         */
+        private boolean shown;
 
         /**
          * Constructs an instance of the empty directory pane
@@ -1358,6 +1592,13 @@ public abstract class DirectoryPane extends VBox {
             setMinHeight(FILE_PANEL_BOTTOM_TOOLBAR_OFFSET);
 
             initDragAndDrop();
+            setOnContextMenuRequested(e -> {
+                LineEntry target = UI.Events.selectLineEntry(e.getTarget());
+                if (target == null) { // we didn't request a line entry's context menu, so display the EntriesBox's context menu
+                    ContextMenu contextMenu = createContextMenu();
+                    contextMenu.show(this, e.getScreenX(), e.getScreenY());
+                }
+            });
         }
 
         /**
@@ -1410,6 +1651,47 @@ public abstract class DirectoryPane extends VBox {
             }
 
             dragEvent.consume();
+        }
+
+        /**
+         * Creates and returns the context menu for this EntriesBox
+         */
+        private ContextMenu createContextMenu() {
+            MenuItem paste = new MenuItem("Paste");
+            boolean disabled = !canPaste();
+            paste.setDisable(disabled);
+            paste.setOnAction(e -> paste(DirectoryPane.this.directory));
+
+            ContextMenu contextMenu = new ContextMenu();
+            contextMenu.getItems().add(paste);
+
+            return contextMenu;
+        }
+
+        /**
+         * Returns true if the copiedEntry can be pasted here
+         * @return true if can paste, false if not
+         */
+        private boolean canPaste() {
+            boolean pasteableEntries = false;
+            LineEntry target = LineEntry.newInstance(DirectoryPane.this.directory, DirectoryPane.this);
+            if (target != null) {
+                for (LineEntry copiedEntry : copiedEntries) {
+                    pasteableEntries = pasteableEntries || isFilePasteable(copiedEntry, target);
+                }
+
+                return pasteableEntries;
+            }
+
+            return false;
+        }
+
+        /**
+         * Show this empty folder pane or not
+         * @param show true to show, false if now
+         */
+        private void show(boolean show) {
+
         }
     }
 }

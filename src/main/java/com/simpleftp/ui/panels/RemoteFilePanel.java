@@ -28,12 +28,15 @@ import com.simpleftp.ftp.connection.FTPConnection;
 import com.simpleftp.ftp.exceptions.FTPException;
 import com.simpleftp.ftp.exceptions.FTPRemotePathNotFoundException;
 import com.simpleftp.ui.UI;
+import com.simpleftp.ui.background.BundledServices;
+import com.simpleftp.ui.background.FileService;
 import com.simpleftp.ui.directories.DirectoryPane;
 import com.simpleftp.ui.directories.RemoteDirectoryPane;
 import com.simpleftp.ui.files.LineEntry;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -256,5 +259,24 @@ public final class RemoteFilePanel extends FilePanel {
 
         if (path != null)
             goToRemotePath(path);
+    }
+
+    /**
+     * Deletes the list of line entries
+     *
+     * @param entries the entries to delete
+     */
+    @Override
+    void doMultipleDelete(List<LineEntry> entries) {
+        BundledServices bundle = new BundledServices(FileService.Operation.REMOVE);
+
+        for (LineEntry entry : entries) {
+            CommonFile source = entry.getFile();
+            bundle.bundle(FileService.newInstance(source, null, FileService.Operation.REMOVE, false)
+                            .setOnOperationSucceeded(() -> fileDeleteSucceeded(entry, false))
+                            .setOnOperationFailed(() -> fileDeleteFailed(source)));
+        }
+
+        bundle.activate();
     }
 }
