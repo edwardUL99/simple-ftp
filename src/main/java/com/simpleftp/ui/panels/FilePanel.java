@@ -40,6 +40,10 @@ import lombok.extern.log4j.Log4j2;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * This is a Panel that contains a DirectoryPane and a toolbar of options for controlling that DirectoryPane.
@@ -112,6 +116,10 @@ public abstract class FilePanel extends VBox {
      * Mapping of file basenames to their respective line entries
      */
     private final HashMap<String, LineEntry> entryMappings;
+    /**
+     * A boolean flag to keep track of the directory pane having multiple selections or not
+     */
+    private boolean multipleSelected;
 
     /**
      * Constructs a DirectoryPane with the specified directoryPane
@@ -350,17 +358,18 @@ public abstract class FilePanel extends VBox {
     private void checkComboBoxValue() {
         LineEntry lineEntry = getLineEntryFromComboBox(); // the line entry in question
         if (lineEntry != null) {
-            if (!lineEntry.isSelected())
-                lineEntry.setSelected(true);
-            CommonFile file = lineEntry.getFile();
-            symLinkDestButton.setVisible(file.isSymbolicLink());
-            propertiesButton.setVisible(true);
-            open.setVisible(true);
-            delete.setVisible(true);
+            if (!multipleSelected) {
+                if (!lineEntry.isSelected())
+                    lineEntry.setSelected(true);
+                CommonFile file = lineEntry.getFile();
+                symLinkDestButton.setVisible(file.isSymbolicLink());
+                propertiesButton.setVisible(true);
+            }
         } else {
             symLinkDestButton.setVisible(false);
             propertiesButton.setVisible(false);
-            LineEntry.unselectLastEntry(directoryPane);
+            if (!multipleSelected)
+                LineEntry.unselectLastEntry(directoryPane);
         }
     }
 
@@ -433,40 +442,98 @@ public abstract class FilePanel extends VBox {
     }
 
     /**
+     * Handles the deletion of multiple files
+     */
+    private void doMultipleDelete() {
+        List<LineEntry> selectedEntries = directoryPane.getSelectedEntries().getLineEntries();
+        Stream<LineEntry> stream = selectedEntries
+                .stream()
+                .filter(Objects::nonNull);
+        long count = stream.count();
+        if (UI.doConfirmation("Confirm files deletion", "Confirm deletion of " + count + " files")) {
+            doMultipleDelete(selectedEntries.stream()
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toList()));
+            selectedEntries.clear();
+            directoryPane.clearMultiSelection();
+        }
+    }
+
+    /**
      * Deletes the chosen line entry from the combobox
      */
     public void delete() {
-        LineEntry lineEntry = getLineEntryFromComboBox();
+        if (multipleSelected) {
+            doMultipleDelete();
+        } else {
+            LineEntry lineEntry = getLineEntryFromComboBox();
 
-        if (lineEntry != null) {
-            CommonFile file = lineEntry.getFile();
-            String fileName = file.getName();
-
-            boolean opened = UI.isFileOpened(file.getFilePath(), directoryPane.isLocal());
-            boolean locked = UI.isFileLockedByFileService(file);
-            if (!opened && !locked) {
-                if (UI.doConfirmation("Confirm file deletion", "Confirm deletion of " + fileName)) {
-                    try {
-                        if (file.isNormalFile() || file.isSymbolicLink()) {
-                            if (directoryPane.deleteEntry(lineEntry)) {
-                                UI.doInfo("File deleted successfully", "File " + fileName + " deleted");
-                                removeLineEntryFromPanel(fileName);
-                            } else {
-                                UI.doError("File not deleted", "File " + fileName + " wasn't deleted successfully");
-                            }
-                        } else {
-                            doRecursiveDeletion(lineEntry); // recursive may take a while so we want a FileService to do it in the background
-                        }
-                    } catch (FileSystemException ex) {
-                        UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
-                    }
-                }
-            } else if (opened) {
-                UI.doError("File Open", "File " + fileName + " is currently opened, file can't be deleted");
-            } else {
-                UI.doError("File Locked", "File " + fileName + " is currently locked by a background task, file can't be deleted");
+            if (lineEntry != null) {
+                doDelete(lineEntry);
             }
         }
+    }
+
+    /**
+     * Deletes the provided line entry
+     * @param lineEntry the line entry to delete
+     */
+    private void doDelete(final LineEntry lineEntry) {
+        CommonFile file = lineEntry.getFile();
+        String fileName = file.getName();
+
+        boolean opened = UI.isFileOpened(file.getFilePath(), directoryPane.isLocal());
+        boolean locked = UI.isFileLockedByFileService(file);
+        if (!opened && !locked) {
+            if (UI.doConfirmation("Confirm file deletion", "Confirm deletion of " + fileName)) {
+                try {
+                    if (file.isNormalFile() || file.isSymbolicLink()) {
+                        if (directoryPane.deleteEntry(lineEntry)) {
+                            UI.doInfo("File deleted successfully", "File " + fileName + " deleted");
+                            removeLineEntryFromPanel(fileName);
+                        } else {
+                            UI.doError("File not deleted", "File " + fileName + " wasn't deleted successfully");
+                        }
+                    } else {
+                        doRecursiveDeletion(lineEntry); // recursive may take a while so we want a FileService to do it in the background
+                    }
+                } catch (FileSystemException ex) {
+                    UI.doException(ex, UI.ExceptionType.ERROR, FTPSystem.isDebugEnabled());
+                }
+            }
+        } else if (opened) {
+            UI.doError("File Open", "File " + fileName + " is currently opened, file can't be deleted");
+        } else {
+            UI.doError("File Locked", "File " + fileName + " is currently locked by a background task, file can't be deleted");
+        }
+    }
+
+    /**
+     * Deletes the list of line entries
+     * @param entries the entries to delete
+     */
+    abstract void doMultipleDelete(List<LineEntry> entries);
+
+    /**
+     * Handles when a file is deleted successfully
+     * @param lineEntry the line entry that was deleted
+     * @param displaySuccess true to display a success message, false if not
+     */
+    protected void fileDeleteSucceeded(LineEntry lineEntry, boolean displaySuccess) {
+        CommonFile file = lineEntry.getFile();
+        String fileName = file.getName();
+        if (displaySuccess)
+            UI.doInfo("File Deleted", "File " + fileName + " has been deleted");
+        directoryPane.deleteEntry(lineEntry, false);
+        removeLineEntryFromPanel(fileName);
+    }
+
+    /**
+     * Handles when a file fails to be deleted
+     * @param file the file that failed to be deleted
+     */
+    protected void fileDeleteFailed(CommonFile file) {
+        UI.doError("File not deleted", "File " + file.getName() + " wasn't deleted successfully");
     }
 
     /**
@@ -475,15 +542,29 @@ public abstract class FilePanel extends VBox {
      */
     private void doRecursiveDeletion(final LineEntry lineEntry) {
         CommonFile file = lineEntry.getFile();
-        FileService.newInstance(file, null, FileService.Operation.REMOVE, directoryPane.isLocal())
-            .setOnOperationSucceeded(() -> {
-                String fileName = file.getName();
-                UI.doInfo("File Deleted", "File " + fileName + " has been deleted");
-                directoryPane.deleteEntry(lineEntry, false);
-                removeLineEntryFromPanel(fileName);
-            })
-            .setOnOperationFailed(() -> UI.doError("File not deleted", "File " + file.getName() + " wasn't deleted successfully"))
-            .schedule(); // schedule it to run
+        if (directoryPane.isLocal()) {
+            boolean error = false;
+            try {
+                if (directoryPane.getFileSystem().removeFile(file)) {
+                    fileDeleteSucceeded(lineEntry, true);
+                } else {
+                    error = true;
+                }
+            } catch (FileSystemException ex) {
+                if (FTPSystem.isDebugEnabled())
+                    ex.printStackTrace();
+
+                error = true;
+            }
+
+            if (error)
+                fileDeleteFailed(file);
+        } else {
+            FileService.newInstance(file, null, FileService.Operation.REMOVE, false)
+                    .setOnOperationSucceeded(() -> fileDeleteSucceeded(lineEntry, true))
+                    .setOnOperationFailed(() -> fileDeleteFailed(file))
+                    .schedule(); // schedule it to run
+        }
     }
 
     /**
@@ -530,7 +611,8 @@ public abstract class FilePanel extends VBox {
         String name = lineEntry != null ? lineEntry.getFile().getName():"";
 
         if (comboBox.getItems().contains(name)) {
-            comboBox.setValue(name);
+            if (!multipleSelected)
+                comboBox.setValue(name);
             checkComboBoxValue();
         }
     }
@@ -557,6 +639,18 @@ public abstract class FilePanel extends VBox {
     public void setPanelView(PanelView panelView) {
         this.panelView = panelView;
     }
+
+    /**
+     * Handles the case of multiple files being selected in the DirectoryPane (or not)
+     * @param multipleSelected true if multiple selected or not
+     */
+    public void onMultipleSelected(boolean multipleSelected) {
+        this.multipleSelected = multipleSelected;
+        open.setDisable(multipleSelected);
+
+        comboBox.setValue("");
+    }
+
 
     /**
      * Creates a new FilePanel instance based on the file panel provided

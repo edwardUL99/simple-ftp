@@ -20,6 +20,7 @@ package com.simpleftp.ui.panels;
 import com.simpleftp.filesystem.FileUtils;
 import com.simpleftp.filesystem.LocalFile;
 import com.simpleftp.filesystem.exceptions.FileSystemException;
+import com.simpleftp.filesystem.interfaces.CommonFile;
 import com.simpleftp.filesystem.interfaces.FileSystem;
 import com.simpleftp.ftp.FTPSystem;
 import com.simpleftp.local.exceptions.LocalPathNotFoundException;
@@ -40,6 +41,7 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -381,5 +383,39 @@ public final class LocalFilePanel extends FilePanel {
                 UI.doException(ex, UI.ExceptionType.EXCEPTION, FTPSystem.isDebugEnabled());
             }
         }
+    }
+
+    /**
+     * Deletes the list of line entries
+     *
+     * @param entries the entries to delete
+     */
+    @Override
+    void doMultipleDelete(List<LineEntry> entries) {
+        FileSystem fileSystem = directoryPane.getFileSystem();
+
+        int succeeded = 0;
+        int failed = 0;
+        for (LineEntry entry : entries) {
+            CommonFile file = entry.getFile();
+            try {
+                if (fileSystem.removeFile(file)) {
+                    fileDeleteSucceeded(entry, false);
+                    succeeded++;
+                } else {
+                    fileDeleteFailed(file);
+                    failed++;
+                }
+            } catch(FileSystemException ex) {
+                if (FTPSystem.isDebugEnabled())
+                    ex.printStackTrace();
+
+                fileDeleteFailed(file);
+                failed++;
+            }
+        }
+
+        UI.doInfo( "Deletion finished", "Deletion finished with: " + succeeded
+                + " successfully completed and " + failed + " failed");
     }
 }

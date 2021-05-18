@@ -261,6 +261,34 @@ public final class RemoteDirectoryPane extends DirectoryPane {
     }
 
     /**
+     * Handles the success of the copy move service
+     * @param copy tru to copy, false to move
+     * @param source the source file
+     * @param destination the destination file
+     * @param targetPane the pane the copy/move targeted
+     */
+    private void copyMoveServiceSucceeded(boolean copy, CommonFile source, CommonFile destination, DirectoryPane targetPane) {
+        String destinationPath = destination.getFilePath();
+        String currentPath = directory.getFilePath();
+
+        if (!copy) {
+            String parentPath = FileUtils.getParentPath(source.getFilePath(), source.isLocal());
+            if (FileUtils.pathEquals(parentPath, currentPath, false))
+                refreshCurrentDirectory();
+            else
+                refreshCache(parentPath); // if it was a move, we refresh so that the file no longer exists
+
+            copiedEntries.removeIf(lineEntry -> lineEntry.getFile().equals(source));
+        }
+
+        if (!FileUtils.pathEquals(destinationPath, currentPath, false))
+            refreshCache(destinationPath);
+
+        if (targetPane != null && targetPane.isLocal())
+            targetPane.refresh();
+    }
+
+    /**
      * This method creates and schedules the file service used for copying/moving the source to destination
      *
      * @param source      the source file to be copied/moved
@@ -270,35 +298,23 @@ public final class RemoteDirectoryPane extends DirectoryPane {
      */
     @Override
     void scheduleCopyMoveService(CommonFile source, CommonFile destination, boolean copy, DirectoryPane targetPane) {
-        String operationHeader = copy ? "Copy":"Move", operationMessage = copy? "copy":"move";
-        FileService.newInstance(source, destination, copy ? FileService.Operation.COPY:FileService.Operation.MOVE, destination.isLocal())
-                .setOnOperationSucceeded(() -> {
-                    String destinationPath = destination.getFilePath();
-                    String currentPath = directory.getFilePath();
-                    UI.doInfo(operationHeader + " Completed", "The " + operationMessage + " of " + source.getFilePath()
-                    + " to " + destinationPath + " has completed");
+        FileService service = FileService.newInstance(source, destination, copy ? FileService.Operation.COPY:FileService.Operation.MOVE, destination.isLocal());
 
-                    if (!copy) {
-                        String parentPath = FileUtils.getParentPath(source.getFilePath(), source.isLocal());
-                        if (FileUtils.pathEquals(parentPath, currentPath, false))
-                            refreshCurrentDirectory();
-                        else
-                            refreshCache(parentPath); // if it was a move, we refresh so that the file no longer exists
+        if (bundle == null && copyPasteBundle == null) {
+            service.setOnOperationSucceeded(() -> {
+                operationCompletedMessage(copy, source, destination);
+                copyMoveServiceSucceeded(copy, source, destination, targetPane);
+            }).setOnOperationFailed(() -> operationFailedMessage(copy, source, destination)).schedule();
+        } else {
+            service.setOnOperationSucceeded(() -> copyMoveServiceSucceeded(copy, source, destination, targetPane))
+                    .setOnOperationFailed(() -> operationFailedMessage(copy, source, destination));
 
-                        if (copiedEntry != null && copiedEntry.getFile().equals(source))
-                            copiedEntry = null; // After a move the copied entry will no longer be in the location it was
-                    }
+            if (bundle != null)
+                bundle.bundle(service);
 
-                    if (!FileUtils.pathEquals(destinationPath, currentPath, false))
-                        refreshCache(destinationPath);
-
-                    if (targetPane != null && targetPane.isLocal()) {
-                        targetPane.refresh();
-                    }
-                })
-                .setOnOperationFailed(() -> UI.doError(operationHeader + " Failed", "The " + operationMessage + " of " + source.getFilePath()
-                + " to " + destination.getFilePath() + " has failed"))
-                .schedule();
+            if (copyPasteBundle != null)
+                copyPasteBundle.bundle(service);
+        }
     }
 
     /**

@@ -527,8 +527,6 @@ public class LoginWindow extends VBox implements Window {
 
             matchedSession = session;
             setSessionFieldsEditable(false);
-            UI.doInfo("Session Found", "A session has matched the provided details successfully. " +
-                    "The password field has been filled with the password that was saved on file");
         } else {
             UI.doInfo("No Session Found", "There is no existing session matching the entered details. " +
                     "Logging in with sessions enabled will create a new session for these details");

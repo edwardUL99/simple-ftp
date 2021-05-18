@@ -631,6 +631,10 @@ public final class UI {
             return tasks.stream()
                     .filter(task -> task instanceof FileService)
                     .map(task -> (FileService) task)
+                    .filter(task -> {
+                        BackgroundTask.State state = task.getState();
+                        return state != BackgroundTask.State.FAILED && state != BackgroundTask.State.CANCELLED;
+                    })
                     .anyMatch(task -> taskFileEquals(file, task.getSource()));
     }
 
