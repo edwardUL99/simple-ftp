@@ -26,6 +26,8 @@ import com.simpleftp.ui.panels.FilePanel;
 import javafx.geometry.Pos;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 
 import javafx.scene.image.ImageView;
@@ -36,6 +38,8 @@ import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.HashMap;
+
+// TODO see if you can find a way to save the file multiple selected if a drag and drop is cancelled
 
 /**
  * This is an abstract class representing a line entry on the panel.
@@ -114,6 +118,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         image.setFitWidth(UI.FILE_ICON_SIZE);
         image.setFitHeight(UI.FILE_ICON_SIZE);
         image.setImage(new Image(imageURL));
+        setupImageClick();
         setHeight(UI.FILE_ICON_SIZE);
         this.file = file;
         this.owningPane = owningPane;
@@ -123,15 +128,32 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
     }
 
     /**
+     * Sets up click listeners for the image view click
+     */
+    private void setupImageClick() {
+        image.setOnMouseClicked(e -> multiSelect());
+    }
+
+    /**
+     * Select this line entry as a part of a multiple selection
+     */
+    public void multiSelect() {
+        handleMultipleLineEntrySelection();
+        setSelected(!selected);
+    }
+
+    /**
      * Sets this LineEntry to be the one that is selected on it's parent FilePanel if not null
      * @param selected true if selected, false if not
      */
     public void setSelected(boolean selected) {
         if (owningPane != null) {
+            LineEntries selectedEntries = owningPane.getSelectedEntries();
+
             if (selected) {
                 this.selected = true;
                 LineEntry lastSelected = LineEntry.lastSelected.get(owningPane);
-                if (lastSelected != null)
+                if (lastSelected != null && !selectedEntries.contains(this))
                     lastSelected.setSelected(false);
 
                 LineEntry.lastSelected.put(owningPane, this);
@@ -144,7 +166,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
             FilePanel filePanel = owningPane.getFilePanel();
             if (filePanel != null) {
                 if (selected)
-                    filePanel.setComboBoxSelection(this);
+                    filePanel.setComboBoxSelection(this); // TODO this sometimes causes stackoverflow
                 else
                     filePanel.setComboBoxSelection(null);
             }
@@ -199,44 +221,105 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
             if (enableMouseEntry)
                 setStyle(UI.GREY_BACKGROUND_TRANSPARENT);
         });
-        setOnMouseExited(e -> {
-            if (!selected)
-                setStyle(UI.WHITE_BACKGROUND);
-            if (dragStarted) {
-                DirectoryPane.forEachInstance(pane -> pane.getUpButton().displayDragDropTarget(true));
-                enableMouseEntry = false;
-                dragEventSource = true;
-                setStyle(UI.GREY_BACKGROUND_TRANSPARENT);
+        setOnMouseExited(this::handleMouseExited);
+        setOnMouseClicked(this::handleMouseClick);
+        setOnMousePressed(e -> e.setDragDetect(true));
+        setOnMouseReleased(this::handleMouseReleased);
+    }
 
-                UI.Events.setDragCursorImage(this);
-                UI.Events.setDragInProgress(true);
-            }
-        });
-        setOnMouseClicked(e -> {
-            if (!e.isConsumed()) {
-                e.setDragDetect(false);
-                if (e.getClickCount() == 1) {
-                    setSelected(!selected);
+    /**
+     * Handles mouse event exit
+     * @param e the mouse event
+     */
+    private void handleMouseExited(MouseEvent e) {
+        if (!selected)
+            setStyle(UI.WHITE_BACKGROUND);
+        if (dragStarted) {
+            DirectoryPane.forEachInstance(pane -> pane.getUpButton().displayDragDropTarget(true));
+            enableMouseEntry = false;
+            dragEventSource = true;
+            setStyle(UI.GREY_BACKGROUND_TRANSPARENT);
+
+            UI.Events.setDragCursorImage(this);
+            UI.Events.setDragInProgress(true);
+        }
+    }
+
+    /**
+     * Handles a mouse click
+     * @param e the mouse event
+     */
+    private void handleMouseClick(MouseEvent e) {
+        if (!e.isConsumed()) {
+            MouseButton mouseButton = e.getButton();
+            boolean primaryButton = mouseButton == MouseButton.PRIMARY;
+            boolean secondaryButton = mouseButton == MouseButton.SECONDARY;
+            e.setDragDetect(false);
+            if (primaryButton || secondaryButton) {
+                if (e.getClickCount() == 1 && e.getTarget() != image) {
+                    if (owningPane != null) {
+                        if (primaryButton) {
+                            if (e.isControlDown()) {
+                                handleMultipleLineEntrySelection();
+                            } else {
+                                owningPane.clearMultiSelection();
+                            }
+                            setSelected(!selected);
+                        }
+                    }
+
+                    if (secondaryButton && !selected)
+                        setSelected(true);
                 } else if (e.getClickCount() == 2) {
-                    owningPane.openLineEntry(this);
+                    if (owningPane != null)
+                        owningPane.openLineEntry(this);
                 }
             }
-            owningPane.requestFocus();
-        });
-        setOnMousePressed(e -> e.setDragDetect(true));
-        setOnMouseReleased(e -> {
-            DirectoryPane.forEachInstance(pane -> pane.getUpButton().displayDragDropTarget(false));
-            if (dragStarted) {
-                dragEventSource = false;
-                if (!selected)
-                    setStyle(UI.WHITE_BACKGROUND);
-            }
+        }
 
-            UI.Events.resetMouseCursor();
-            UI.Events.setDragInProgress(false);
-            dragStarted = false;
-            enableMouseEntry = true;
-        });
+        if (owningPane != null)
+            owningPane.requestFocus();
+    }
+
+    /**
+     * Handles a mouse release
+     * @param e the mouse event
+     */
+    private void handleMouseReleased(MouseEvent e) {
+        DirectoryPane.forEachInstance(pane -> pane.getUpButton().displayDragDropTarget(false));
+        if (dragStarted) {
+            dragEventSource = false;
+            if (!selected)
+                setStyle(UI.WHITE_BACKGROUND);
+        }
+
+        UI.Events.resetMouseCursor();
+        UI.Events.setDragInProgress(false);
+        dragStarted = false;
+        enableMouseEntry = true;
+    }
+
+    /**
+     * Handles when Ctrl+click is done, i.e., multiple selection
+     */
+    private void handleMultipleLineEntrySelection() {
+        LineEntries selectedEntries = owningPane.getSelectedEntries();
+
+        LineEntry lastSelected = LineEntry.lastSelected.get(owningPane);
+        if (lastSelected != null && !selectedEntries.contains(lastSelected))
+            selectedEntries.add(lastSelected);
+
+        LineEntry.lastSelected.put(owningPane, null);
+
+        if (!selected) {
+            selectedEntries.add(this);
+        } else {
+            selectedEntries.remove(this);
+        }
+
+        FilePanel filePanel = owningPane.getFilePanel();
+        if (filePanel != null)
+            filePanel.onMultipleSelected(selectedEntries.size() > 1);
     }
 
     /**

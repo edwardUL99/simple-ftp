@@ -36,8 +36,6 @@ import javafx.scene.text.Font;
 import java.util.Timer;
 import java.util.TimerTask;
 
-// TODO the whole background task viewing needs rigorous testing, document new properties on confluence
-
 /**
  * This class represents a UI element to display a DisplayableBackgroundTask graphically
  */

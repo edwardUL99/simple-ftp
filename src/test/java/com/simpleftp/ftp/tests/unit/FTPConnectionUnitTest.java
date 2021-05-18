@@ -1632,9 +1632,9 @@ class FTPConnectionUnitTest {
         int expectedMillis = TEST_TIMEOUT_SECS * 1000;
         int expectedSecs = TEST_TIMEOUT_SECS;
 
-        doCallRealMethod().when(ftpClient).setDefaultTimeout(expectedMillis);
+        doCallRealMethod().when(ftpClient).setConnectTimeout(expectedMillis);
         doCallRealMethod().when(ftpClient).setControlKeepAliveTimeout(expectedSecs);
-        doCallRealMethod().when(ftpClient).getDefaultTimeout();
+        doCallRealMethod().when(ftpClient).getConnectTimeout();
         doCallRealMethod().when(ftpClient).getControlKeepAliveTimeout();
         given(server.getTimeout())
                 .willReturn(300);
@@ -1642,7 +1642,7 @@ class FTPConnectionUnitTest {
         ftpConnection.setTimeoutTime();
         assertEquals(ftpConnection.getServer().getTimeout(), expectedSecs);
         assertEquals(ftpClient.getControlKeepAliveTimeout(), expectedSecs);
-        verify(ftpClient).setDefaultTimeout(expectedMillis);
+        verify(ftpClient).setConnectTimeout(expectedMillis);
         verify(ftpClient).setControlKeepAliveTimeout(expectedSecs);
     }
 
