@@ -118,12 +118,20 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
         image.setFitWidth(UI.FILE_ICON_SIZE);
         image.setFitHeight(UI.FILE_ICON_SIZE);
         image.setImage(new Image(imageURL));
+        setupImageClick();
         setHeight(UI.FILE_ICON_SIZE);
         this.file = file;
         this.owningPane = owningPane;
         enableMouseEntry = true;
 
         init();
+    }
+
+    /**
+     * Sets up click listeners for the image view click
+     */
+    private void setupImageClick() {
+        image.setOnMouseClicked(e -> multiSelect());
     }
 
     /**
@@ -248,7 +256,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
             boolean secondaryButton = mouseButton == MouseButton.SECONDARY;
             e.setDragDetect(false);
             if (primaryButton || secondaryButton) {
-                if (e.getClickCount() == 1) {
+                if (e.getClickCount() == 1 && e.getTarget() != image) {
                     if (owningPane != null) {
                         if (primaryButton) {
                             if (e.isControlDown()) {
