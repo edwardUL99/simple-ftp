@@ -8,7 +8,7 @@ out on that OS.
 ***Note that this has only been testing on Unix based FTP servers due to limited resources***
 
 ## Features
-These features are as of release 1.0
+These features are as of release 1.1.0
 
 - Browse files on both the local file system and the remote FTP System
     - This is done using a panel to list the files in the current directory on that File System
@@ -33,6 +33,7 @@ These features are as of release 1.0
 - Drag and drop copying of files and folders as well as dialog options to do the same
 - Viewing background tasks and their statuses
 - Caching of remote directory listings
+- Multi-selection of files. These multi-selected files can be chosen by single clicking the icon on the left hand side of the file icon or by Ctrl+clicking the file
 
 ## Pre-requisites
 You need the following to run the application:
