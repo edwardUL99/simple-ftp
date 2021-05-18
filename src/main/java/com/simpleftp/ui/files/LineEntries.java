@@ -109,4 +109,13 @@ public class LineEntries {
             lineEntries = sorted;
         }
     }
+
+    /**
+     * Returns whether or not this LineEntries object contains the provided line entry
+     * @param lineEntry the line entry to check
+     * @return true if contains it or false if not
+     */
+    public boolean contains(LineEntry lineEntry) {
+        return lineEntries.contains(lineEntry);
+    }
 }

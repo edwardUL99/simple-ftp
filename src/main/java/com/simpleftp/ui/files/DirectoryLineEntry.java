@@ -65,22 +65,24 @@ public final class DirectoryLineEntry extends LineEntry {
      * @param dragEvent the drag event representing the drag entry
      */
     private void dragEntered(MouseDragEvent dragEvent) {
-        EventTarget target = dragEvent.getTarget();
-        Object gestureSource = dragEvent.getGestureSource();
+        if (!selected) {
+            EventTarget target = dragEvent.getTarget();
+            Object gestureSource = dragEvent.getGestureSource();
 
-        if (gestureSource != this && UI.Events.validDragAndDropTarget(target)) {
-            LineEntry sourceEntry = UI.Events.selectLineEntry(gestureSource);
-            if (sourceEntry == null || sourceEntry.owningPane == owningPane) {
-                setStyle(UI.Events.DRAG_ENTERED_BACKGROUND);
-            } else {
-                ObservableList<Node> children = owningPane.getEntriesBox().getChildren();
-                if (this == children.get(children.size() - 1))
-                    setStyle(UI.Events.DRAG_ENTERED_BACKGROUND); // bit darker to distinguish from drag entry of entries box
-                else
-                    setStyle(UI.Events.DRAG_ENTERED_BACKGROUND_CLEAR);
+            if (gestureSource != this && UI.Events.validDragAndDropTarget(target)) {
+                LineEntry sourceEntry = UI.Events.selectLineEntry(gestureSource);
+                if (sourceEntry == null || sourceEntry.owningPane == owningPane) {
+                    setStyle(UI.Events.DRAG_ENTERED_BACKGROUND);
+                } else {
+                    ObservableList<Node> children = owningPane.getEntriesBox().getChildren();
+                    if (this == children.get(children.size() - 1))
+                        setStyle(UI.Events.DRAG_ENTERED_BACKGROUND); // bit darker to distinguish from drag entry of entries box
+                    else
+                        setStyle(UI.Events.DRAG_ENTERED_BACKGROUND_CLEAR);
+                }
+
+                UI.Events.setDragCursorEnteredImage();
             }
-
-            UI.Events.setDragCursorEnteredImage();
         }
     }
 
@@ -91,6 +93,8 @@ public final class DirectoryLineEntry extends LineEntry {
     private void dragExited(MouseDragEvent dragEvent) {
         if (!dragEventSource && !selected)
             setStyle(UI.WHITE_BACKGROUND);
+        else if (!dragEventSource)
+            setStyle(UI.GREY_BACKGROUND_TRANSPARENT);
 
         UI.Events.setDragCursorImage(this);
     }
@@ -101,7 +105,7 @@ public final class DirectoryLineEntry extends LineEntry {
      */
     private void dragDropped(MouseDragEvent dragEvent) {
         Object source = dragEvent.getGestureSource();
-        if (source != this) {
+        if (source != this && !((LineEntry)source).selected) {
             DirectoryPane directoryPane = UI.Events.getDirectoryPane(source);
 
             if (directoryPane != null) {
