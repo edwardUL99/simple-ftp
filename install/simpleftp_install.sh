@@ -280,19 +280,31 @@ fi
 
 echo -e "\n\t[Installation]\n"
 
+existing_password_encrypt_key=""
+current_jar=""
+
+if [ -f "simple_ftp" ]; then
+  current_jar=$(grep simple-ftp- simple_ftp | awk -F/ '{print $NF}')
+fi
+
 if [ "$files_downloaded" == "false" ]; then
   echo "Checking if there are any existing simple-ftp JARS in $output_dir"
 
-  mapfile -t files < <(find . -name "simple-ftp*.jar")
+  mapfile -t files < <(find . -name "simple-ftp*.jar*")
 
   for f in "${files[@]}";
   do
+      if [ "$f" == "$current_jar" ]; then
+        existing_password_encrypt_key=$(unzip -p "$current_jar" password.encrypt)
+      fi
       confirmExistingJarRemoval "$f"
   done
 
   if [ "${#files[@]}" -eq "0" ]; then
     echo "No pre-existing simple-ftp JARs found"
   fi
+else
+  existing_password_encrypt_key=$(unzip -p "$current_jar" password.encrypt)
 fi
 
 if [ -n "$jar_file" ]; then
@@ -313,15 +325,20 @@ if [ -n "$jar_file" ]; then
 
   echo -e "\n\t[password.encrypt Generation]\n"
 
-  echo "Generating the password.encrypt file used for password encryption"
-  echo "It is not recommended to change this file after installation as otherwise saved passwords will no longer be able to be decrypted and application files will become unusable"
+  if [ -z "$existing_password_encrypt_key" ]; then
+    echo "Generating the password.encrypt file used for password encryption"
+    echo "It is not recommended to change this file after installation as otherwise saved passwords will no longer be able to be decrypted and application files will become unusable"
 
-  key=$(LC_ALL=C tr -dc 'A-Za-z0-9!"#$%&'\''()*+,-./:;<=>?@[\]^_`{|}~' < /dev/urandom | head -c 20)
+    key=$(LC_ALL=C tr -dc 'A-Za-z0-9!"#$%&'\''()*+,-./:;<=>?@[\]^_`{|}~' < /dev/urandom | head -c 20)
 
-  if [ -z "$key" ]; then
-    echo "Failed to generate password key, exiting..."
-    unsuccessfulCleanUp $jar_file
-    exit 10
+    if [ -z "$key" ]; then
+      echo "Failed to generate password key, exiting..."
+      unsuccessfulCleanUp $jar_file
+      exit 10
+    fi
+  else
+    echo "Using already existing password.encrypt from previous installation"
+    key=$existing_password_encrypt_key
   fi
 
   echo "$key" > password.encrypt

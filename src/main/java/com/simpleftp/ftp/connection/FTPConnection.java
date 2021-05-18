@@ -1057,7 +1057,7 @@ public class FTPConnection {
             logDebug("Setting FTPConnection timeout time to {} seconds", seconds);
             int mSeconds = seconds * 1000;
 
-            ftpClient.setDefaultTimeout(mSeconds);
+            ftpClient.setConnectTimeout(mSeconds);
             ftpClient.setControlKeepAliveTimeout(seconds);
             ftpClient.setControlKeepAliveReplyTimeout(mSeconds);
             ftpClient.setDataTimeout(0);
