@@ -161,6 +161,10 @@ public abstract class FilePanel extends VBox {
                 open();
             }
         });
+        comboBox.setOnMouseClicked(e -> {
+            if (directoryPane.getSelectedEntries().size() > 1)
+                directoryPane.clearMultiSelection();
+        });
         comboBox.setPrefWidth(UI.PANEL_COMBO_WIDTH);
         comboBox.setOnAction(e -> checkComboBoxValue());
         comboBox.setTooltip(new Tooltip("Currently Selected File"));
