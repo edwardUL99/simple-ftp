@@ -105,7 +105,7 @@ public final class DirectoryLineEntry extends LineEntry {
      */
     private void dragDropped(MouseDragEvent dragEvent) {
         Object source = dragEvent.getGestureSource();
-        if (source != this && !((LineEntry)source).selected) {
+        if (source != this) {
             DirectoryPane directoryPane = UI.Events.getDirectoryPane(source);
 
             if (directoryPane != null) {

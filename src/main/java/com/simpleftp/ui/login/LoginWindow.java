@@ -38,6 +38,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -178,6 +179,7 @@ public class LoginWindow extends VBox implements Window {
         initSessionsEnabled();
         initButtons();
         initPropertyBindings();
+        initKeyBindings();
     }
 
     /**
@@ -494,6 +496,28 @@ public class LoginWindow extends VBox implements Window {
 
         for (TextField field : fields)
             field.setEditable(editable);
+    }
+
+    /**
+     * Initialise any login window key bindings
+     */
+    private void initKeyBindings() {
+        setOnKeyPressed(e -> {
+            KeyCode code = e.getCode();
+
+            if (code == KeyCode.L) {
+                passwordFieldEnter();
+            } else if (code == KeyCode.C) {
+                cancel();
+                close();
+            } else if (code == KeyCode.M) {
+                checkMatchButtonProperty();
+                if (matchSession.isVisible())
+                    matchSession();
+            } else if (code == KeyCode.R) {
+                reset();
+            }
+        });
     }
 
     /**
