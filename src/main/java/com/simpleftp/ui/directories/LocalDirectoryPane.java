@@ -233,8 +233,12 @@ public final class LocalDirectoryPane extends DirectoryPane {
             service.setOnOperationSucceeded(() -> {
                 operationCompletedMessage(copy, source, destination);
                 copyMoveServiceSucceeded(copy, source, destination, targetPane);
-            }).setOnOperationFailed(() -> operationFailedMessage(copy, source, destination))
-                    .schedule();
+            }).setOnOperationFailed(() -> operationFailedMessage(copy, source, destination));
+
+            if (copy)
+                service.start();
+            else
+                service.schedule();
         } else {
             service.setOnOperationSucceeded(() -> copyMoveServiceSucceeded(copy, source, destination, targetPane))
                     .setOnOperationFailed(() -> operationFailedMessage(copy, source, destination));

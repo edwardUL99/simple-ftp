@@ -175,7 +175,12 @@ public final class BundledServices {
      */
     public void activate() {
         activated = true;
-        services.forEach(FileService::schedule);
+        services.forEach(service -> {
+            if (service.operation == FileService.Operation.COPY)
+                service.start();
+            else
+                service.schedule();
+        });
     }
 
     /**
