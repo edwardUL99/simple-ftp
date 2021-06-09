@@ -1161,11 +1161,6 @@ public abstract class DirectoryPane extends VBox {
         if (sourcePane.selectedEntries.size() > 1)
             sourcePane.bundle = new BundledServices(copy ? FileService.Operation.COPY: FileService.Operation.MOVE);
 
-        /*sourcePane.selectedEntries.getLineEntries()
-                .stream()
-                .filter(Objects::nonNull)
-                .forEach(lineEntry -> doDragAndDrop(dragEvent, sourcePane, lineEntry, destination, copy));*/
-
         for (LineEntry selected : sourcePane.selectedEntries.getLineEntries()) {
             if (selected != null) {
                 doDragAndDrop(dragEvent, sourcePane, selected, destination, copy);

@@ -551,14 +551,16 @@ public final class UI {
             throw new IllegalStateException("The Application has not been started yet, so cannot add a BackgroundTask to the system. " +
                     "Call UI.startApplication(Stage primaryStage) first");
 
-        backgroundTasks.add(backgroundTask);
+        if (!backgroundTasks.contains(backgroundTask)) {
+            backgroundTasks.add(backgroundTask);
 
-        if (backgroundTask instanceof DisplayableBackgroundTask) {
-            DisplayableBackgroundTask displayableTask = (DisplayableBackgroundTask)backgroundTask;
-            TaskElement taskElement = new TaskElement(displayableTask);
-            displayedBackgroundTasks.put(displayableTask, taskElement);
-            mainView.getTaskWindow().getTaskPane().addTask(taskElement);
-            backgroundTasksProperty.setValue(true);
+            if (backgroundTask instanceof DisplayableBackgroundTask) {
+                DisplayableBackgroundTask displayableTask = (DisplayableBackgroundTask) backgroundTask;
+                TaskElement taskElement = new TaskElement(displayableTask);
+                displayedBackgroundTasks.put(displayableTask, taskElement);
+                mainView.getTaskWindow().getTaskPane().addTask(taskElement);
+                backgroundTasksProperty.setValue(true);
+            }
         }
     }
 

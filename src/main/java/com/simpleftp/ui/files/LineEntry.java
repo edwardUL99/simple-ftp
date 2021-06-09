@@ -163,10 +163,14 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
 
             FilePanel filePanel = owningPane.getFilePanel();
             if (filePanel != null) {
-                if (selected)
-                    filePanel.setComboBoxSelection(this); // TODO Stack overflow being thrown still, multi-select 2 items and then select one of them again
-                else
+                if (selected) {
+                    LineEntry entry = filePanel.getSelectedEntry();
+
+                    if (entry != this)
+                        filePanel.setComboBoxSelection(this);
+                } else {
                     filePanel.setComboBoxSelection(null);
+                }
             }
         }
     }
