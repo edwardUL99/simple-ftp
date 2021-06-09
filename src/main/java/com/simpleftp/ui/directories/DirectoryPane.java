@@ -160,7 +160,6 @@ public abstract class DirectoryPane extends VBox {
      */
     private static final ArrayList<DirectoryPane> instances = new ArrayList<>();
 
-
     /**
      * Constructs a DirectoryPane object.
      * Sub-classes are expected to instantiate the filesystem object as the instance varies depending on if this is local or remote and to call the initDirectory(directory) method.
@@ -598,7 +597,7 @@ public abstract class DirectoryPane extends VBox {
         List<LineEntry> selected = getCopySelectedFiles();
 
         if (selected != null) {
-            if (getCopySelectedFiles().size() > 1)
+            if (selected.size() > 1)
                 return createMultiContextMenu();
         }
 
@@ -1691,7 +1690,7 @@ public abstract class DirectoryPane extends VBox {
          * @param show true to show, false if now
          */
         private void show(boolean show) {
-
+            shown = show;
         }
     }
 }

@@ -289,6 +289,7 @@ public abstract class FileService extends AbstractDisplayableBackgroundTask {
     public void start() {
         updateState(State.STARTED);
         service.start();
+        displayTask();
     }
 
     /**

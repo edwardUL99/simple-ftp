@@ -39,8 +39,6 @@ import lombok.extern.log4j.Log4j2;
 
 import java.util.HashMap;
 
-// TODO see if you can find a way to save the file multiple selected if a drag and drop is cancelled
-
 /**
  * This is an abstract class representing a line entry on the panel.
  * DirectoryPane essentially displays a listing of the files in the current directory.
@@ -166,7 +164,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
             FilePanel filePanel = owningPane.getFilePanel();
             if (filePanel != null) {
                 if (selected)
-                    filePanel.setComboBoxSelection(this); // TODO this sometimes causes stackoverflow
+                    filePanel.setComboBoxSelection(this); // TODO Stack overflow being thrown still, multi-select 2 items and then select one of them again
                 else
                     filePanel.setComboBoxSelection(null);
             }
