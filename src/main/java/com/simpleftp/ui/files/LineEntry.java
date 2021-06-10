@@ -151,7 +151,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
             if (selected) {
                 this.selected = true;
                 LineEntry lastSelected = LineEntry.lastSelected.get(owningPane);
-                if (lastSelected != null && !selectedEntries.contains(this))
+                if (lastSelected != null && lastSelected != this && !selectedEntries.contains(this))
                     lastSelected.setSelected(false);
 
                 LineEntry.lastSelected.put(owningPane, this);
@@ -167,7 +167,7 @@ public abstract class LineEntry extends HBox implements Comparable<LineEntry> {
                     LineEntry entry = filePanel.getSelectedEntry();
 
                     if (entry != this)
-                        filePanel.setComboBoxSelection(this);
+                        filePanel.setComboBoxSelection(this); // TODO still throwing stack overflow
                 } else {
                     filePanel.setComboBoxSelection(null);
                 }
