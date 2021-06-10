@@ -617,7 +617,7 @@ public abstract class FilePanel extends VBox {
         if (comboBox.getItems().contains(name)) {
             if (!multipleSelected)
                 comboBox.setValue(name);
-            checkComboBoxValue();
+            //checkComboBoxValue();
         }
     }
 
